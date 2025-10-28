@@ -34,7 +34,7 @@
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string/>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -51,5 +51,52 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Archivo-Black.ttf</string>
+		<string>Archivo-BlackItalic.ttf</string>
+		<string>Archivo-Bold.ttf</string>
+		<string>Archivo-BoldItalic.ttf</string>
+		<string>Archivo-ExtraBold.ttf</string>
+		<string>Archivo-ExtraBoldItalic.ttf</string>
+		<string>Archivo-ExtraLight.ttf</string>
+		<string>Archivo-ExtraLightItalic.ttf</string>
+		<string>Archivo-Italic.ttf</string>
+		<string>Archivo-Light.ttf</string>
+		<string>Archivo-LightItalic.ttf</string>
+		<string>Archivo-Medium.ttf</string>
+		<string>Archivo-MediumItalic.ttf</string>
+		<string>Archivo-Regular.ttf</string>
+		<string>Archivo-SemiBold.ttf</string>
+		<string>Archivo-SemiBoldItalic.ttf</string>
+		<string>Archivo-Thin.ttf</string>
+		<string>Archivo-ThinItalic.ttf</string>
+		<string>Lato-Black.ttf</string>
+		<string>Lato-BlackItalic.ttf</string>
+		<string>Lato-Bold.ttf</string>
+		<string>Lato-BoldItalic.ttf</string>
+		<string>Lato-Italic.ttf</string>
+		<string>Lato-Light.ttf</string>
+		<string>Lato-LightItalic.ttf</string>
+		<string>Lato-Regular.ttf</string>
+		<string>Lato-Thin.ttf</string>
+		<string>Lato-ThinItalic.ttf</string>
+		<string>AntDesign.ttf</string>
+	<string>Entypo.ttf</string>
+	<string>EvilIcons.ttf</string>
+	<string>Feather.ttf</string>
+	<string>FontAwesome.ttf</string>
+	<string>FontAwesome5.ttf</string>
+	<string>Fontisto.ttf</string>
+	<string>Foundation.ttf</string>
+	<string>Ionicons.ttf</string>
+	<string>MaterialIcons.ttf</string>
+	<string>MaterialCommunityIcons.ttf</string>
+	<string>Octicons.ttf</string>
+	<string>SimpleLineIcons.ttf</string>
+	<string>Zocial.ttf</string>
+	</array>
+
+
 </dict>
 </plist>
