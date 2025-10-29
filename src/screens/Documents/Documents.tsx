@@ -156,10 +156,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing(14),
     paddingHorizontal: spacing(12),
     marginBottom: spacing(16),
-    shadowColor: '#000',
+    shadowColor: theme.colors.gray[400],
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.07,
-    shadowRadius: 3,
+    // shadowRadius: 3,
     elevation: 2,
   },
   cardHeader: {
