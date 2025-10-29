@@ -34,15 +34,16 @@ function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
 }
 
 export default function App() {
-  const isDarkMode = isAndroid
-    ? useColorScheme() === 'light'
-    : useColorScheme() === 'dark';
+  // const colorScheme = useColorScheme();
+  // const isDarkMode = isAndroid
+  //   ? colorScheme === 'light'
+  //   : colorScheme === 'dark';
   const [isAuthenticated] = useState(true);
 
   return (
     <UnistylesProvider>
       <SafeAreaProvider>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        <StatusBar barStyle="default" />
         <NavigationContainer>
           <AppContent isAuthenticated={isAuthenticated} />
         </NavigationContainer>
