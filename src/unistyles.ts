@@ -8,6 +8,7 @@ export const breakpoints = {
   superLarge: 2000,
   tvLike: 4000,
 } as const;
+
 export const lightTheme = {
   colors: {
     background: '#F9F9F9',
