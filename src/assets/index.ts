@@ -2,6 +2,8 @@ export const assets = {
   images: {
     AuthBackground: require('./Images/auth-background.png'),
     Avatar: require('./Images/avatar.png'),
+    Avatar2: require('./Images/avatar2.png'),
+    Avatar3: require('./Images/avatar3.png'),
   },
   icons: {
     googleIcon: require('./Icons/google.png'),

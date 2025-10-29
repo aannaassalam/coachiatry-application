@@ -42,7 +42,7 @@ const BottomNavigator = () => {
           borderTopWidth: 1,
           borderTopColor: theme.colors.gray[100],
           elevation: 5,
-          height: spacing(60),
+          height: spacing(70),
           paddingBottom: spacing(6),
           paddingTop: spacing(6),
         },
