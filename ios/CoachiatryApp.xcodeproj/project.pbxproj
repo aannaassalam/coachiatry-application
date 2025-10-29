@@ -43,44 +43,44 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		015F7D6209F74B2D90FF9841 /* Archivo-ThinItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-ThinItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-ThinItalic.ttf"; sourceTree = "<group>"; };
+		015F7D6209F74B2D90FF9841 /* Archivo-ThinItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-ThinItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-ThinItalic.ttf"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* CoachiatryApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CoachiatryApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = CoachiatryApp/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = CoachiatryApp/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = CoachiatryApp/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		144D661A332B4A3781B28248 /* Lato-LightItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-LightItalic.ttf"; path = "../src/assets/fonts/Lato/Lato-LightItalic.ttf"; sourceTree = "<group>"; };
-		18C8947C118A4B728980D89D /* Archivo-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Medium.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Medium.ttf"; sourceTree = "<group>"; };
-		2781C28DA0BA44A5A694BA10 /* Archivo-ExtraLightItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-ExtraLightItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-ExtraLightItalic.ttf"; sourceTree = "<group>"; };
-		27AC0C0DBEE74F46ADA574D3 /* Archivo-ExtraBoldItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-ExtraBoldItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-ExtraBoldItalic.ttf"; sourceTree = "<group>"; };
-		300153397BCF48AC929E7C53 /* Lato-BoldItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-BoldItalic.ttf"; path = "../src/assets/fonts/Lato/Lato-BoldItalic.ttf"; sourceTree = "<group>"; };
-		482D100551C4482DBB807934 /* Archivo-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Bold.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Bold.ttf"; sourceTree = "<group>"; };
-		4A859D70E6A14B7F9AB30732 /* Lato-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Bold.ttf"; path = "../src/assets/fonts/Lato/Lato-Bold.ttf"; sourceTree = "<group>"; };
-		56EA912A7FBD46FD8DAADD12 /* Archivo-MediumItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-MediumItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-MediumItalic.ttf"; sourceTree = "<group>"; };
-		584C443EE65E4AC7B2ECC1CB /* Archivo-BlackItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-BlackItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-BlackItalic.ttf"; sourceTree = "<group>"; };
-		6A7429A0D4F448F08685CA36 /* Archivo-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-ExtraBold.ttf"; path = "../src/assets/fonts/Archivo/Archivo-ExtraBold.ttf"; sourceTree = "<group>"; };
-		745BA06CE57541B399A9FD7C /* Archivo-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Light.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Light.ttf"; sourceTree = "<group>"; };
+		144D661A332B4A3781B28248 /* Lato-LightItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-LightItalic.ttf"; path = "../src/assets/fonts/Lato/Lato-LightItalic.ttf"; sourceTree = "<group>"; };
+		18C8947C118A4B728980D89D /* Archivo-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Medium.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Medium.ttf"; sourceTree = "<group>"; };
+		2781C28DA0BA44A5A694BA10 /* Archivo-ExtraLightItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-ExtraLightItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-ExtraLightItalic.ttf"; sourceTree = "<group>"; };
+		27AC0C0DBEE74F46ADA574D3 /* Archivo-ExtraBoldItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-ExtraBoldItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-ExtraBoldItalic.ttf"; sourceTree = "<group>"; };
+		300153397BCF48AC929E7C53 /* Lato-BoldItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-BoldItalic.ttf"; path = "../src/assets/fonts/Lato/Lato-BoldItalic.ttf"; sourceTree = "<group>"; };
+		482D100551C4482DBB807934 /* Archivo-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Bold.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Bold.ttf"; sourceTree = "<group>"; };
+		4A859D70E6A14B7F9AB30732 /* Lato-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Bold.ttf"; path = "../src/assets/fonts/Lato/Lato-Bold.ttf"; sourceTree = "<group>"; };
+		56EA912A7FBD46FD8DAADD12 /* Archivo-MediumItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-MediumItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-MediumItalic.ttf"; sourceTree = "<group>"; };
+		584C443EE65E4AC7B2ECC1CB /* Archivo-BlackItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-BlackItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-BlackItalic.ttf"; sourceTree = "<group>"; };
+		6A7429A0D4F448F08685CA36 /* Archivo-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-ExtraBold.ttf"; path = "../src/assets/fonts/Archivo/Archivo-ExtraBold.ttf"; sourceTree = "<group>"; };
+		745BA06CE57541B399A9FD7C /* Archivo-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Light.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Light.ttf"; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = CoachiatryApp/AppDelegate.swift; sourceTree = "<group>"; };
-		7EB71F95A1D942BE8228B451 /* Lato-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Light.ttf"; path = "../src/assets/fonts/Lato/Lato-Light.ttf"; sourceTree = "<group>"; };
-		811146C71BBF4D449ECF7854 /* Archivo-Italic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Italic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Italic.ttf"; sourceTree = "<group>"; };
+		7EB71F95A1D942BE8228B451 /* Lato-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Light.ttf"; path = "../src/assets/fonts/Lato/Lato-Light.ttf"; sourceTree = "<group>"; };
+		811146C71BBF4D449ECF7854 /* Archivo-Italic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Italic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Italic.ttf"; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = CoachiatryApp/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		8B1DEF4D0A744BE89855CFEB /* Lato-Italic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Italic.ttf"; path = "../src/assets/fonts/Lato/Lato-Italic.ttf"; sourceTree = "<group>"; };
-		8B73EAE3E21845A9BF77EB98 /* Lato-ThinItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-ThinItalic.ttf"; path = "../src/assets/fonts/Lato/Lato-ThinItalic.ttf"; sourceTree = "<group>"; };
-		8C2D03FA956347D48F28C548 /* Archivo-Thin.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Thin.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Thin.ttf"; sourceTree = "<group>"; };
-		932F0658CED84105BB64D666 /* Lato-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Regular.ttf"; path = "../src/assets/fonts/Lato/Lato-Regular.ttf"; sourceTree = "<group>"; };
-		93D97D9E3066432FB2B34099 /* Lato-Thin.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Thin.ttf"; path = "../src/assets/fonts/Lato/Lato-Thin.ttf"; sourceTree = "<group>"; };
-		A6E1E3BB7E2B44B8B2574EE1 /* Archivo-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-SemiBold.ttf"; path = "../src/assets/fonts/Archivo/Archivo-SemiBold.ttf"; sourceTree = "<group>"; };
+		8B1DEF4D0A744BE89855CFEB /* Lato-Italic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Italic.ttf"; path = "../src/assets/fonts/Lato/Lato-Italic.ttf"; sourceTree = "<group>"; };
+		8B73EAE3E21845A9BF77EB98 /* Lato-ThinItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-ThinItalic.ttf"; path = "../src/assets/fonts/Lato/Lato-ThinItalic.ttf"; sourceTree = "<group>"; };
+		8C2D03FA956347D48F28C548 /* Archivo-Thin.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Thin.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Thin.ttf"; sourceTree = "<group>"; };
+		932F0658CED84105BB64D666 /* Lato-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Regular.ttf"; path = "../src/assets/fonts/Lato/Lato-Regular.ttf"; sourceTree = "<group>"; };
+		93D97D9E3066432FB2B34099 /* Lato-Thin.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Thin.ttf"; path = "../src/assets/fonts/Lato/Lato-Thin.ttf"; sourceTree = "<group>"; };
+		A6E1E3BB7E2B44B8B2574EE1 /* Archivo-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-SemiBold.ttf"; path = "../src/assets/fonts/Archivo/Archivo-SemiBold.ttf"; sourceTree = "<group>"; };
 		BB126F7121309767E03DA0DE /* Pods-CoachiatryApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CoachiatryApp.release.xcconfig"; path = "Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp.release.xcconfig"; sourceTree = "<group>"; };
-		BDC6D6C16B30435287E77E34 /* Archivo-LightItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-LightItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-LightItalic.ttf"; sourceTree = "<group>"; };
-		C4F398873074443884322D62 /* Archivo-Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Black.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Black.ttf"; sourceTree = "<group>"; };
+		BDC6D6C16B30435287E77E34 /* Archivo-LightItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-LightItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-LightItalic.ttf"; sourceTree = "<group>"; };
+		C4F398873074443884322D62 /* Archivo-Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Black.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Black.ttf"; sourceTree = "<group>"; };
 		C65504B8B7038B5AD5A10E75 /* Pods-CoachiatryApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CoachiatryApp.debug.xcconfig"; path = "Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp.debug.xcconfig"; sourceTree = "<group>"; };
 		CE9F0302D7BA506D5789C159 /* libPods-CoachiatryApp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-CoachiatryApp.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		D06A927437D0459E82FB5F84 /* Archivo-SemiBoldItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-SemiBoldItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-SemiBoldItalic.ttf"; sourceTree = "<group>"; };
-		E4E16989989C4484AD842780 /* Lato-BlackItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-BlackItalic.ttf"; path = "../src/assets/fonts/Lato/Lato-BlackItalic.ttf"; sourceTree = "<group>"; };
+		D06A927437D0459E82FB5F84 /* Archivo-SemiBoldItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-SemiBoldItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-SemiBoldItalic.ttf"; sourceTree = "<group>"; };
+		E4E16989989C4484AD842780 /* Lato-BlackItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-BlackItalic.ttf"; path = "../src/assets/fonts/Lato/Lato-BlackItalic.ttf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		F55B766E0A884F3D843FB994 /* Archivo-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Regular.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Regular.ttf"; sourceTree = "<group>"; };
-		F5FBDE9B347249B69BD5DA1E /* Archivo-ExtraLight.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-ExtraLight.ttf"; path = "../src/assets/fonts/Archivo/Archivo-ExtraLight.ttf"; sourceTree = "<group>"; };
-		F7B1C30842A144D482F5D710 /* Lato-Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Black.ttf"; path = "../src/assets/fonts/Lato/Lato-Black.ttf"; sourceTree = "<group>"; };
-		FA1EE23256CD4836B66D90B3 /* Archivo-BoldItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-BoldItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-BoldItalic.ttf"; sourceTree = "<group>"; };
+		F55B766E0A884F3D843FB994 /* Archivo-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Regular.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Regular.ttf"; sourceTree = "<group>"; };
+		F5FBDE9B347249B69BD5DA1E /* Archivo-ExtraLight.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-ExtraLight.ttf"; path = "../src/assets/fonts/Archivo/Archivo-ExtraLight.ttf"; sourceTree = "<group>"; };
+		F7B1C30842A144D482F5D710 /* Lato-Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Black.ttf"; path = "../src/assets/fonts/Lato/Lato-Black.ttf"; sourceTree = "<group>"; };
+		FA1EE23256CD4836B66D90B3 /* Archivo-BoldItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-BoldItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-BoldItalic.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -188,7 +188,6 @@
 				8B73EAE3E21845A9BF77EB98 /* Lato-ThinItalic.ttf */,
 			);
 			name = Resources;
-			path = "";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -381,6 +380,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 36UZNG64M5;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = CoachiatryApp/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -394,7 +394,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.CoachiatryApp;
 				PRODUCT_NAME = CoachiatryApp;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -409,6 +409,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 36UZNG64M5;
 				INFOPLIST_FILE = CoachiatryApp/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -421,7 +422,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.CoachiatryApp;
 				PRODUCT_NAME = CoachiatryApp;
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
