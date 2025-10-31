@@ -5,6 +5,8 @@ import BottomNavigator from './BottomNavigator';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DocumentEditor from '../screens/Documents/DocumentEditor';
+import Profile from '../screens/Profile/Profile';
+import EditProfile from '../screens/Profile/EditProfile';
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -18,6 +20,8 @@ const AppNavigator = () => {
     >
       <Stack.Screen name="BottomTabs" component={BottomNavigator} />
       <Stack.Screen name="DocumentEditor" component={DocumentEditor} />
+      <Stack.Screen name="Profile" component={Profile} />
+      <Stack.Screen name="EditProfile" component={EditProfile} />
     </Stack.Navigator>
   );
 };

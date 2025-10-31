@@ -10,6 +10,9 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
 import { CoachAi, HeaderSearchIcon } from '../../assets';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { AppStackParamList } from '../../types/navigation';
 
 interface AppHeaderProps {
   heading: string;
@@ -18,7 +21,10 @@ interface AppHeaderProps {
   searchValue?: string;
   onSearchChange?: (text: string) => void;
 }
-
+type HeaderScreenNavigationProp = NativeStackNavigationProp<
+  AppStackParamList,
+  'Profile'
+>;
 const AppHeader: React.FC<AppHeaderProps> = ({
   heading,
   showSearch = false,
@@ -26,13 +32,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   searchValue,
   onSearchChange,
 }) => {
+  const navigation = useNavigation<HeaderScreenNavigationProp>();
   return (
     <View style={styles.container}>
       {/* Top Row */}
       <View style={styles.topRow}>
         <View />
         <Text style={styles.heading}>{heading}</Text>
-        <TouchableOpacity onPress={onSettingsPress}>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
           <Ionicons
             name="settings-outline"
             size={fontSize(20)}

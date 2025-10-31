@@ -37,6 +37,13 @@
 	<string></string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+<string>This app requires access to your photo library</string>
+<key>NSCameraUsageDescription</key>
+<string>This app requires access to your camera</string>
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>This app needs to save photos</string>
+
 	<key>UIAppFonts</key>
 	<array>
 		<string>Archivo-Black.ttf</string>

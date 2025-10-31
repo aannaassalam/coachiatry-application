@@ -1,37 +1,42 @@
 import React from 'react';
-import { Text, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
-import { createStyleSheet, useStyles } from 'react-native-unistyles';
+import {
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  StyleProp,
+  ViewStyle,
+  TextStyle,
+} from 'react-native';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
 
 interface AppButtonProps {
   text?: string;
   style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   onPress?: () => void;
   leftIcon?: React.ReactNode;
   variant?: 'primary' | 'outline' | 'secondary-outline';
 }
 
-function AppButton({
+const AppButton: React.FC<AppButtonProps> = ({
   text,
   style,
+  textStyle,
   onPress,
   leftIcon,
-  variant,
-}: AppButtonProps) {
-  const { styles } = useStyles(stylesheet);
-
+  variant = 'primary',
+}) => {
   return (
     <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={onPress}
       style={[
         styles.button,
         variant === 'outline' && styles.outlineButton,
         variant === 'secondary-outline' && styles.secondaryOutlineButton,
-
         style,
       ]}
-      onPress={onPress}
-      activeOpacity={0.8}
     >
       {leftIcon && leftIcon}
       <Text
@@ -39,17 +44,18 @@ function AppButton({
           styles.buttonText,
           variant === 'outline' && styles.outlineText,
           variant === 'secondary-outline' && styles.secondaryOutlineButtonText,
+          textStyle,
         ]}
       >
         {text}
       </Text>
     </TouchableOpacity>
   );
-}
+};
 
 export default AppButton;
 
-const stylesheet = createStyleSheet(() => ({
+const styles = StyleSheet.create({
   button: {
     backgroundColor: theme.colors.primary,
     borderRadius: fontSize(10),
@@ -80,4 +86,4 @@ const stylesheet = createStyleSheet(() => ({
   outlineText: {
     color: theme.colors.gray[700],
   },
-}));
+});
