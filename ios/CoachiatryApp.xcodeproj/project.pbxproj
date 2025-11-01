@@ -18,9 +18,9 @@
 		38B1C8302B28439391D92C3C /* Archivo-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 6A7429A0D4F448F08685CA36 /* Archivo-ExtraBold.ttf */; };
 		430C75B3AD5C47BA804F32AF /* Archivo-ExtraBoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 27AC0C0DBEE74F46ADA574D3 /* Archivo-ExtraBoldItalic.ttf */; };
 		4EB822B8D45E4BF09C0C1B97 /* Lato-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F7B1C30842A144D482F5D710 /* Lato-Black.ttf */; };
-		53BE06A5F7AE20680CA82C8C /* libPods-CoachiatryApp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE9F0302D7BA506D5789C159 /* libPods-CoachiatryApp.a */; };
 		669ACED0E50F4C0BA7E13DAF /* Archivo-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F55B766E0A884F3D843FB994 /* Archivo-Regular.ttf */; };
 		694A479731A747E7B1216711 /* Archivo-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 745BA06CE57541B399A9FD7C /* Archivo-Light.ttf */; };
+		6FFAA8F83461D93A9C51ED04 /* Pods_CoachiatryApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CE02E98A4B239836C61D22E /* Pods_CoachiatryApp.framework */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		8D12F9E901114040804A5146 /* Lato-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8B1DEF4D0A744BE89855CFEB /* Lato-Italic.ttf */; };
@@ -43,6 +43,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		002E6D5A8CB8870E8D76E9A2 /* Pods-CoachiatryApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CoachiatryApp.release.xcconfig"; path = "Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp.release.xcconfig"; sourceTree = "<group>"; };
 		015F7D6209F74B2D90FF9841 /* Archivo-ThinItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-ThinItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-ThinItalic.ttf"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* CoachiatryApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CoachiatryApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = CoachiatryApp/Images.xcassets; sourceTree = "<group>"; };
@@ -57,6 +58,7 @@
 		4A859D70E6A14B7F9AB30732 /* Lato-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Bold.ttf"; path = "../src/assets/fonts/Lato/Lato-Bold.ttf"; sourceTree = "<group>"; };
 		56EA912A7FBD46FD8DAADD12 /* Archivo-MediumItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-MediumItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-MediumItalic.ttf"; sourceTree = "<group>"; };
 		584C443EE65E4AC7B2ECC1CB /* Archivo-BlackItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-BlackItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-BlackItalic.ttf"; sourceTree = "<group>"; };
+		5CE02E98A4B239836C61D22E /* Pods_CoachiatryApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_CoachiatryApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		6A7429A0D4F448F08685CA36 /* Archivo-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-ExtraBold.ttf"; path = "../src/assets/fonts/Archivo/Archivo-ExtraBold.ttf"; sourceTree = "<group>"; };
 		745BA06CE57541B399A9FD7C /* Archivo-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Light.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Light.ttf"; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = CoachiatryApp/AppDelegate.swift; sourceTree = "<group>"; };
@@ -66,14 +68,12 @@
 		8B1DEF4D0A744BE89855CFEB /* Lato-Italic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Italic.ttf"; path = "../src/assets/fonts/Lato/Lato-Italic.ttf"; sourceTree = "<group>"; };
 		8B73EAE3E21845A9BF77EB98 /* Lato-ThinItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-ThinItalic.ttf"; path = "../src/assets/fonts/Lato/Lato-ThinItalic.ttf"; sourceTree = "<group>"; };
 		8C2D03FA956347D48F28C548 /* Archivo-Thin.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Thin.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Thin.ttf"; sourceTree = "<group>"; };
+		8C902D18DCF7CE6B51413353 /* Pods-CoachiatryApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CoachiatryApp.debug.xcconfig"; path = "Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp.debug.xcconfig"; sourceTree = "<group>"; };
 		932F0658CED84105BB64D666 /* Lato-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Regular.ttf"; path = "../src/assets/fonts/Lato/Lato-Regular.ttf"; sourceTree = "<group>"; };
 		93D97D9E3066432FB2B34099 /* Lato-Thin.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Thin.ttf"; path = "../src/assets/fonts/Lato/Lato-Thin.ttf"; sourceTree = "<group>"; };
 		A6E1E3BB7E2B44B8B2574EE1 /* Archivo-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-SemiBold.ttf"; path = "../src/assets/fonts/Archivo/Archivo-SemiBold.ttf"; sourceTree = "<group>"; };
-		BB126F7121309767E03DA0DE /* Pods-CoachiatryApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CoachiatryApp.release.xcconfig"; path = "Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp.release.xcconfig"; sourceTree = "<group>"; };
 		BDC6D6C16B30435287E77E34 /* Archivo-LightItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-LightItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-LightItalic.ttf"; sourceTree = "<group>"; };
 		C4F398873074443884322D62 /* Archivo-Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-Black.ttf"; path = "../src/assets/fonts/Archivo/Archivo-Black.ttf"; sourceTree = "<group>"; };
-		C65504B8B7038B5AD5A10E75 /* Pods-CoachiatryApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CoachiatryApp.debug.xcconfig"; path = "Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp.debug.xcconfig"; sourceTree = "<group>"; };
-		CE9F0302D7BA506D5789C159 /* libPods-CoachiatryApp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-CoachiatryApp.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D06A927437D0459E82FB5F84 /* Archivo-SemiBoldItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Archivo-SemiBoldItalic.ttf"; path = "../src/assets/fonts/Archivo/Archivo-SemiBoldItalic.ttf"; sourceTree = "<group>"; };
 		E4E16989989C4484AD842780 /* Lato-BlackItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-BlackItalic.ttf"; path = "../src/assets/fonts/Lato/Lato-BlackItalic.ttf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
@@ -88,7 +88,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				53BE06A5F7AE20680CA82C8C /* libPods-CoachiatryApp.a in Frameworks */,
+				6FFAA8F83461D93A9C51ED04 /* Pods_CoachiatryApp.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -111,7 +111,7 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				CE9F0302D7BA506D5789C159 /* libPods-CoachiatryApp.a */,
+				5CE02E98A4B239836C61D22E /* Pods_CoachiatryApp.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -149,8 +149,8 @@
 		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				C65504B8B7038B5AD5A10E75 /* Pods-CoachiatryApp.debug.xcconfig */,
-				BB126F7121309767E03DA0DE /* Pods-CoachiatryApp.release.xcconfig */,
+				8C902D18DCF7CE6B51413353 /* Pods-CoachiatryApp.debug.xcconfig */,
+				002E6D5A8CB8870E8D76E9A2 /* Pods-CoachiatryApp.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -197,13 +197,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "CoachiatryApp" */;
 			buildPhases = (
-				867D3BF47AF7C9AB356BBD8E /* [CP] Check Pods Manifest.lock */,
+				137F87E0E9993CE7E9D6E390 /* [CP] Check Pods Manifest.lock */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
-				363EF1F75EDB934851519548 /* [CP] Embed Pods Frameworks */,
-				468CF82F6716DCBBFC200DF2 /* [CP] Copy Pods Resources */,
+				340FFB9C71D6C2F6057893C1 /* [CP] Embed Pods Frameworks */,
+				411BD8B4816C407AA5A619DD /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -303,41 +303,7 @@
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
 		};
-		363EF1F75EDB934851519548 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		468CF82F6716DCBBFC200DF2 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		867D3BF47AF7C9AB356BBD8E /* [CP] Check Pods Manifest.lock */ = {
+		137F87E0E9993CE7E9D6E390 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -359,6 +325,40 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
+		340FFB9C71D6C2F6057893C1 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		411BD8B4816C407AA5A619DD /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-CoachiatryApp/Pods-CoachiatryApp-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -375,10 +375,12 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C65504B8B7038B5AD5A10E75 /* Pods-CoachiatryApp.debug.xcconfig */;
+			baseConfigurationReference = 8C902D18DCF7CE6B51413353 /* Pods-CoachiatryApp.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 36UZNG64M5;
 				ENABLE_BITCODE = NO;
@@ -394,8 +396,9 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.CoachiatryApp;
+				PRODUCT_BUNDLE_IDENTIFIER = org.CoachiatryApp;
 				PRODUCT_NAME = CoachiatryApp;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -404,10 +407,12 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = BB126F7121309767E03DA0DE /* Pods-CoachiatryApp.release.xcconfig */;
+			baseConfigurationReference = 002E6D5A8CB8870E8D76E9A2 /* Pods-CoachiatryApp.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 36UZNG64M5;
 				INFOPLIST_FILE = CoachiatryApp/Info.plist;
@@ -422,8 +427,9 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.CoachiatryApp;
+				PRODUCT_BUNDLE_IDENTIFIER = org.CoachiatryApp;
 				PRODUCT_NAME = CoachiatryApp;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -478,6 +484,19 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon/ReactCommon.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon/ReactCommon.framework/Headers/react/nativemodule/core",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-runtimeexecutor/React_runtimeexecutor.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-runtimeexecutor/React_runtimeexecutor.framework/Headers/platform/ios",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon-Samples/ReactCommon_Samples.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon-Samples/ReactCommon_Samples.framework/Headers/platform/ios",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-Fabric/React_Fabric.framework/Headers/react/renderer/components/view/platform/cxx",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-NativeModulesApple/React_NativeModulesApple.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers/react/renderer/graphics/platform/ios",
+				);
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,
@@ -547,6 +566,19 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon/ReactCommon.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon/ReactCommon.framework/Headers/react/nativemodule/core",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-runtimeexecutor/React_runtimeexecutor.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-runtimeexecutor/React_runtimeexecutor.framework/Headers/platform/ios",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon-Samples/ReactCommon_Samples.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon-Samples/ReactCommon_Samples.framework/Headers/platform/ios",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-Fabric/React_Fabric.framework/Headers/react/renderer/components/view/platform/cxx",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-NativeModulesApple/React_NativeModulesApple.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers/react/renderer/graphics/platform/ios",
+				);
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,

@@ -13,4 +13,5 @@ export type AppStackParamList = {
   };
   Profile: undefined;
   BottomTabs: undefined;
+  TaskDetails: undefined;
 };

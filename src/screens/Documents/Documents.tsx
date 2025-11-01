@@ -1,17 +1,21 @@
-import React, { useState } from 'react';
-import AppHeader from '../../components/ui/AppHeader';
-import { theme } from '../../theme';
-import AppTabs from '../../components/ui/AppTabs';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { fontSize, spacing } from '../../utils';
-import AppBadge from '../../components/ui/AppBadge';
-import { Calendar } from '../../assets';
-import AppButton from '../../components/ui/AppButton';
-import { TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useState } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Calendar } from '../../assets';
+import AppBadge from '../../components/ui/AppBadge';
+import AppHeader from '../../components/ui/AppHeader';
+import AppTabs from '../../components/ui/AppTabs';
+import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
+import { fontSize, spacing } from '../../utils';
 type DocumentScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
   'DocumentEditor'

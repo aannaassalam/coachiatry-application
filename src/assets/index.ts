@@ -4,9 +4,12 @@ export const assets = {
     Avatar: require('./Images/avatar.png'),
     Avatar2: require('./Images/avatar2.png'),
     Avatar3: require('./Images/avatar3.png'),
+    EmptyFiler: require('./Images/empty-filter.png'),
   },
   icons: {
     googleIcon: require('./Icons/google.png'),
+    sort: require('./Icons/sort.png'),
+    filter: require('./Icons/filter.png'),
   },
 };
 export { default as DashboardActive } from './Svgs/dashboard-icon-active.svg';
@@ -24,3 +27,4 @@ export { default as ChevronLeft } from './Svgs/chevron-left.svg';
 export { default as Undo } from './Svgs/undo.svg';
 export { default as Redo } from './Svgs/redo.svg';
 export { default as WhiteCoachAi } from './Svgs/coach-ai.svg';
+export { default as Flag } from './Svgs/flag.svg';

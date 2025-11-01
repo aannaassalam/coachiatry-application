@@ -14,6 +14,7 @@ import { fontSize, spacing } from '../../utils';
 import { assets, ChevronLeft } from '../../assets';
 import AppBadge from '../../components/ui/AppBadge';
 import { FlatList } from 'react-native';
+import TaskBadge from '../../components/Tasks/TaskBadge';
 
 interface TaskCardProps {
   title: string;
@@ -37,27 +38,13 @@ const TaskCard: React.FC<TaskCardProps> = ({
   return (
     <View>
       {/* Label */}
-      <View style={[styles.labelContainer, { backgroundColor: color }]}>
-        <Text
-          style={[
-            styles.labelText,
-            { color: labelColor || theme.colors.gray[900] },
-          ]}
-        >
-          {title}
-        </Text>
-        <View
-          style={[
-            styles.countBadge,
-            {
-              backgroundColor:
-                activeColor || labelColor || theme.colors.gray[900],
-            },
-          ]}
-        >
-          <Text style={styles.countText}>{count}</Text>
-        </View>
-      </View>
+      <TaskBadge
+        title={title}
+        count={count}
+        labelColor={activeColor || labelColor || theme.colors.gray[900]}
+        backgroundColor={color}
+        marginBottom={spacing(6)}
+      />
 
       {/* Tasks List */}
       {isTodo && tasks && (
@@ -389,32 +376,6 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   // Tasks
-  labelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderRadius: fontSize(5),
-    paddingVertical: spacing(6),
-    paddingHorizontal: spacing(10),
-    paddingRight: spacing(6),
-    marginBottom: spacing(6),
-  },
-  labelText: {
-    fontSize: fontSize(13),
-    fontFamily: theme.fonts.archivo.medium,
-    textTransform: 'capitalize',
-  },
-  countBadge: {
-    marginLeft: spacing(6),
-    borderRadius: fontSize(4),
-    paddingHorizontal: spacing(6),
-    paddingVertical: spacing(3),
-  },
-  countText: {
-    color: theme.colors.white,
-    fontSize: fontSize(11),
-    fontFamily: theme.fonts.archivo.bold,
-  },
 
   taskList: {
     backgroundColor: theme.colors.secondary,
