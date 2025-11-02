@@ -1,7 +1,12 @@
 // App.tsx
 import { NavigationContainer } from '@react-navigation/native';
 import { useState } from 'react';
-import { StyleSheet as RNStyleSheet, StatusBar, View } from 'react-native';
+import {
+  StyleSheet as RNStyleSheet,
+  StatusBar,
+  useColorScheme,
+  View,
+} from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   SafeAreaProvider,
@@ -14,6 +19,7 @@ import { theme } from './src/theme';
 import './src/unistyles';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Host } from 'react-native-portalize';
+import { isAndroid } from './src/utils';
 
 function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
   const insets = useSafeAreaInsets();
@@ -31,17 +37,17 @@ function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
 }
 
 export default function App() {
-  // const colorScheme = useColorScheme();
-  // const isDarkMode = isAndroid
-  //   ? colorScheme === 'light'
-  //   : colorScheme === 'dark';
+  const colorScheme = useColorScheme();
+  const isDarkMode = isAndroid
+    ? colorScheme === 'light'
+    : colorScheme === 'dark';
   const [isAuthenticated] = useState(true);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <UnistylesProvider>
         <SafeAreaProvider>
-          <StatusBar barStyle="default" />
+          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
           <Host>
             <NavigationContainer>
               <AppContent isAuthenticated={isAuthenticated} />

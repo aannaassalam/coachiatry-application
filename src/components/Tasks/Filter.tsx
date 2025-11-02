@@ -1,24 +1,22 @@
-import React, { useCallback, useRef, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
-import { createStyleSheet } from 'react-native-unistyles';
-import { fontSize, scale, spacing } from '../../utils';
-import { theme } from '../../theme';
-import { assets } from '../../assets';
+import { TrueSheet } from '@lodev09/react-native-true-sheet';
+import React, { Component, useRef, useState } from 'react';
 import {
-  BottomSheetBackdrop,
-  BottomSheetBackdropProps,
-  BottomSheetFooter,
-  BottomSheetFooterProps,
-  BottomSheetModal,
-  BottomSheetModalProvider,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { Portal } from 'react-native-portalize';
-import AppButton from '../ui/AppButton';
+import { createStyleSheet } from 'react-native-unistyles';
 import Feather from 'react-native-vector-icons/Feather';
+import { assets } from '../../assets';
+import { theme } from '../../theme';
+import { fontSize, scale, spacing } from '../../utils';
+import AppButton from '../ui/AppButton';
 
 export default function Filter() {
-  const bottomSheetModelRef = useRef<BottomSheetModal>(null);
   const [filters, setFilters] = useState<
     {
       selectedKey: string;
@@ -26,7 +24,8 @@ export default function Filter() {
       selectedValue: string;
     }[]
   >([]);
-  const [index, setIndex] = useState(0);
+  const sheet = useRef<TrueSheet>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const [view, setView] = useState<'view' | 'add'>('view');
   const [filterMode, setFilterMode] = useState<'key' | 'operator' | 'value'>(
     'key',
@@ -36,22 +35,9 @@ export default function Filter() {
     selectedOperator: string;
   } | null>(null);
 
-  const handleIndexChange = (_index: number) => {
-    setIndex(_index);
+  const present = async () => {
+    await sheet.current?.present();
   };
-
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop
-        {...props}
-        pressBehavior="close"
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        enableTouchThrough={false}
-      />
-    ),
-    [],
-  );
 
   const handleFilterProgress = (value: string) => {
     if (filterMode === 'key') {
@@ -88,216 +74,204 @@ export default function Filter() {
 
   return (
     <View>
-      <Pressable
-        style={styles.filterIcon}
-        onPress={() => bottomSheetModelRef.current?.present()}
-      >
+      <Pressable style={styles.filterIcon} onPress={present}>
         <Image source={assets.icons.filter} style={styles.sortIcon} />
       </Pressable>
       <Portal>
-        <BottomSheetModalProvider>
-          <BottomSheetModal
-            ref={bottomSheetModelRef}
-            onChange={handleIndexChange}
-            backdropComponent={renderBackdrop}
-            handleComponent={null}
-            onDismiss={() => {
-              setIndex(-1);
-              setActiveFilter(null);
-              setFilterMode('key');
-              setView('view');
-            }}
-            enableDynamicSizing
-            backgroundStyle={{
-              borderTopLeftRadius: 30,
-              borderTopRightRadius: 30,
-              backgroundColor: '#F9F9F9',
-            }}
+        <TrueSheet
+          ref={sheet}
+          sizes={['auto']}
+          cornerRadius={Platform.OS === 'android' ? 24 : undefined}
+          grabber={false}
+          FooterComponent={
+            <View style={styles.footerContainer}>
+              <AppButton
+                text="Add Filter"
+                style={{ paddingVertical: spacing(16) }}
+                onPress={() => {
+                  if (view === 'view') {
+                    setView('add');
+                  }
+                }}
+              />
+            </View>
+          }
+          edgeToEdge
+          backgroundColor="#F9F9F9"
+          scrollRef={scrollRef as unknown as React.RefObject<Component>}
+        >
+          <ScrollView
+            contentContainerStyle={styles.contentContainer}
+            ref={scrollRef}
+            nestedScrollEnabled
           >
-            <BottomSheetView style={styles.contentContainer}>
-              <Text style={styles.heading}>
-                {view === 'view'
-                  ? filters.length > 0
-                    ? 'Active Filters'
-                    : 'Filters'
-                  : 'Add Filters'}
-              </Text>
-              {view === 'view' ? (
-                filters.length === 0 ? (
-                  <View
-                    style={{
-                      paddingTop: spacing(32),
-                      alignItems: 'center',
-                      marginBottom: spacing(72),
-                    }}
-                  >
-                    <Image
-                      source={assets.images.EmptyFiler}
-                      style={styles.image}
-                      resizeMode="contain"
-                    />
-                    <Text style={styles.emptyTitle}>No Active filter</Text>
-                    <Text style={styles.emptySubtitle}>
-                      Add New Filters here
-                    </Text>
-                  </View>
-                ) : (
-                  <View>
-                    {filters.map((filter, idx) => {
-                      return (
-                        <View style={styles.whereContainer} key={idx}>
+            <Text style={styles.heading}>
+              {view === 'view'
+                ? filters.length > 0
+                  ? 'Active Filters'
+                  : 'Filters'
+                : 'Add Filters'}
+            </Text>
+            {view === 'view' ? (
+              filters.length === 0 ? (
+                <View
+                  style={{
+                    paddingTop: spacing(32),
+                    alignItems: 'center',
+                    // marginBottom: spacing(72),
+                  }}
+                >
+                  <Image
+                    source={assets.images.EmptyFiler}
+                    style={styles.image}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.emptyTitle}>No Active filter</Text>
+                  <Text style={styles.emptySubtitle}>Add New Filters here</Text>
+                </View>
+              ) : (
+                <View>
+                  {filters.map((filter, idx) => {
+                    return (
+                      <View style={styles.whereContainer} key={idx}>
+                        <View style={styles.row}>
+                          <Text style={styles.whereText}>Where</Text>
+                          <Pressable onPress={() => removeFilter(idx)}>
+                            <Feather name="x" size={18} color="#212121" />
+                          </Pressable>
+                        </View>
+                        <View>
                           <View style={styles.row}>
-                            <Text style={styles.whereText}>Where</Text>
-                            <Pressable onPress={() => removeFilter(idx)}>
-                              <Feather name="x" size={18} color="#212121" />
-                            </Pressable>
-                          </View>
-                          <View>
-                            <View style={styles.row}>
-                              <View style={styles.selectBox}>
-                                <Text
-                                  style={styles.selectBoxText}
-                                  numberOfLines={1}
-                                >
-                                  {filter.selectedKey}
-                                </Text>
-                                <Feather
-                                  name="chevron-down"
-                                  size={16}
-                                  color="#4F4D55"
-                                />
-                              </View>
-                              <View style={styles.selectBox}>
-                                <Text
-                                  style={styles.selectBoxText}
-                                  numberOfLines={1}
-                                >
-                                  {filter.selectedOperator}
-                                </Text>
-                                <Feather
-                                  name="chevron-down"
-                                  size={16}
-                                  color="#4F4D55"
-                                />
-                              </View>
+                            <View style={styles.selectBox}>
+                              <Text
+                                style={styles.selectBoxText}
+                                numberOfLines={1}
+                              >
+                                {filter.selectedKey}
+                              </Text>
+                              <Feather
+                                name="chevron-down"
+                                size={16}
+                                color="#4F4D55"
+                              />
                             </View>
-                            <View style={styles.row}>
-                              <View style={styles.selectBox}>
-                                <Text
-                                  style={styles.selectBoxText}
-                                  numberOfLines={1}
-                                >
-                                  {filter.selectedValue}
-                                </Text>
-                                <Feather
-                                  name="chevron-down"
-                                  size={16}
-                                  color="#4F4D55"
-                                />
-                              </View>
+                            <View style={styles.selectBox}>
+                              <Text
+                                style={styles.selectBoxText}
+                                numberOfLines={1}
+                              >
+                                {filter.selectedOperator}
+                              </Text>
+                              <Feather
+                                name="chevron-down"
+                                size={16}
+                                color="#4F4D55"
+                              />
+                            </View>
+                          </View>
+                          <View style={styles.row}>
+                            <View style={styles.selectBox}>
+                              <Text
+                                style={styles.selectBoxText}
+                                numberOfLines={1}
+                              >
+                                {filter.selectedValue}
+                              </Text>
+                              <Feather
+                                name="chevron-down"
+                                size={16}
+                                color="#4F4D55"
+                              />
                             </View>
                           </View>
                         </View>
-                      );
-                    })}
-                  </View>
-                )
-              ) : filterMode === 'key' ? (
-                <View>
-                  <Pressable
-                    style={styles.box}
-                    onPress={() => handleFilterProgress('status')}
-                  >
-                    <Text style={styles.boxText}>Status</Text>
-                    {/* <Feather name="check" /> */}
-                  </Pressable>
-                  <Pressable
-                    style={styles.box}
-                    onPress={() => handleFilterProgress('dueDate')}
-                  >
-                    <Text style={styles.boxText}>Due Date</Text>
-                    {/* <Feather name="check" /> */}
-                  </Pressable>
-                  <Pressable
-                    style={styles.box}
-                    onPress={() => handleFilterProgress('category')}
-                  >
-                    <Text style={styles.boxText}>Category</Text>
-                    {/* <Feather name="check" /> */}
-                  </Pressable>
-                  <Pressable
-                    style={styles.box}
-                    onPress={() => handleFilterProgress('priority')}
-                  >
-                    <Text style={styles.boxText}>Priority</Text>
-                    {/* <Feather name="check" /> */}
-                  </Pressable>
+                      </View>
+                    );
+                  })}
                 </View>
-              ) : filterMode === 'operator' ? (
-                <View>
-                  <Pressable
-                    style={styles.box}
-                    onPress={() => handleFilterProgress('is')}
-                  >
-                    <Text style={styles.boxText}>is</Text>
-                    {/* <Feather name="check" /> */}
-                  </Pressable>
-                  <Pressable
-                    style={styles.box}
-                    onPress={() => handleFilterProgress('isNot')}
-                  >
-                    <Text style={styles.boxText}>is not</Text>
-                    {/* <Feather name="check" /> */}
-                  </Pressable>
-                </View>
-              ) : filterMode === 'value' ? (
-                <View>
-                  <Pressable
-                    style={styles.box}
-                    onPress={() => handleFilterProgress('one')}
-                  >
-                    <Text style={styles.boxText}>One</Text>
-                    {/* <Feather name="check" /> */}
-                  </Pressable>
-                  <Pressable
-                    style={styles.box}
-                    onPress={() => handleFilterProgress('two')}
-                  >
-                    <Text style={styles.boxText}>Two</Text>
-                    {/* <Feather name="check" /> */}
-                  </Pressable>
-                  <Pressable
-                    style={styles.box}
-                    onPress={() => handleFilterProgress('three')}
-                  >
-                    <Text style={styles.boxText}>Three</Text>
-                    {/* <Feather name="check" /> */}
-                  </Pressable>
-                  <Pressable
-                    style={styles.box}
-                    onPress={() => handleFilterProgress('four')}
-                  >
-                    <Text style={styles.boxText}>Four</Text>
-                    {/* <Feather name="check" /> */}
-                  </Pressable>
-                </View>
-              ) : null}
-              <View style={{ backgroundColor: '#f9f9f9' }}>
-                <View style={styles.footerContainer}>
-                  <AppButton
-                    text="Add Filter"
-                    style={{ paddingVertical: spacing(16) }}
-                    onPress={() => {
-                      if (view === 'view') {
-                        setView('add');
-                      }
-                    }}
-                  />
-                </View>
+              )
+            ) : filterMode === 'key' ? (
+              <View>
+                <Pressable
+                  style={styles.box}
+                  onPress={() => handleFilterProgress('status')}
+                >
+                  <Text style={styles.boxText}>Status</Text>
+                  {/* <Feather name="check" /> */}
+                </Pressable>
+                <Pressable
+                  style={styles.box}
+                  onPress={() => handleFilterProgress('dueDate')}
+                >
+                  <Text style={styles.boxText}>Due Date</Text>
+                  {/* <Feather name="check" /> */}
+                </Pressable>
+                <Pressable
+                  style={styles.box}
+                  onPress={() => handleFilterProgress('category')}
+                >
+                  <Text style={styles.boxText}>Category</Text>
+                  {/* <Feather name="check" /> */}
+                </Pressable>
+                <Pressable
+                  style={styles.box}
+                  onPress={() => handleFilterProgress('priority')}
+                >
+                  <Text style={styles.boxText}>Priority</Text>
+                  {/* <Feather name="check" /> */}
+                </Pressable>
               </View>
-            </BottomSheetView>
-          </BottomSheetModal>
-        </BottomSheetModalProvider>
+            ) : filterMode === 'operator' ? (
+              <View>
+                <Pressable
+                  style={styles.box}
+                  onPress={() => handleFilterProgress('is')}
+                >
+                  <Text style={styles.boxText}>is</Text>
+                  {/* <Feather name="check" /> */}
+                </Pressable>
+                <Pressable
+                  style={styles.box}
+                  onPress={() => handleFilterProgress('isNot')}
+                >
+                  <Text style={styles.boxText}>is not</Text>
+                  {/* <Feather name="check" /> */}
+                </Pressable>
+              </View>
+            ) : filterMode === 'value' ? (
+              <View>
+                <Pressable
+                  style={styles.box}
+                  onPress={() => handleFilterProgress('one')}
+                >
+                  <Text style={styles.boxText}>One</Text>
+                  {/* <Feather name="check" /> */}
+                </Pressable>
+                <Pressable
+                  style={styles.box}
+                  onPress={() => handleFilterProgress('two')}
+                >
+                  <Text style={styles.boxText}>Two</Text>
+                  {/* <Feather name="check" /> */}
+                </Pressable>
+                <Pressable
+                  style={styles.box}
+                  onPress={() => handleFilterProgress('three')}
+                >
+                  <Text style={styles.boxText}>Three</Text>
+                  {/* <Feather name="check" /> */}
+                </Pressable>
+                <Pressable
+                  style={styles.box}
+                  onPress={() => handleFilterProgress('four')}
+                >
+                  <Text style={styles.boxText}>Four</Text>
+                  {/* <Feather name="check" /> */}
+                </Pressable>
+              </View>
+            ) : null}
+          </ScrollView>
+        </TrueSheet>
       </Portal>
     </View>
   );
@@ -318,6 +292,7 @@ const styles = createStyleSheet({
   contentContainer: {
     padding: spacing(20),
     paddingTop: spacing(28),
+    paddingBottom: spacing(90),
   },
   heading: {
     fontFamily: theme.fonts.archivo.medium,
@@ -393,6 +368,8 @@ const styles = createStyleSheet({
     textTransform: 'capitalize',
   },
   footerContainer: {
-    paddingBottom: spacing(38),
+    paddingBottom: Platform.OS === 'ios' ? spacing(38) : spacing(80),
+    paddingInline: spacing(20),
+    backgroundColor: '#f9f9f9',
   },
 });

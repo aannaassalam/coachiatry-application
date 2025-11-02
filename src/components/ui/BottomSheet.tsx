@@ -1,100 +1,82 @@
-import BottomSheet, {
-  BottomSheetBackdrop,
-  BottomSheetBackdropProps,
-  BottomSheetFooter,
-  BottomSheetFooterProps,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
-import React, {
-  ReactNode,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { SheetSize, TrueSheet } from '@lodev09/react-native-true-sheet';
+import React, { Component, ReactNode, useEffect, useRef } from 'react';
+import { Platform, ScrollView, View } from 'react-native';
 import { Portal } from 'react-native-portalize';
 import { createStyleSheet } from 'react-native-unistyles';
 import { spacing } from '../../utils';
 import AppButton from './AppButton';
-import { View } from 'react-native';
-import { theme } from '../../theme';
 
 export default function BottomSheetBox({
   children,
   open,
   onClose,
-  height = '50%',
+  sizes,
+  paddingBottom,
 }: {
   children: ReactNode;
   open: boolean;
   onClose: () => void;
-  height?: string;
+  sizes?: SheetSize[];
+  paddingBottom?: number;
 }) {
-  const [sheetIndex, setSheetIndex] = useState(-1);
+  const sheet = useRef<TrueSheet>(null);
+  const scrollRef = useRef<ScrollView>(null);
+
+  const present = async () => {
+    await sheet.current?.present();
+  };
+
+  const dismiss = async () => {
+    await sheet.current?.dismiss();
+    console.log('Bye bye 👋');
+  };
 
   useEffect(() => {
-    setSheetIndex(open ? 0 : -1);
+    if (open) {
+      present();
+    } else {
+      dismiss();
+    }
   }, [open]);
 
-  // 👇 Corrected backdrop configuration
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop
-        {...props}
-        pressBehavior="close"
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        enableTouchThrough={false}
-      />
-    ),
-    [],
-  );
-
-  const renderFooter = useCallback(
-    (props: BottomSheetFooterProps) => (
-      <BottomSheetFooter
-        {...props}
-        // bottomInset={38}
-        style={{ backgroundColor: theme.colors.white }}
-      >
-        <View style={styles.footerContainer}>
-          <AppButton text="Apply" style={{ paddingVertical: spacing(16) }} />
-        </View>
-      </BottomSheetFooter>
-    ),
-    [],
+  const renderFooter = (
+    <View style={styles.footerContainer}>
+      <AppButton text="Apply" style={{ paddingVertical: spacing(16) }} />
+    </View>
   );
 
   return (
     <Portal>
-      <BottomSheet
-        index={sheetIndex}
-        onClose={() => {
-          setSheetIndex(-1);
-          onClose();
-        }}
-        snapPoints={[height]}
-        enablePanDownToClose
-        backdropComponent={renderBackdrop}
-        footerComponent={renderFooter}
-        handleComponent={null}
-        backgroundStyle={{
-          borderTopLeftRadius: 30,
-          borderTopRightRadius: 30,
-          backgroundColor: '#F9F9F9',
-        }}
+      <TrueSheet
+        ref={sheet}
+        sizes={sizes ?? ['auto']}
+        grabber={false}
+        cornerRadius={Platform.OS === 'android' ? 24 : undefined}
+        FooterComponent={renderFooter}
+        edgeToEdge
+        backgroundColor="#F9F9F9"
+        scrollRef={scrollRef as unknown as React.RefObject<Component>}
+        onDismiss={onClose}
       >
-        <BottomSheetView style={styles.contentContainer}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.contentContainer,
+            {
+              paddingBottom,
+            },
+          ]}
+          ref={scrollRef}
+          nestedScrollEnabled
+        >
           {children}
-        </BottomSheetView>
-      </BottomSheet>
+        </ScrollView>
+      </TrueSheet>
     </Portal>
   );
 }
 
 const styles = createStyleSheet({
   contentContainer: {
-    flex: 1,
     padding: spacing(20),
     paddingTop: spacing(28),
     // alignItems: 'center',
@@ -102,6 +84,7 @@ const styles = createStyleSheet({
   },
   footerContainer: {
     paddingHorizontal: spacing(20),
-    paddingBottom: spacing(38),
+    paddingBottom: Platform.OS === 'ios' ? spacing(38) : spacing(80),
+    backgroundColor: '#f9f9f9',
   },
 });

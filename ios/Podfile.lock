@@ -2844,6 +2844,34 @@ PODS:
     - SocketRocket
     - Yoga
   - SocketRocket (0.7.1)
+  - TrueSheet (2.0.6):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -2931,6 +2959,7 @@ DEPENDENCIES:
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
   - SocketRocket (~> 0.7.1)
+  - "TrueSheet (from `../node_modules/@lodev09/react-native-true-sheet`)"
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -3103,6 +3132,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-svg"
   RNVectorIcons:
     :path: "../node_modules/react-native-vector-icons"
+  TrueSheet:
+    :path: "../node_modules/@lodev09/react-native-true-sheet"
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
@@ -3190,6 +3221,7 @@ SPEC CHECKSUMS:
   RNSVG: c9eb879f90cc3cd5f81d987f39eae35f3b108618
   RNVectorIcons: 96c832d9134dfee90ce0be7a1e0bf4c1e41a8d11
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
+  TrueSheet: 2b44a17a4fc00005ed72c463bfec0521cf194790
   Yoga: ce55ebb197c21e22b6700cd36e3f36b7ec26e6f8
 
 PODFILE CHECKSUM: 3b0a04bbe03edf391784e6ad03f9a90a3824ddad

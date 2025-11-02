@@ -19,7 +19,12 @@ export default function StatusBox() {
       </Pressable>
 
       {/* ✅ Portal ensures sheet covers everything including tab bar */}
-      <BottomSheetBox open={open} onClose={() => setOpen(false)}>
+      <BottomSheetBox
+        open={open}
+        onClose={() => setOpen(false)}
+        sizes={['medium']}
+        paddingBottom={spacing(100)}
+      >
         <View>
           <Text style={styles.heading}>Status</Text>
           <ScrollView contentContainerStyle={styles.statuses}>
@@ -285,7 +290,7 @@ const styles = createStyleSheet({
     marginBottom: spacing(20),
   },
   statuses: {
-    paddingBottom: spacing(170),
+    // paddingBottom: spacing(170),
   },
   status: {
     paddingVertical: spacing(10),

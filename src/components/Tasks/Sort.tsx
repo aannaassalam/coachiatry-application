@@ -14,7 +14,7 @@ export default function Sort() {
       <Pressable style={styles.filterIcon} onPress={() => setOpen(true)}>
         <Image source={assets.icons.sort} style={styles.sortIcon} />
       </Pressable>
-      <BottomSheetBox open={open} onClose={() => setOpen(false)} height="38%">
+      <BottomSheetBox open={open} onClose={() => setOpen(false)}>
         <View>
           <Text style={styles.heading}>Sort by</Text>
           <View>
