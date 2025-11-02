@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@gorhom/bottom-sheet": "^4.6.1",
+    "@gorhom/bottom-sheet": "^5.2.6",
     "@react-native/new-app-screen": "0.82.0",
     "@react-native/normalize-colors": "^0.82.1",
     "@react-navigation/bottom-tabs": "^7.4.9",
@@ -9,8 +9,8 @@
     "date-fns": "^4.1.0",
     "moment": "^2.30.1",
     "nativewind": "^4.2.1",
-    "react": "19.1.1",
-    "react-native": "0.82.0",
+    "react": "^19.1.0",
+    "react-native": "^0.80.2",
     "react-native-css-interop": "^0.2.1",
     "react-native-edge-to-edge": "^1.7.0",
     "react-native-gesture-handler": "^2.29.0",
@@ -20,7 +20,7 @@
     "react-native-paper": "^5.14.5",
     "react-native-pell-rich-editor": "^1.10.0",
     "react-native-portalize": "^1.0.7",
-    "react-native-reanimated": "^3.19.3",
+    "react-native-reanimated": "^3.19.1",
     "react-native-safe-area-context": "^5.4.0",
     "react-native-screens": "^4.17.1",
     "react-native-svg": "^15.14.0",
