@@ -71,10 +71,11 @@ const styles = createStyleSheet({
     borderBottomColor: theme.colors.gray[200],
   },
   caretButton: {
-    width: 20,
+    // width: 20,
     height: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: spacing(8),
   },
   cell: {
     minWidth: spacing(120),
@@ -82,7 +83,6 @@ const styles = createStyleSheet({
     alignItems: 'center',
     padding: spacing(10),
     borderRightWidth: 1,
-    gap: spacing(8),
     borderRightColor: theme.colors.gray[200],
   },
   statusOutsideBox: backgroundColor => ({

@@ -46,6 +46,7 @@ export default function TaskCard({
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.task}
+          removeClippedSubviews
         >
           <View>
             <IndividualTask />

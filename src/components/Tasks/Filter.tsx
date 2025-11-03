@@ -1,14 +1,11 @@
-import { TrueSheet } from '@lodev09/react-native-true-sheet';
-import React, { Component, useRef, useState } from 'react';
-import {
-  Image,
-  Platform,
-  Pressable,
+import { useRef, useState } from 'react';
+import { Image, Platform, Pressable, Text, View } from 'react-native';
+import ActionSheet, {
+  ActionSheetRef,
   ScrollView,
-  Text,
-  View,
-} from 'react-native';
-import { Portal } from 'react-native-portalize';
+  SheetManager,
+  SheetProps,
+} from 'react-native-actions-sheet';
 import { createStyleSheet } from 'react-native-unistyles';
 import Feather from 'react-native-vector-icons/Feather';
 import { assets } from '../../assets';
@@ -16,27 +13,26 @@ import { theme } from '../../theme';
 import { fontSize, scale, spacing } from '../../utils';
 import AppButton from '../ui/AppButton';
 
+type Filter = {
+  selectedKey: string;
+  selectedOperator: string;
+  selectedValue: string;
+};
+
 export default function Filter() {
-  const [filters, setFilters] = useState<
-    {
-      selectedKey: string;
-      selectedOperator: string;
-      selectedValue: string;
-    }[]
-  >([]);
-  const sheet = useRef<TrueSheet>(null);
-  const scrollRef = useRef<ScrollView>(null);
+  const sheetRef = useRef<ActionSheetRef>(null);
+  const [filters, setFilters] = useState<Filter[]>([]);
   const [view, setView] = useState<'view' | 'add'>('view');
   const [filterMode, setFilterMode] = useState<'key' | 'operator' | 'value'>(
     'key',
   );
-  const [activeFilter, setActiveFilter] = useState<{
-    selectedKey: string;
-    selectedOperator: string;
-  } | null>(null);
+  const [activeFilter, setActiveFilter] = useState<Omit<
+    Filter,
+    'selectedValue'
+  > | null>(null);
 
   const present = async () => {
-    await sheet.current?.present();
+    sheetRef.current?.show();
   };
 
   const handleFilterProgress = (value: string) => {
@@ -77,202 +73,194 @@ export default function Filter() {
       <Pressable style={styles.filterIcon} onPress={present}>
         <Image source={assets.icons.filter} style={styles.sortIcon} />
       </Pressable>
-      <Portal>
-        <TrueSheet
-          ref={sheet}
-          sizes={['auto']}
-          cornerRadius={Platform.OS === 'android' ? 24 : undefined}
-          grabber={false}
-          FooterComponent={
-            <View style={styles.footerContainer}>
-              <AppButton
-                text="Add Filter"
-                style={{ paddingVertical: spacing(16) }}
-                onPress={() => {
-                  if (view === 'view') {
-                    setView('add');
-                  }
+      <ActionSheet
+        useBottomSafeAreaPadding
+        backgroundInteractionEnabled={false}
+        closeOnTouchBackdrop
+        indicatorStyle={{ display: 'none' }}
+        gestureEnabled
+        ref={sheetRef}
+        containerStyle={{
+          borderTopLeftRadius: 30,
+          borderTopRightRadius: 30,
+          backgroundColor: '#f9f9f9',
+        }}
+      >
+        <ScrollView contentContainerStyle={styles.contentContainer}>
+          <Text style={styles.heading}>
+            {view === 'view'
+              ? filters.length > 0
+                ? 'Active Filters'
+                : 'Filters'
+              : 'Add Filters'}
+          </Text>
+          {view === 'view' ? (
+            filters.length === 0 ? (
+              <View
+                style={{
+                  paddingTop: spacing(32),
+                  alignItems: 'center',
+                  // marginBottom: spacing(72),
                 }}
-              />
-            </View>
-          }
-          edgeToEdge
-          backgroundColor="#F9F9F9"
-          scrollRef={scrollRef as unknown as React.RefObject<Component>}
-        >
-          <ScrollView
-            contentContainerStyle={styles.contentContainer}
-            ref={scrollRef}
-            nestedScrollEnabled
-          >
-            <Text style={styles.heading}>
-              {view === 'view'
-                ? filters.length > 0
-                  ? 'Active Filters'
-                  : 'Filters'
-                : 'Add Filters'}
-            </Text>
-            {view === 'view' ? (
-              filters.length === 0 ? (
-                <View
-                  style={{
-                    paddingTop: spacing(32),
-                    alignItems: 'center',
-                    // marginBottom: spacing(72),
-                  }}
-                >
-                  <Image
-                    source={assets.images.EmptyFiler}
-                    style={styles.image}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.emptyTitle}>No Active filter</Text>
-                  <Text style={styles.emptySubtitle}>Add New Filters here</Text>
-                </View>
-              ) : (
-                <View>
-                  {filters.map((filter, idx) => {
-                    return (
-                      <View style={styles.whereContainer} key={idx}>
+              >
+                <Image
+                  source={assets.images.EmptyFiler}
+                  style={styles.image}
+                  resizeMode="contain"
+                />
+                <Text style={styles.emptyTitle}>No Active filter</Text>
+                <Text style={styles.emptySubtitle}>Add New Filters here</Text>
+              </View>
+            ) : (
+              <View>
+                {filters.map((filter, idx) => {
+                  return (
+                    <View style={styles.whereContainer} key={idx}>
+                      <View style={styles.row}>
+                        <Text style={styles.whereText}>Where</Text>
+                        <Pressable onPress={() => removeFilter(idx)}>
+                          <Feather name="x" size={18} color="#212121" />
+                        </Pressable>
+                      </View>
+                      <View>
                         <View style={styles.row}>
-                          <Text style={styles.whereText}>Where</Text>
-                          <Pressable onPress={() => removeFilter(idx)}>
-                            <Feather name="x" size={18} color="#212121" />
-                          </Pressable>
-                        </View>
-                        <View>
-                          <View style={styles.row}>
-                            <View style={styles.selectBox}>
-                              <Text
-                                style={styles.selectBoxText}
-                                numberOfLines={1}
-                              >
-                                {filter.selectedKey}
-                              </Text>
-                              <Feather
-                                name="chevron-down"
-                                size={16}
-                                color="#4F4D55"
-                              />
-                            </View>
-                            <View style={styles.selectBox}>
-                              <Text
-                                style={styles.selectBoxText}
-                                numberOfLines={1}
-                              >
-                                {filter.selectedOperator}
-                              </Text>
-                              <Feather
-                                name="chevron-down"
-                                size={16}
-                                color="#4F4D55"
-                              />
-                            </View>
+                          <View style={styles.selectBox}>
+                            <Text
+                              style={styles.selectBoxText}
+                              numberOfLines={1}
+                            >
+                              {filter.selectedKey}
+                            </Text>
+                            <Feather
+                              name="chevron-down"
+                              size={16}
+                              color="#4F4D55"
+                            />
                           </View>
-                          <View style={styles.row}>
-                            <View style={styles.selectBox}>
-                              <Text
-                                style={styles.selectBoxText}
-                                numberOfLines={1}
-                              >
-                                {filter.selectedValue}
-                              </Text>
-                              <Feather
-                                name="chevron-down"
-                                size={16}
-                                color="#4F4D55"
-                              />
-                            </View>
+                          <View style={styles.selectBox}>
+                            <Text
+                              style={styles.selectBoxText}
+                              numberOfLines={1}
+                            >
+                              {filter.selectedOperator}
+                            </Text>
+                            <Feather
+                              name="chevron-down"
+                              size={16}
+                              color="#4F4D55"
+                            />
+                          </View>
+                        </View>
+                        <View style={styles.row}>
+                          <View style={styles.selectBox}>
+                            <Text
+                              style={styles.selectBoxText}
+                              numberOfLines={1}
+                            >
+                              {filter.selectedValue}
+                            </Text>
+                            <Feather
+                              name="chevron-down"
+                              size={16}
+                              color="#4F4D55"
+                            />
                           </View>
                         </View>
                       </View>
-                    );
-                  })}
-                </View>
-              )
-            ) : filterMode === 'key' ? (
-              <View>
-                <Pressable
-                  style={styles.box}
-                  onPress={() => handleFilterProgress('status')}
-                >
-                  <Text style={styles.boxText}>Status</Text>
-                  {/* <Feather name="check" /> */}
-                </Pressable>
-                <Pressable
-                  style={styles.box}
-                  onPress={() => handleFilterProgress('dueDate')}
-                >
-                  <Text style={styles.boxText}>Due Date</Text>
-                  {/* <Feather name="check" /> */}
-                </Pressable>
-                <Pressable
-                  style={styles.box}
-                  onPress={() => handleFilterProgress('category')}
-                >
-                  <Text style={styles.boxText}>Category</Text>
-                  {/* <Feather name="check" /> */}
-                </Pressable>
-                <Pressable
-                  style={styles.box}
-                  onPress={() => handleFilterProgress('priority')}
-                >
-                  <Text style={styles.boxText}>Priority</Text>
-                  {/* <Feather name="check" /> */}
-                </Pressable>
+                    </View>
+                  );
+                })}
               </View>
-            ) : filterMode === 'operator' ? (
-              <View>
-                <Pressable
-                  style={styles.box}
-                  onPress={() => handleFilterProgress('is')}
-                >
-                  <Text style={styles.boxText}>is</Text>
-                  {/* <Feather name="check" /> */}
-                </Pressable>
-                <Pressable
-                  style={styles.box}
-                  onPress={() => handleFilterProgress('isNot')}
-                >
-                  <Text style={styles.boxText}>is not</Text>
-                  {/* <Feather name="check" /> */}
-                </Pressable>
-              </View>
-            ) : filterMode === 'value' ? (
-              <View>
-                <Pressable
-                  style={styles.box}
-                  onPress={() => handleFilterProgress('one')}
-                >
-                  <Text style={styles.boxText}>One</Text>
-                  {/* <Feather name="check" /> */}
-                </Pressable>
-                <Pressable
-                  style={styles.box}
-                  onPress={() => handleFilterProgress('two')}
-                >
-                  <Text style={styles.boxText}>Two</Text>
-                  {/* <Feather name="check" /> */}
-                </Pressable>
-                <Pressable
-                  style={styles.box}
-                  onPress={() => handleFilterProgress('three')}
-                >
-                  <Text style={styles.boxText}>Three</Text>
-                  {/* <Feather name="check" /> */}
-                </Pressable>
-                <Pressable
-                  style={styles.box}
-                  onPress={() => handleFilterProgress('four')}
-                >
-                  <Text style={styles.boxText}>Four</Text>
-                  {/* <Feather name="check" /> */}
-                </Pressable>
-              </View>
-            ) : null}
-          </ScrollView>
-        </TrueSheet>
-      </Portal>
+            )
+          ) : filterMode === 'key' ? (
+            <View>
+              <Pressable
+                style={styles.box}
+                onPress={() => handleFilterProgress('status')}
+              >
+                <Text style={styles.boxText}>Status</Text>
+                {/* <Feather name="check" /> */}
+              </Pressable>
+              <Pressable
+                style={styles.box}
+                onPress={() => handleFilterProgress('dueDate')}
+              >
+                <Text style={styles.boxText}>Due Date</Text>
+                {/* <Feather name="check" /> */}
+              </Pressable>
+              <Pressable
+                style={styles.box}
+                onPress={() => handleFilterProgress('category')}
+              >
+                <Text style={styles.boxText}>Category</Text>
+                {/* <Feather name="check" /> */}
+              </Pressable>
+              <Pressable
+                style={styles.box}
+                onPress={() => handleFilterProgress('priority')}
+              >
+                <Text style={styles.boxText}>Priority</Text>
+                {/* <Feather name="check" /> */}
+              </Pressable>
+            </View>
+          ) : filterMode === 'operator' ? (
+            <View>
+              <Pressable
+                style={styles.box}
+                onPress={() => handleFilterProgress('is')}
+              >
+                <Text style={styles.boxText}>is</Text>
+                {/* <Feather name="check" /> */}
+              </Pressable>
+              <Pressable
+                style={styles.box}
+                onPress={() => handleFilterProgress('isNot')}
+              >
+                <Text style={styles.boxText}>is not</Text>
+                {/* <Feather name="check" /> */}
+              </Pressable>
+            </View>
+          ) : filterMode === 'value' ? (
+            <View>
+              <Pressable
+                style={styles.box}
+                onPress={() => handleFilterProgress('one')}
+              >
+                <Text style={styles.boxText}>One</Text>
+                {/* <Feather name="check" /> */}
+              </Pressable>
+              <Pressable
+                style={styles.box}
+                onPress={() => handleFilterProgress('two')}
+              >
+                <Text style={styles.boxText}>Two</Text>
+                {/* <Feather name="check" /> */}
+              </Pressable>
+              <Pressable
+                style={styles.box}
+                onPress={() => handleFilterProgress('three')}
+              >
+                <Text style={styles.boxText}>Three</Text>
+                {/* <Feather name="check" /> */}
+              </Pressable>
+              <Pressable
+                style={styles.box}
+                onPress={() => handleFilterProgress('four')}
+              >
+                <Text style={styles.boxText}>Four</Text>
+                {/* <Feather name="check" /> */}
+              </Pressable>
+            </View>
+          ) : null}
+        </ScrollView>
+        <View style={styles.footerContainer}>
+          <AppButton
+            text="Add filter"
+            style={{ paddingVertical: spacing(16) }}
+            onPress={() => setView('add')}
+          />
+        </View>
+      </ActionSheet>
     </View>
   );
 }
@@ -292,7 +280,7 @@ const styles = createStyleSheet({
   contentContainer: {
     padding: spacing(20),
     paddingTop: spacing(28),
-    paddingBottom: spacing(90),
+    paddingBottom: spacing(20),
   },
   heading: {
     fontFamily: theme.fonts.archivo.medium,
@@ -368,7 +356,7 @@ const styles = createStyleSheet({
     textTransform: 'capitalize',
   },
   footerContainer: {
-    paddingBottom: Platform.OS === 'ios' ? spacing(38) : spacing(80),
+    paddingBottom: Platform.OS === 'ios' ? spacing(45) : spacing(20),
     paddingInline: spacing(20),
     backgroundColor: '#f9f9f9',
   },

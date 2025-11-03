@@ -11,6 +11,7 @@
     "nativewind": "^4.2.1",
     "react": "19.1.1",
     "react-native": "0.82.0",
+    "react-native-actions-sheet": "^0.9.8",
     "react-native-css-interop": "^0.2.1",
     "react-native-edge-to-edge": "^1.7.0",
     "react-native-gesture-handler": "^2.29.0",

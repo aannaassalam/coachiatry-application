@@ -11,7 +11,6 @@ import Filter from '../../components/Tasks/Filter';
 
 function TaskList() {
   const [tab, setTab] = useState('list');
-  const [open, setOpen] = useState(false);
 
   return (
     <View style={styles.container}>
@@ -44,7 +43,7 @@ function TaskList() {
           <Sort />
         </View>
       </View>
-      <ScrollView>
+      <ScrollView removeClippedSubviews>
         <TaskCard defaultExpanded />
         <TaskCard />
         <TaskCard />

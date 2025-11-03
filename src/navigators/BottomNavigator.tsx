@@ -37,6 +37,7 @@ const BottomNavigator = () => {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: true,
+        lazy: true,
         tabBarStyle: {
           backgroundColor: theme.colors.white,
           borderTopWidth: 1,
@@ -63,7 +64,7 @@ const BottomNavigator = () => {
       })}
     >
       <Tab.Screen name="Dashboard" component={Dashboard} />
-      <Tab.Screen name="Tasks" component={TaskList} />
+      <Tab.Screen name="Tasks" component={TaskList} options={{ lazy: false }} />
       <Tab.Screen name="Chats" component={ChatList} />
       <Tab.Screen name="Documents" component={Documents} />
     </Tab.Navigator>

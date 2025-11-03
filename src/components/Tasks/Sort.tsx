@@ -1,42 +1,52 @@
-import React, { useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
-import BottomSheetBox from '../ui/BottomSheet';
+import { SheetManager } from 'react-native-actions-sheet';
+import { createStyleSheet } from 'react-native-unistyles';
 import Feather from 'react-native-vector-icons/Feather';
 import { assets } from '../../assets';
-import { createStyleSheet } from 'react-native-unistyles';
-import { fontSize, spacing } from '../../utils';
 import { theme } from '../../theme';
+import { fontSize, spacing } from '../../utils';
 
-export default function Sort() {
-  const [open, setOpen] = useState(false);
+const SortSheetBody = () => {
   return (
     <View>
-      <Pressable style={styles.filterIcon} onPress={() => setOpen(true)}>
+      <Text style={styles.heading}>Sort by</Text>
+      <View>
+        <Pressable style={styles.status}>
+          <Text style={styles.statusText}>Due Date</Text>
+          <Feather name="check" />
+        </Pressable>
+        <Pressable style={styles.status}>
+          <Text style={styles.statusText}>Category</Text>
+          <Feather name="check" />
+        </Pressable>
+        <Pressable style={styles.status}>
+          <Text style={styles.statusText}>Status</Text>
+          <Feather name="check" />
+        </Pressable>
+        <Pressable style={styles.status}>
+          <Text style={styles.statusText}>Priority</Text>
+          <Feather name="check" />
+        </Pressable>
+      </View>
+    </View>
+  );
+};
+
+export default function Sort() {
+  return (
+    <View>
+      <Pressable
+        style={styles.filterIcon}
+        onPress={() =>
+          SheetManager.show('general-sheet', {
+            payload: {
+              children: <SortSheetBody />,
+            },
+          })
+        }
+      >
         <Image source={assets.icons.sort} style={styles.sortIcon} />
       </Pressable>
-      <BottomSheetBox open={open} onClose={() => setOpen(false)}>
-        <View>
-          <Text style={styles.heading}>Sort by</Text>
-          <View>
-            <Pressable style={styles.status}>
-              <Text style={styles.statusText}>Due Date</Text>
-              <Feather name="check" />
-            </Pressable>
-            <Pressable style={styles.status}>
-              <Text style={styles.statusText}>Category</Text>
-              <Feather name="check" />
-            </Pressable>
-            <Pressable style={styles.status}>
-              <Text style={styles.statusText}>Status</Text>
-              <Feather name="check" />
-            </Pressable>
-            <Pressable style={styles.status}>
-              <Text style={styles.statusText}>Priority</Text>
-              <Feather name="check" />
-            </Pressable>
-          </View>
-        </View>
-      </BottomSheetBox>
     </View>
   );
 }
