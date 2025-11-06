@@ -16,18 +16,21 @@ import AppTabs from '../../components/ui/AppTabs';
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { fontSize, spacing } from '../../utils';
+import { useQuery } from '@tanstack/react-query';
+import { getAllDocuments } from '../../api/functions/document.api';
+
 type DocumentScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
   'DocumentEditor'
 >;
+
 export default function Documents() {
   const [search, setSearch] = useState('');
   const navigation = useNavigation<DocumentScreenNavigationProp>();
   const TABS = [
     { key: 'all', label: 'All' },
-    { key: 'myDocs', label: 'My Docs' },
+    { key: 'my-docs', label: 'My Docs' },
     { key: 'shared', label: 'Shared' },
-    { key: 'archived', label: 'Archived' },
   ];
 
   const DOCS = {
@@ -77,9 +80,19 @@ export default function Documents() {
     shared: [],
     archived: [],
   };
+
   const renderContent = (activeTab: string) => {
     const key = activeTab as keyof typeof DOCS;
     const docs = DOCS[key] || [];
+
+    const {
+      data = { data: [] },
+      isLoading,
+      isFetching,
+    } = useQuery({
+      queryKey: ['documents', activeTab],
+      queryFn: () => getAllDocuments({ tab: activeTab }),
+    });
 
     if (docs.length === 0) {
       return (
@@ -130,14 +143,15 @@ export default function Documents() {
         onSearchChange={setSearch}
         onSettingsPress={() => console.log('Settings pressed')}
       />
-      <ScrollView
-        contentContainerStyle={{
+      <View
+        style={{
+          flex: 1,
           paddingHorizontal: spacing(16),
           marginTop: spacing(6),
         }}
       >
         <AppTabs tabs={TABS} renderContent={renderContent} />
-      </ScrollView>
+      </View>
       <TouchableOpacity
         activeOpacity={0.8}
         style={styles.addBtn}

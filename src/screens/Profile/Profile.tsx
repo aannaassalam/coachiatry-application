@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { theme } from '../../theme';
-import { fontSize, spacing } from '../../utils';
+import { fontSize, scale, spacing } from '../../utils';
 import AppButton from '../../components/ui/AppButton';
 import Octicons from 'react-native-vector-icons/Octicons';
 import AntDesign from 'react-native-vector-icons/AntDesign'; // or 'react-native-vector-icons/Octicons'
@@ -18,12 +18,17 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { assets, ChevronLeft } from '../../assets';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../types/navigation';
+import { removeToken } from '../../helpers/token-storage';
+import { queryClient } from '../../../App';
+import { useAuth } from '../../hooks/useAuth';
+import { SmartAvatar } from '../../components/ui/SmartAvatar';
 type ProfileScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
   'EditProfile'
 >;
 export default function Profile() {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
+  const { profile, setAuthData } = useAuth();
   const watchers = [
     {
       id: '1',
@@ -38,6 +43,12 @@ export default function Profile() {
       avatar: assets.images.Avatar3,
     },
   ];
+
+  const signOut = async () => {
+    queryClient.removeQueries();
+    setAuthData({ token: '', user: null });
+    await removeToken();
+  };
 
   const renderWatcher = ({ item }: { item: any }) => (
     <View style={styles.watcherRow}>
@@ -68,9 +79,18 @@ export default function Profile() {
 
         {/* Profile Info */}
         <View style={styles.profileSection}>
-          <Image source={assets.images.Avatar2} style={styles.profilePic} />
-          <Text style={styles.name}>Amanda Haydenson</Text>
-          <Text style={styles.email}>amanahay8899sin@gmail.com</Text>
+          <SmartAvatar
+            src={profile?.photo}
+            name={profile?.fullName}
+            imageStyle={styles.profilePic}
+            fontSize={fontSize(22)}
+            style={{ marginBottom: spacing(20) }}
+            size={scale(70)}
+            key={new Date().toDateString()}
+          />
+          {/* <Image source={assets.images.Avatar2} style={styles.profilePic} /> */}
+          <Text style={styles.name}>{profile?.fullName}</Text>
+          <Text style={styles.email}>{profile?.email}</Text>
 
           {/* Buttons */}
           <View style={styles.buttonRow}>
@@ -94,7 +114,7 @@ export default function Profile() {
             />
             <AppButton
               text="Logout"
-              onPress={() => {}}
+              onPress={signOut}
               leftIcon={
                 <AntDesign
                   name="logout"
@@ -187,10 +207,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing(24),
   },
   profilePic: {
-    width: fontSize(70),
-    height: fontSize(70),
     borderRadius: fontSize(40),
-    marginBottom: spacing(20),
   },
   name: {
     fontSize: fontSize(18),

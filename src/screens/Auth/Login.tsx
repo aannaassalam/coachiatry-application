@@ -1,107 +1,193 @@
-import React, { useState } from 'react';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useMutation } from '@tanstack/react-query';
+import { useState } from 'react';
+import { Controller, FormProvider, useForm } from 'react-hook-form';
 import {
-  View,
+  Image,
+  ImageBackground,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
   Text,
   TextInput,
   TouchableOpacity,
-  Image,
-  Pressable,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
-import { theme } from '../../theme';
-import { assets } from '../../assets';
-import { fontSize, SCREEN_WIDTH, spacing } from '../../utils';
-import AppInput from '../../components/ui/AppInput';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import AppCheckBox from '../../components/ui/AppCheckBox';
+import * as yup from 'yup';
+import { login } from '../../api/functions/auth.api';
+import { assets } from '../../assets';
 import AppButton from '../../components/ui/AppButton';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import AppCheckBox from '../../components/ui/AppCheckBox';
+import AppInput from '../../components/ui/AppInput';
+import { useAuth } from '../../hooks/useAuth';
+import { theme } from '../../theme';
 import { AuthStackParamList } from '../../types/navigation';
+import { fontSize, SCREEN_WIDTH, spacing } from '../../utils';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { onError } from '../../helpers/utils';
+
 type LoginScreenNavigationProp = NativeStackNavigationProp<
   AuthStackParamList,
   'Login'
 >;
+
+const schema = yup.object().shape({
+  email: yup.string().email('Invalid email').required('Email is required'),
+  password: yup
+    .string()
+    .min(8, 'Password must be at least 6 characters')
+    .required('Password is required'),
+  rememberMe: yup.boolean().required().default(false),
+});
+
 export default function Login() {
   const insets = useSafeAreaInsets();
   const { styles } = useStyles(stylesheet);
+  const { setAuthData } = useAuth();
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [showPassword, setShowPassword] = useState(false);
   const [values, setValues] = useState({
     isChecked: false,
   });
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: login,
+    onSuccess: data => {
+      setAuthData(data.data);
+    },
+  });
+
+  const form = useForm<yup.InferType<typeof schema>>({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      email: '',
+      password: '',
+      rememberMe: false,
+    },
+    disabled: isPending,
+  });
+
+  const onSubmit = (data: yup.InferType<typeof schema>) => {
+    mutate(data);
+  };
+
   return (
-    <View style={[styles.container, {}]}>
-      <Image source={assets.images.AuthBackground} style={styles.bgImage} />
-      <View style={styles.card}>
-        {/* Header */}
-        <Text style={styles.title}>Login to account</Text>
-        <Text style={styles.subtitle}>
-          Enter your credentials to access your account
-        </Text>
-        <View style={{ gap: spacing(16) }}>
-          <AppInput
-            label="Email ID"
-            placeholder="Enter email ID"
-            keyboardType="email-address"
-          />
-          <View>
-            <View style={styles.passwordRow}>
-              <Text style={styles.label}>Password</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[
+        styles.container,
+        { paddingBottom: insets.bottom, paddingTop: insets.top },
+      ]}
+    >
+      <ImageBackground
+        source={assets.images.AuthBackground}
+        resizeMode="cover"
+        style={styles.bgImage}
+      >
+        <TouchableWithoutFeedback
+          onPress={() => Keyboard.dismiss()}
+          style={{
+            flex: 1,
+          }}
+        >
+          <View style={styles.card}>
+            {/* Header */}
+            <Text style={styles.title}>Login to account</Text>
+            <Text style={styles.subtitle}>
+              Enter your credentials to access your account
+            </Text>
+            <FormProvider {...form}>
+              <View style={{ gap: spacing(16) }}>
+                <AppInput
+                  label="Email ID"
+                  name="email"
+                  placeholder="Enter email ID"
+                  keyboardType="email-address"
+                />
+                <View>
+                  <View style={styles.passwordRow}>
+                    <Text style={styles.label}>Password</Text>
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('ForgotPassword')}
+                    >
+                      <Text style={styles.forgot}>Forgot Password?</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Controller
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <View style={styles.passwordInputWrapper}>
+                        <TextInput
+                          placeholder="Enter password"
+                          placeholderTextColor={theme.colors.gray[500]}
+                          secureTextEntry={!showPassword}
+                          style={[styles.input, { flex: 1, borderWidth: 0 }]}
+                          {...field}
+                          onChangeText={field.onChange}
+                        />
+                        <Pressable
+                          onPress={() => setShowPassword(!showPassword)}
+                        >
+                          <Ionicons
+                            name={showPassword ? 'eye-off' : 'eye'}
+                            size={20}
+                            color={theme.colors.primary}
+                          />
+                        </Pressable>
+                      </View>
+                    )}
+                  />
+                </View>
+              </View>
+            </FormProvider>
+            <AppCheckBox
+              text="Remember device for 30 days"
+              isChecked={values.isChecked}
+              toggleCheck={() => setValues({ isChecked: !values.isChecked })}
+            />
+            {/* Login Button */}
+            <AppButton
+              text="Login"
+              style={{ marginBottom: spacing(14) }}
+              onPress={form.handleSubmit(onSubmit, onError)}
+              isLoading={isPending}
+            />
+
+            {/* Google Sign-in */}
+            <AppButton
+              text="Sign in with Google"
+              variant="outline"
+              leftIcon={<Image source={assets.icons.googleIcon} />}
+              disabled={isPending}
+            />
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Signup */}
+            <View style={styles.signupRow}>
+              <Text style={styles.signupText}>Don’t have account? </Text>
               <TouchableOpacity
-                onPress={() => navigation.navigate('ForgotPassword')}
+                onPress={() => navigation.navigate('Signup')}
+                disabled={isPending}
               >
-                <Text style={styles.forgot}>Forgot Password?</Text>
+                <Text style={styles.signupLink}>Sign Up</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.passwordInputWrapper}>
-              <TextInput
-                placeholder="Enter password"
-                placeholderTextColor={theme.colors.gray[500]}
-                secureTextEntry={!showPassword}
-                style={[styles.input, { flex: 1, borderWidth: 0 }]}
-              />
-              <Pressable onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons
-                  name={showPassword ? 'eye-off' : 'eye'}
-                  size={20}
-                  color={theme.colors.primary}
-                />
-              </Pressable>
-            </View>
           </View>
-        </View>
-        <AppCheckBox
-          text="Remember device for 30 days"
-          isChecked={values.isChecked}
-          toggleCheck={() => setValues({ isChecked: !values.isChecked })}
-        />
-        {/* Login Button */}
-        <AppButton text="Login" style={{ marginBottom: spacing(14) }} />
-
-        {/* Google Sign-in */}
-        <AppButton
-          text="Sign in with Google"
-          variant="outline"
-          leftIcon={<Image source={assets.icons.googleIcon} />}
-        />
-        {/* Divider */}
-        <View style={styles.dividerContainer}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        {/* Signup */}
-        <View style={styles.signupRow}>
-          <Text style={styles.signupText}>Don’t have account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-            <Text style={styles.signupLink}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+        </TouchableWithoutFeedback>
+      </ImageBackground>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -109,13 +195,11 @@ const stylesheet = createStyleSheet({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
     position: 'relative',
   },
   bgImage: {
-    position: 'absolute',
-    bottom: 0,
+    flex: 1,
+    justifyContent: 'center',
     width: SCREEN_WIDTH,
   },
   card: {
@@ -129,6 +213,7 @@ const stylesheet = createStyleSheet({
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 4,
+    marginInline: 'auto',
   },
   title: {
     fontSize: fontSize(20),

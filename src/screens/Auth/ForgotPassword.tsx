@@ -6,6 +6,10 @@ import {
   TouchableOpacity,
   Image,
   Pressable,
+  KeyboardAvoidingView,
+  ImageBackground,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { theme } from '../../theme';
@@ -18,43 +22,102 @@ import AppButton from '../../components/ui/AppButton';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types/navigation';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FormProvider, useForm } from 'react-hook-form';
+import * as yup from 'yup';
+import { useMutation } from '@tanstack/react-query';
+import { forgotPassword } from '../../api/functions/auth.api';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { onError } from '../../helpers/utils';
+
 type LoginScreenNavigationProp = NativeStackNavigationProp<
   AuthStackParamList,
   'ForgotPassword'
 >;
+
+const schema = yup.object().shape({
+  email: yup.string().email('Invalid email').required('Email is required'),
+});
+
 export default function ForgotPassword() {
+  const insets = useSafeAreaInsets();
   const { styles } = useStyles(stylesheet);
   const navigation = useNavigation<LoginScreenNavigationProp>();
 
+  const { mutate, isPending } = useMutation({
+    mutationFn: forgotPassword,
+    onSuccess: navigation.goBack,
+  });
+
+  const form = useForm<yup.InferType<typeof schema>>({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      email: '',
+    },
+    disabled: isPending,
+  });
+
+  const onSubmit = (data: yup.InferType<typeof schema>) => {
+    mutate(data.email);
+  };
+
   return (
-    <View style={styles.container}>
-      <Image source={assets.images.AuthBackground} style={styles.bgImage} />
-      <View style={styles.card}>
-        {/* Header */}
-        <Text style={styles.title}>Forgot Password</Text>
-        <Text style={styles.subtitle}>
-          Enter your email to receive password reset instructions
-        </Text>
-        <View style={{ gap: spacing(16) }}>
-          <AppInput
-            label="Email ID"
-            placeholder="Enter email address"
-            keyboardType="email-address"
-          />
-        </View>
+    <KeyboardAvoidingView
+      style={[
+        styles.container,
+        { paddingBottom: insets.bottom, paddingTop: insets.top },
+      ]}
+    >
+      <ImageBackground
+        source={assets.images.AuthBackground}
+        resizeMode="cover"
+        style={styles.bgImage}
+      >
+        <TouchableWithoutFeedback
+          onPress={() => Keyboard.dismiss()}
+          style={{
+            flex: 1,
+          }}
+        >
+          <View style={styles.card}>
+            {/* Header */}
+            <Text style={styles.title}>Forgot Password</Text>
+            <Text style={styles.subtitle}>
+              Enter your email to receive password reset instructions
+            </Text>
+            <View style={{ gap: spacing(16) }}>
+              <FormProvider {...form}>
+                <AppInput
+                  name="email"
+                  label="Email ID"
+                  placeholder="Enter email address"
+                  keyboardType="email-address"
+                />
+              </FormProvider>
+            </View>
 
-        {/* Signup Button */}
-        <AppButton text="Submit" style={{ marginVertical: spacing(14) }} />
+            {/* Signup Button */}
+            <AppButton
+              text="Submit"
+              style={{ marginVertical: spacing(14) }}
+              onPress={form.handleSubmit(onSubmit, onError)}
+              isLoading={isPending}
+            />
 
-        {/* Signup */}
-        <View style={styles.signupRow}>
-          <Text style={styles.signupText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.signupLink}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+            {/* Signup */}
+            <View style={styles.signupRow}>
+              <Text style={styles.signupText}>Already have an account? </Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Login')}
+                disabled={isPending}
+              >
+                <Text style={styles.signupLink}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </ImageBackground>
+    </KeyboardAvoidingView>
   );
 }
 

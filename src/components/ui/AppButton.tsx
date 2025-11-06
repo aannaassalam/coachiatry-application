@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
+import { ActivityIndicator } from 'react-native-paper';
 
 interface AppButtonProps {
   text?: string;
@@ -17,6 +18,8 @@ interface AppButtonProps {
   onPress?: () => void;
   leftIcon?: React.ReactNode;
   variant?: 'primary' | 'outline' | 'secondary-outline';
+  disabled?: boolean;
+  isLoading?: boolean;
 }
 
 const AppButton: React.FC<AppButtonProps> = ({
@@ -26,6 +29,8 @@ const AppButton: React.FC<AppButtonProps> = ({
   onPress,
   leftIcon,
   variant = 'primary',
+  disabled,
+  isLoading,
 }) => {
   return (
     <TouchableOpacity
@@ -36,9 +41,24 @@ const AppButton: React.FC<AppButtonProps> = ({
         variant === 'outline' && styles.outlineButton,
         variant === 'secondary-outline' && styles.secondaryOutlineButton,
         style,
+        isLoading || disabled ? { opacity: 0.7 } : null,
       ]}
+      disabled={disabled || isLoading}
     >
       {leftIcon && leftIcon}
+      {isLoading && (
+        <ActivityIndicator
+          animating
+          color={
+            variant === 'primary'
+              ? theme.colors.white
+              : variant === 'outline'
+                ? theme.colors.gray[700]
+                : theme.colors.primary
+          }
+          size={fontSize(12)}
+        />
+      )}
       <Text
         style={[
           styles.buttonText,

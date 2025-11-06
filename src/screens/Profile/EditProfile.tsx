@@ -8,21 +8,35 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { Asset, launchImageLibrary } from 'react-native-image-picker';
 import { theme } from '../../theme';
-import { fontSize, spacing } from '../../utils';
+import { fontSize, scale, spacing } from '../../utils';
 import AppInput from '../../components/ui/AppInput';
 import AppButton from '../../components/ui/AppButton';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { assets, ChevronLeft } from '../../assets';
+import { useAuth } from '../../hooks/useAuth';
+import * as yup from 'yup';
+import { useMutation } from '@tanstack/react-query';
+import {
+  updateProfile,
+  updateProfilePicture,
+} from '../../api/functions/user.api';
+import { FormProvider, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { queryClient } from '../../../App';
+import { SmartAvatar } from '../../components/ui/SmartAvatar';
+
+const schema = yup.object().shape({
+  fullName: yup.string().required('Name is required'),
+  email: yup.string().email('Invalid email').required('Email is required'),
+});
 
 const EditProfile = () => {
-  const [photo, setPhoto] = useState<string | null>(
-    'https://i.pravatar.cc/150?img=12',
-  );
-  const [name, setName] = useState('Amanda Haydenson');
-  const [email, setEmail] = useState('amanahay@gmail.com');
+  const { profile } = useAuth();
+  const [photo, setPhoto] = useState<string | undefined>(profile?.photo);
+  const [imageData, setImageData] = useState<Asset | null>(null);
 
   // Password handling
   const [password, setPassword] = useState('******');
@@ -30,16 +44,54 @@ const EditProfile = () => {
 
   const navigation = useNavigation();
 
+  const { mutate, isPending } = useMutation({
+    mutationFn: updateProfile,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      navigation.goBack();
+    },
+  });
+
+  const { mutate: updatePicture, isPending: isPictureUpdating } = useMutation({
+    mutationFn: updateProfilePicture,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
+  });
+
+  const form = useForm<yup.InferType<typeof schema>>({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      fullName: profile?.fullName,
+      email: profile?.email,
+    },
+    disabled: isPending,
+  });
+
   const pickImage = () => {
     launchImageLibrary(
-      { mediaType: 'photo', maxHeight: 1080, maxWidth: 1080, quality: 0.9 },
+      {
+        mediaType: 'photo',
+        maxHeight: 1080,
+        maxWidth: 1080,
+        quality: 0.9,
+        selectionLimit: 1,
+      },
       response => {
         if (response.didCancel) return;
         if (!response.didCancel && response.assets && response.assets[0].uri) {
           setPhoto(response.assets[0].uri);
+          setImageData(response.assets[0]);
         }
       },
     );
+  };
+
+  const onSubmit = (data: yup.InferType<typeof schema>) => {
+    mutate(data);
+    if (imageData) {
+      updatePicture(imageData);
+    }
   };
 
   return (
@@ -63,10 +115,18 @@ const EditProfile = () => {
           style={styles.avatarWrapper}
           onPress={pickImage}
         >
-          <Image
+          <SmartAvatar
+            src={photo}
+            name={profile?.fullName}
+            imageStyle={styles.avatar}
+            fontSize={fontSize(22)}
+            size={scale(100)}
+            key={new Date().toDateString()}
+          />
+          {/* <Image
             source={photo ? { uri: photo } : assets.images.Avatar2}
             style={styles.avatar}
-          />
+          /> */}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
@@ -76,20 +136,24 @@ const EditProfile = () => {
 
       {/* Input Fields */}
       <View style={styles.form}>
-        <AppInput
-          label="Full name"
-          placeholder="Enter full name"
-          //   value={name}
-          //   onChangeText={setName}
-        />
+        <FormProvider {...form}>
+          <AppInput
+            label="Full name"
+            placeholder="Enter full name"
+            name="fullName"
+            //   value={name}
+            //   onChangeText={setName}
+          />
 
-        <AppInput
-          label="Email"
-          placeholder="Enter email ID"
-          keyboardType="email-address"
-          //   value={email}
-          //   onChangeText={setEmail}
-        />
+          <AppInput
+            label="Email"
+            placeholder="Enter email ID"
+            keyboardType="email-address"
+            name="email"
+            //   value={email}
+            //   onChangeText={setEmail}
+          />
+        </FormProvider>
 
         {/* Password */}
         <View style={styles.passwordWrapper}>
@@ -127,7 +191,7 @@ const EditProfile = () => {
 
       {/* Save Button */}
       <View style={styles.saveButtonContainer}>
-        <AppButton text="Save Changes" onPress={() => {}} />
+        <AppButton text="Save Changes" onPress={form.handleSubmit(onSubmit)} />
       </View>
     </ScrollView>
   );
@@ -163,9 +227,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   avatar: {
-    width: fontSize(100),
-    height: fontSize(100),
-    borderRadius: fontSize(50),
+    // width: fontSize(100),
+    // height: fontSize(100),
+    // borderRadius: fontSize(50),
   },
   changePhoto: {
     marginTop: spacing(8),

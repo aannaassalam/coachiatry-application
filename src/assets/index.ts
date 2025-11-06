@@ -5,6 +5,7 @@ export const assets = {
     Avatar2: require('./Images/avatar2.png'),
     Avatar3: require('./Images/avatar3.png'),
     EmptyFiler: require('./Images/empty-filter.png'),
+    logo: require('./Images/logo.png'),
   },
   icons: {
     googleIcon: require('./Icons/google.png'),
@@ -28,3 +29,5 @@ export { default as Undo } from './Svgs/undo.svg';
 export { default as Redo } from './Svgs/redo.svg';
 export { default as WhiteCoachAi } from './Svgs/coach-ai.svg';
 export { default as Flag } from './Svgs/flag.svg';
+export { default as Logo } from './Svgs/logo.svg';
+export { default as RawLogo } from './Svgs/raw-logo.svg';

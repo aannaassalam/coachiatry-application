@@ -4,13 +4,13 @@ import { fontSize, spacing } from '../../utils';
 import { theme } from '../../theme';
 
 function AppBadge({
-  bgColor,
-  dotColor,
-  text,
+  bgColor = theme.colors.gray[300],
+  dotColor = theme.colors.gray[700],
+  text = 'tag',
 }: {
-  bgColor: string;
-  dotColor: string;
-  text: string;
+  bgColor?: string;
+  dotColor?: string;
+  text?: string;
 }) {
   return (
     <View style={[styles.tagContainer, { backgroundColor: bgColor }]}>

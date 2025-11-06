@@ -1,28 +1,60 @@
+import { useQueries } from '@tanstack/react-query';
+import moment from 'moment';
 import React, { useState } from 'react';
-import { theme } from '../../theme';
 import {
-  View,
-  Text,
-  TouchableOpacity,
+  ActivityIndicator,
+  FlatList,
   ScrollView,
   StyleSheet,
-  Image,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import AppHeader from '../../components/ui/AppHeader';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { fontSize, spacing } from '../../utils';
-import { assets, ChevronLeft } from '../../assets';
-import AppBadge from '../../components/ui/AppBadge';
-import { FlatList } from 'react-native';
+import { getAllConversations } from '../../api/functions/chat.api';
+import { getAllDocuments } from '../../api/functions/document.api';
+import { getAllStatuses } from '../../api/functions/status.api';
+import { getAllTasks } from '../../api/functions/task.api';
+import { ChevronLeft } from '../../assets';
 import TaskBadge from '../../components/Tasks/TaskBadge';
+import AppBadge from '../../components/ui/AppBadge';
+import AppHeader from '../../components/ui/AppHeader';
+import { SmartAvatar } from '../../components/ui/SmartAvatar';
+import { useAuth } from '../../hooks/useAuth';
+import { theme } from '../../theme';
+import { ChatConversation } from '../../typescript/interface/chat.interface';
+import { Document } from '../../typescript/interface/document.interface';
+import { Status } from '../../typescript/interface/status.interface';
+import { Task } from '../../typescript/interface/task.interface';
+import { fontSize, scale, spacing } from '../../utils';
+
+moment.updateLocale('en', {
+  relativeTime: {
+    future: 'in %s',
+    past: '%s',
+    s: '%ds',
+    ss: '%ds',
+    m: '1m',
+    mm: '%dm',
+    h: '1h',
+    hh: '%dh',
+    w: '1w',
+    ww: '%dw',
+    d: '1d',
+    dd: '%dd',
+    M: '1m',
+    MM: '%dm',
+    y: '1y',
+    yy: '%dy',
+  },
+});
 
 interface TaskCardProps {
   title: string;
   count: number;
   color: string;
   labelColor?: string;
-  activeColor?: string;
-  tasks?: { title: string; date: string; progress: string }[];
+  tasks?: Task[];
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -30,39 +62,43 @@ const TaskCard: React.FC<TaskCardProps> = ({
   count,
   color,
   labelColor,
-  activeColor,
-  tasks,
+  tasks = [],
 }) => {
-  const isTodo = title === 'Todo';
-
   return (
     <View>
       {/* Label */}
       <TaskBadge
         title={title}
         count={count}
-        labelColor={activeColor || labelColor || theme.colors.gray[900]}
+        labelColor={labelColor || theme.colors.gray[900]}
         backgroundColor={color}
         marginBottom={spacing(6)}
       />
 
       {/* Tasks List */}
-      {isTodo && tasks && (
+      {tasks?.length > 0 && (
         <View style={styles.taskList}>
-          {tasks.map((task, index) => (
-            <View key={index} style={styles.taskCard}>
+          {tasks.map(task => (
+            <View key={task._id} style={styles.taskCard}>
               <View>
                 <Text style={styles.taskTitle}>{task.title}</Text>
-                <Text style={styles.taskDate}>{task.date}</Text>
+                <Text style={styles.taskDate}>
+                  {moment(task.dueDate).format('D MMM, YYYY')}
+                </Text>
               </View>
-              <View style={styles.progressContainer}>
-                <Ionicons
-                  name="git-branch-outline"
-                  size={fontSize(16)}
-                  color={theme.colors.gray[700]}
-                />
-                <Text style={styles.progressText}>{task.progress}</Text>
-              </View>
+              {(task.subtasks ?? [])?.length > 0 && (
+                <View style={styles.progressContainer}>
+                  <Ionicons
+                    name="git-branch-outline"
+                    size={fontSize(16)}
+                    color={theme.colors.gray[700]}
+                  />
+                  <Text style={styles.progressText}>
+                    {task.subtasks?.filter(_st => _st.completed).length}/
+                    {task.subtasks?.length}
+                  </Text>
+                </View>
+              )}
             </View>
           ))}
         </View>
@@ -70,7 +106,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
     </View>
   );
 };
-const TasksSection = () => {
+
+const TasksSection = ({
+  status,
+  tasks,
+}: {
+  status: Status[];
+  tasks: Task[];
+}) => {
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
@@ -82,32 +125,23 @@ const TasksSection = () => {
 
       {/* Task Sections */}
       <View style={{ gap: spacing(14), paddingHorizontal: spacing(16) }}>
-        <TaskCard
-          title="Todo"
-          count={2}
-          color="#E7E8EB"
-          activeColor={theme.colors.primary}
-          tasks={[
-            {
-              title: 'Task from coach',
-              date: '22 Oct, 2025',
-              progress: '0/2',
-            },
-            { title: 'new task', date: '16 Oct, 2025', progress: '3/6' },
-          ]}
-        />
-        <TaskCard
-          title="new status"
-          count={0}
-          color="#FFF9DD"
-          labelColor="#B6862A"
-        />
-        <TaskCard
-          title="New Status"
-          count={0}
-          color="#EAE7FD"
-          labelColor="#3D2EA6"
-        />
+        {status
+          .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
+          .map(_status => {
+            const tasksForStatus = tasks.filter(
+              _task => _task.status._id === _status._id,
+            );
+            return (
+              <TaskCard
+                key={_status._id}
+                title={_status.title}
+                count={tasksForStatus.length}
+                color={_status.color.bg}
+                labelColor={_status.color.text}
+                tasks={tasksForStatus}
+              />
+            );
+          })}
       </View>
       <TouchableOpacity activeOpacity={0.8} style={styles.footerRow}>
         <Text style={styles.headerTitle}>View More</Text>
@@ -119,43 +153,8 @@ const TasksSection = () => {
   );
 };
 
-const DocumentsSection = () => {
-  const documents = [
-    {
-      id: '1',
-      title: 'Doctor’s Recommendation Letter',
-      date: '5 Jul, 2025',
-      tag: 'Health',
-      tagBg: '#FFF6E6',
-      tagColor: '#E8A23A',
-    },
-    {
-      id: '2',
-      title: 'Medical History Summary',
-      date: '5 Jul, 2025',
-      tag: 'Therapy',
-      tagBg: '#E7E8EB',
-      tagColor: '#23294A',
-    },
-    {
-      id: '3',
-      title: 'Prescription – Dr. Neha Sharma',
-      date: '5 Jul, 2025',
-      tag: 'Fitness',
-      tagBg: '#E6F4EC',
-      tagColor: '#20A664',
-    },
-    {
-      id: '4',
-      title: 'Mental Health Assessment',
-      date: '5 Jul, 2025',
-      tag: 'Health',
-      tagBg: '#FFF6E6',
-      tagColor: '#E8A23A',
-    },
-  ];
-
-  const renderItem = ({ item }: { item: any }) => (
+const DocumentsSection = ({ documents }: { documents: Document[] }) => {
+  const renderItem = ({ item }: { item: Document }) => (
     <View style={styles.docCard}>
       <View style={styles.docLeft}>
         <View style={styles.iconContainer}>
@@ -165,11 +164,13 @@ const DocumentsSection = () => {
             color={theme.colors.gray[600]}
           />
         </View>
-        <View style={{ maxWidth: '76%' }}>
+        <View style={{ maxWidth: '73%' }}>
           <Text numberOfLines={1} ellipsizeMode="tail" style={styles.docTitle}>
             {item.title}
           </Text>
-          <Text style={styles.docDate}>Updated : {item.date}</Text>
+          <Text style={styles.docDate}>
+            Updated : {moment(item.updatedAt).format('D MMM, YYYY')}
+          </Text>
         </View>
       </View>
       <View
@@ -180,9 +181,9 @@ const DocumentsSection = () => {
         }}
       >
         <AppBadge
-          bgColor={item.tagBg}
-          dotColor={item.tagColor}
-          text={item.tag}
+          bgColor={item.tag?.color.bg}
+          dotColor={item.tag?.color.text}
+          text={item.tag?.title}
         />
       </View>
     </View>
@@ -200,7 +201,7 @@ const DocumentsSection = () => {
       <FlatList
         data={documents}
         renderItem={renderItem}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item._id}
         scrollEnabled={false}
         contentContainerStyle={{ gap: spacing(8) }}
         style={{ padding: spacing(8), marginTop: spacing(-8) }}
@@ -209,37 +210,29 @@ const DocumentsSection = () => {
   );
 };
 
-const ChatSection = () => {
-  const chats = [
-    {
-      id: '1',
-      name: 'Eleanor Pena',
-      message: 'Paperless opt-out email sent',
-      time: '5s',
-      avatar: assets.images.Avatar3,
-      unread: false,
-    },
-    {
-      id: '2',
-      name: 'Cody Fisher',
-      message:
-        'Im trying to book an appointment but the assistant isnt picking up the phone....',
-      time: '59m',
-      avatar: assets.images.Avatar2,
-      unread: false,
-    },
-    {
-      id: '3',
-      name: 'We Are Three',
-      message:
-        "I have something on my mind that's been bothering me, but I'm not sure",
-      time: '1h',
-      avatar: null,
-      unread: true,
-    },
-  ];
-  const renderItem = ({ item, index }: { item: any; index: number }) => {
+const ChatSection = ({ chats }: { chats: ChatConversation[] }) => {
+  const { profile } = useAuth();
+
+  const renderItem = ({
+    item,
+    index,
+  }: {
+    item: ChatConversation;
+    index: number;
+  }) => {
     const isLast = index === chats.length - 1; // 👈 check if last card
+    const chatUser = item.members.find(
+      _member => _member.user._id !== profile?._id,
+    );
+    const details: { photo?: string; name?: string } = {
+      photo: chatUser?.user.photo,
+      name: chatUser?.user.fullName,
+    };
+
+    if (item && item.type === 'group') {
+      details.photo = item.groupPhoto;
+      details.name = item.name;
+    }
 
     return (
       <TouchableOpacity
@@ -247,19 +240,19 @@ const ChatSection = () => {
         style={[styles.chatCard, isLast && { borderBottomWidth: 0 }]}
       >
         <View style={styles.leftRow}>
-          {item.avatar ? (
-            <Image source={item.avatar} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.fallbackAvatar]}>
-              <Text style={styles.fallbackText}>
-                {item.name.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-          )}
-          <View style={{ maxWidth: '76%' }}>
+          <SmartAvatar
+            src={details.photo}
+            name={details.name}
+            size={scale(40)}
+            fontSize={fontSize(16)}
+          />
+          <View style={{ flex: 1 }}>
             <View style={styles.nameRow}>
               <Text numberOfLines={1} ellipsizeMode="tail" style={styles.name}>
-                {item.name}
+                {details.name}
+              </Text>
+              <Text style={styles.timeText}>
+                {moment(item.lastMessage?.createdAt).fromNow(true)}
               </Text>
             </View>
             <Text
@@ -267,12 +260,21 @@ const ChatSection = () => {
               ellipsizeMode="tail"
               style={styles.messageText}
             >
-              {item.message}
+              {item.lastMessage?.sender?._id === profile?._id &&
+              item.isDeletable
+                ? 'You: '
+                : null}
+              {item.lastMessage?.content ||
+                (item.lastMessage?.type === 'image'
+                  ? '📷 Images'
+                  : item.lastMessage?.type === 'video'
+                    ? '🎥 Videos'
+                    : item.lastMessage?.type === 'file'
+                      ? '📁 Files'
+                      : undefined)}
             </Text>
           </View>
         </View>
-
-        <Text style={styles.timeText}>{item.time}</Text>
       </TouchableOpacity>
     );
   };
@@ -291,7 +293,7 @@ const ChatSection = () => {
       <FlatList
         data={chats}
         renderItem={renderItem}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item._id!}
         scrollEnabled={false}
         contentContainerStyle={{ gap: spacing(8) }}
         style={{ padding: spacing(8), marginTop: spacing(-8) }}
@@ -299,8 +301,44 @@ const ChatSection = () => {
     </View>
   );
 };
+
 function Dashboard() {
   const [search, setSearch] = useState('');
+
+  const [
+    { data: status = [], isLoading: isStatusLoading },
+    { data: tasks = [], isLoading },
+    { data: chats = { data: [] }, isLoading: isChatsLoading },
+    { data: documents = { data: [] }, isLoading: isDocumentsLoading },
+  ] = useQueries({
+    queries: [
+      {
+        queryKey: ['status'],
+        queryFn: getAllStatuses,
+      },
+      {
+        queryKey: ['tasks'],
+        queryFn: () =>
+          getAllTasks({
+            startDate: moment().startOf('month').toISOString(),
+            endDate: moment().endOf('month').toISOString(),
+          }),
+      },
+      {
+        queryKey: ['conversations'],
+        queryFn: () => getAllConversations({ limit: 4, sort: '-updatedAt' }),
+      },
+      {
+        queryKey: ['documents'],
+        queryFn: () =>
+          getAllDocuments({ sort: '-updatedAt', tab: 'all', limit: 4 }),
+      },
+    ],
+  });
+
+  const slicedTasks = tasks?.slice(0, 5);
+  const isAllLoading =
+    isLoading || isStatusLoading || isChatsLoading || isDocumentsLoading;
 
   return (
     <View style={styles.container}>
@@ -311,17 +349,25 @@ function Dashboard() {
         onSearchChange={setSearch}
         onSettingsPress={() => console.log('Settings pressed')}
       />
-      <ScrollView
-        contentContainerStyle={{
-          backgroundColor: theme.colors.gray[50],
-          padding: spacing(16),
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        <TasksSection />
-        <DocumentsSection />
-        <ChatSection />
-      </ScrollView>
+      {isAllLoading ? (
+        <View
+          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <ActivityIndicator size="large" />
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={{
+            padding: spacing(16),
+          }}
+          style={{ backgroundColor: theme.colors.gray[50] }}
+          showsVerticalScrollIndicator={false}
+        >
+          <TasksSection status={status} tasks={slicedTasks} />
+          <DocumentsSection documents={documents.data} />
+          <ChatSection chats={chats.data} />
+        </ScrollView>
+      )}
       <TouchableOpacity
         activeOpacity={0.8}
         style={styles.addBtn}
@@ -473,11 +519,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing(12),
   },
-  avatar: {
-    width: fontSize(40),
-    height: fontSize(40),
-    borderRadius: fontSize(20),
-  },
   fallbackAvatar: {
     backgroundColor: '#F9E2CC',
     justifyContent: 'center',
@@ -498,6 +539,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.archivo.medium,
     color: theme.colors.gray[800],
     maxWidth: '90%',
+    flex: 1,
   },
   unreadDot: {
     width: fontSize(8),

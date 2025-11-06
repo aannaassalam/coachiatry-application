@@ -3,33 +3,47 @@ import {
   Pressable,
   Text,
   TextInput,
+  TextInputProps,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
+import { Controller, useFormContext } from 'react-hook-form';
 
 function AppInput({
   label,
+  name,
   placeholder,
   keyboardType,
 }: {
   label: string;
+  name: string;
   placeholder: string;
-  keyboardType?: string;
+  keyboardType?: TextInputProps['keyboardType'];
 }) {
   const { styles } = useStyles(stylesheet);
+  const { control } = useFormContext();
 
   return (
-    <View>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        placeholder={placeholder}
-        placeholderTextColor={theme.colors.gray[500]}
-        style={styles.input}
-      />
-    </View>
+    <Controller
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <View>
+          <Text style={styles.label}>{label}</Text>
+          <TextInput
+            placeholder={placeholder}
+            placeholderTextColor={theme.colors.gray[500]}
+            style={styles.input}
+            keyboardType={keyboardType}
+            {...field}
+            onChangeText={field.onChange}
+          />
+        </View>
+      )}
+    />
   );
 }
 
