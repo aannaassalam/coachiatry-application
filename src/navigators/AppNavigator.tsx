@@ -8,6 +8,7 @@ import DocumentEditor from '../screens/Documents/DocumentEditor';
 import TaskDetailsScreen from '../screens/Tasks/TaskDetails';
 import Profile from '../screens/Profile/Profile';
 import EditProfile from '../screens/Profile/EditProfile';
+import ClientDetails from '../screens/Clients/ClientDetails';
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -24,6 +25,7 @@ const AppNavigator = () => {
       <Stack.Screen name="TaskDetails" component={TaskDetailsScreen} />
       <Stack.Screen name="Profile" component={Profile} />
       <Stack.Screen name="EditProfile" component={EditProfile} />
+      <Stack.Screen name="ClientDetails" component={ClientDetails} />
     </Stack.Navigator>
   );
 };

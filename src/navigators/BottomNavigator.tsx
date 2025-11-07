@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChatActive,
   ChatInactive,
+  ClientsActive,
+  ClientsInactive,
   DashboardActive,
   DashboardInactive,
   DocumentActive,
@@ -21,11 +23,13 @@ import {
   TasksActive,
   TasksInactive,
 } from '../assets';
+import MyClients from '../screens/Clients/MyClients';
 
 export type AppTabParamList = {
   Dashboard: undefined;
   Tasks: undefined;
-  Chats: undefined;
+  // Chats: undefined;
+  Clients: undefined;
   Documents: undefined;
 };
 
@@ -65,7 +69,9 @@ const BottomNavigator = () => {
     >
       <Tab.Screen name="Dashboard" component={Dashboard} />
       <Tab.Screen name="Tasks" component={TaskList} options={{ lazy: false }} />
-      <Tab.Screen name="Chats" component={ChatList} />
+      {/* <Tab.Screen name="Chats" component={ChatList} /> */}
+      <Tab.Screen name="Clients" component={MyClients} />
+
       <Tab.Screen name="Documents" component={Documents} />
     </Tab.Navigator>
   );
@@ -83,6 +89,8 @@ const getLabel = (routeName: string) => {
       return 'Chat';
     case 'Documents':
       return 'Documents';
+    case 'Clients':
+      return 'My Clients';
     default:
       return routeName;
   }
@@ -105,6 +113,9 @@ const getIcon = (routeName: string, focused: boolean) => {
 
     case 'Documents':
       return focused ? <DocumentActive /> : <DocumentInactive />;
+
+    case 'Clients':
+      return focused ? <ClientsActive /> : <ClientsInactive />;
 
     default:
       return <Ionicons name="ellipse-outline" size={size} color={color} />;

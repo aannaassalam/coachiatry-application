@@ -15,4 +15,5 @@ export type AppStackParamList = {
   BottomTabs: undefined;
   TaskDetails: undefined;
   EditProfile: undefined;
+  ClientDetails: undefined;
 };
