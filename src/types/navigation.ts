@@ -21,4 +21,5 @@ export type AppStackParamList = {
     predefinedDueDate?: string;
   };
   EditProfile: undefined;
+  ClientDetails: undefined;
 };

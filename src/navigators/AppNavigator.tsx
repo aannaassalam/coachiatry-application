@@ -1,15 +1,15 @@
-import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { AppStackParamList, AuthStackParamList } from '../types/navigation';
-import BottomNavigator from './BottomNavigator';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ClientDetails from '../screens/Clients/ClientDetails';
 import DocumentEditor from '../screens/Documents/DocumentEditor';
-import TaskDetailsScreen from '../screens/Tasks/TaskDetails';
-import Profile from '../screens/Profile/Profile';
 import EditProfile from '../screens/Profile/EditProfile';
-import { theme } from '../theme';
+import Profile from '../screens/Profile/Profile';
 import AddEditTask from '../screens/Tasks/AddEditTask';
+import TaskDetailsScreen from '../screens/Tasks/TaskDetails';
+import { theme } from '../theme';
+import { AppStackParamList } from '../types/navigation';
+import BottomNavigator from './BottomNavigator';
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -33,6 +33,7 @@ const AppNavigator = () => {
         <Stack.Screen name="AddEditTask" component={AddEditTask} />
         <Stack.Screen name="Profile" component={Profile} />
         <Stack.Screen name="EditProfile" component={EditProfile} />
+        <Stack.Screen name="ClientDetails" component={ClientDetails} />
       </Stack.Navigator>
     </View>
   );

@@ -7,6 +7,8 @@ import { fontSize, spacing } from '../utils';
 import {
   ChatActive,
   ChatInactive,
+  ClientsActive,
+  ClientsInactive,
   DashboardActive,
   DashboardInactive,
   DocumentActive,
@@ -18,17 +20,21 @@ import ChatList from '../screens/Chats/ChatList';
 import Dashboard from '../screens/Dashboard/Dashboard';
 import Documents from '../screens/Documents/Documents';
 import TaskList from '../screens/Tasks/TaskList';
+import MyClients from '../screens/Clients/MyClients';
+import { useAuth } from '../hooks/useAuth';
 
 export type AppTabParamList = {
   Dashboard: undefined;
   Tasks: undefined;
   Chats: undefined;
+  Clients: undefined;
   Documents: undefined;
 };
 
 const Tab = createBottomTabNavigator<AppTabParamList>();
 
 const BottomNavigator = () => {
+  const { profile } = useAuth();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -63,6 +69,10 @@ const BottomNavigator = () => {
       <Tab.Screen name="Dashboard" component={Dashboard} />
       <Tab.Screen name="Tasks" component={TaskList} options={{ lazy: false }} />
       <Tab.Screen name="Chats" component={ChatList} />
+      {profile?.role === 'coach' && (
+        <Tab.Screen name="Clients" component={MyClients} />
+      )}
+
       <Tab.Screen name="Documents" component={Documents} />
     </Tab.Navigator>
   );
@@ -80,6 +90,8 @@ const getLabel = (routeName: string) => {
       return 'Chat';
     case 'Documents':
       return 'Documents';
+    case 'Clients':
+      return 'My Clients';
     default:
       return routeName;
   }
@@ -102,6 +114,9 @@ const getIcon = (routeName: string, focused: boolean) => {
 
     case 'Documents':
       return focused ? <DocumentActive /> : <DocumentInactive />;
+
+    case 'Clients':
+      return focused ? <ClientsActive /> : <ClientsInactive />;
 
     default:
       return <Ionicons name="ellipse-outline" size={size} color={color} />;
