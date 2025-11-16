@@ -1,9 +1,10 @@
 import React from 'react';
 import { TouchableOpacity, View } from 'react-native';
-import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
+import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6';
 import { theme } from '../../theme';
 import { createStyleSheet } from 'react-native-unistyles';
 import { fontSize, scale } from '../../utils';
+import TouchableButton from '../TouchableButton';
 
 export default function CheckBox({
   checked,
@@ -13,7 +14,7 @@ export default function CheckBox({
   onPress?: (toggle: boolean) => void;
 }) {
   return (
-    <TouchableOpacity
+    <TouchableButton
       onPress={() => onPress && onPress(!checked)}
       style={[
         styles.checkbox,
@@ -26,11 +27,12 @@ export default function CheckBox({
       {checked && (
         <FontAwesome6
           name="check"
+          iconStyle="solid"
           color={theme.colors.white}
           size={fontSize(10)}
         />
       )}
-    </TouchableOpacity>
+    </TouchableButton>
   );
 }
 

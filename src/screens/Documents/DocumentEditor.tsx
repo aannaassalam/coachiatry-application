@@ -1,53 +1,165 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
-  Animated,
+  FlatList,
   KeyboardAvoidingView,
-  LayoutAnimation,
   Platform,
-  ScrollView,
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  TextInput,
   View,
 } from 'react-native';
-import Feather from 'react-native-vector-icons/Feather';
-import Fontisto from 'react-native-vector-icons/Fontisto';
-import Foundation from 'react-native-vector-icons/Foundation';
+import { Feather } from '@react-native-vector-icons/feather';
+import { Fontisto } from '@react-native-vector-icons/fontisto';
+import { Foundation } from '@react-native-vector-icons/foundation';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import Octicons from 'react-native-vector-icons/Octicons';
+import { Octicons } from '@react-native-vector-icons/octicons';
 
+import { yupResolver } from '@hookform/resolvers/yup';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Image } from 'react-native';
+import { useMutation, useQueries, useQuery } from '@tanstack/react-query';
+import moment from 'moment';
+import { Controller, useForm } from 'react-hook-form';
+import { SheetManager } from 'react-native-actions-sheet';
+import { showMessage } from 'react-native-flash-message';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
   actions,
   RichEditor,
   RichToolbar,
 } from 'react-native-pell-rich-editor';
+import * as yup from 'yup';
+import { getAllCategories } from '../../api/functions/category.api';
 import {
-  assets,
-  Calendar,
-  ChevronLeft,
-  Redo,
-  Undo,
-  WhiteCoachAi,
-} from '../../assets';
+  createDocument,
+  editDocument,
+  getDocument,
+} from '../../api/functions/document.api';
+import { Calendar, ChevronLeft, Redo, Undo, WhiteCoachAi } from '../../assets';
+import TouchableButton from '../../components/TouchableButton';
 import AppBadge from '../../components/ui/AppBadge';
 import AppButton from '../../components/ui/AppButton';
+import { SmartAvatar } from '../../components/ui/SmartAvatar';
+import { onError } from '../../helpers/utils';
+import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
-import { fontSize, spacing } from '../../utils';
+import { fontSize, scale, spacing } from '../../utils';
+
+const schema = yup.object().shape({
+  title: yup.string().required(),
+  tag: yup.string().required(),
+});
+
+const DocumentCategorySheetBody = ({
+  category,
+  fieldChange,
+}: {
+  category: string;
+  fieldChange: (id: string) => void;
+}) => {
+  const { data = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getAllCategories,
+  });
+
+  return (
+    <View>
+      <Text style={styles.heading}>Select Tag</Text>
+      <FlatList
+        data={data}
+        // contentContainerStyle={styles.statuses}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        keyExtractor={item => item._id}
+        scrollEnabled={false}
+        renderItem={({ item }) => (
+          <Pressable
+            style={styles.category}
+            onPress={() => {
+              fieldChange(item._id);
+              SheetManager.hide('general-sheet');
+            }}
+          >
+            <AppBadge
+              bgColor={item?.color.bg}
+              dotColor={item?.color.text}
+              text={item?.title}
+            />
+            {category === item._id && (
+              <Feather name="check" size={fontSize(16)} />
+            )}
+          </Pressable>
+        )}
+      />
+    </View>
+  );
+};
 
 export default function DocumentEditor() {
+  const { profile } = useAuth();
   const editor = useRef<RichEditor | null>(null);
   const scrollRef = useRef<KeyboardAwareScrollView>(null);
   const headerHeight = useHeaderHeight();
-  const [text, setText] = useState('');
+  const [editorValue, setEditorValue] = useState('');
   const navigation = useNavigation();
   const route = useRoute<any>();
-  const { mode } = route.params || {};
+  const { mode, documentId } = route.params || {};
   const [localMode, setLocalMode] = useState(mode);
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: createDocument,
+    onSuccess: navigation.goBack,
+    meta: {
+      invalidateQueries: ['documents'],
+    },
+  });
+
+  const { mutate: edit, isPending: isEditing } = useMutation({
+    mutationFn: editDocument,
+    onSuccess: () => setLocalMode('view'),
+    meta: {
+      invalidateQueries: ['documents', documentId],
+    },
+  });
+
+  const form = useForm({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      title: '',
+      tag: '',
+    },
+    disabled: isPending || isEditing,
+  });
+
+  const [
+    { data, isLoading },
+    { data: categories, isLoading: isCategoriesLoading },
+  ] = useQueries({
+    queries: [
+      {
+        queryKey: ['documents', documentId],
+        queryFn: () => getDocument(documentId),
+        enabled: !!documentId,
+      },
+      {
+        queryKey: ['categories'],
+        queryFn: getAllCategories,
+      },
+    ],
+  });
+
+  useEffect(() => {
+    if (data) {
+      form.reset({
+        title: data.title,
+        tag: data.tag?._id,
+      });
+      setEditorValue(data.content ?? '');
+    }
+  }, [data, form]);
 
   const handleCursorPosition = (offsetY: number) => {
     if (!scrollRef.current) return;
@@ -58,6 +170,20 @@ export default function DocumentEditor() {
     setLocalMode(localMode);
   }, [localMode, mode]);
 
+  const onSubmit = (_data: yup.InferType<typeof schema>) => {
+    if (!editorValue)
+      showMessage({
+        message: 'Failed',
+        description: 'Please enter document content!',
+        type: 'danger',
+      });
+    if (localMode === 'edit') {
+      edit({ ..._data, content: editorValue, documentId });
+    } else {
+      mutate({ ..._data, content: editorValue });
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -67,12 +193,12 @@ export default function DocumentEditor() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
+          <TouchableButton
             style={styles.iconButton}
             onPress={() => navigation.goBack()}
           >
             <ChevronLeft />
-          </TouchableOpacity>
+          </TouchableButton>
           {localMode !== 'view' && (
             <Text style={styles.headerTitle}>
               {localMode === 'edit' ? 'Edit' : 'Add'}
@@ -80,7 +206,7 @@ export default function DocumentEditor() {
           )}
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             {localMode === 'view' && (
-              <TouchableOpacity
+              <TouchableButton
                 style={{ ...styles.iconButton, marginLeft: 'auto' }}
               >
                 <Ionicons
@@ -88,154 +214,275 @@ export default function DocumentEditor() {
                   size={fontSize(16)}
                   color={theme.colors.gray[800]}
                 />
-              </TouchableOpacity>
+              </TouchableButton>
             )}
-            <TouchableOpacity style={styles.iconButton}>
+            <TouchableButton style={styles.iconButton}>
               <Ionicons
                 name="ellipsis-horizontal"
                 size={fontSize(22)}
                 color={theme.colors.gray[600]}
               />
-            </TouchableOpacity>
+              {/* <Ionicons name="add-circle" size={30} color="#4F8EF7" /> */}
+            </TouchableButton>
           </View>
         </View>
 
-        <KeyboardAwareScrollView
-          ref={scrollRef}
-          enableOnAndroid
-          enableAutomaticScroll
-          extraScrollHeight={20} // ⬆ increase this from 24 → 100
-          extraHeight={Platform.OS === 'ios' ? 120 : 200}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: spacing(150) }}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Author Info */}
-          <View style={styles.authorRow}>
-            <View style={styles.avatar}>
-              <Image source={assets.images.Avatar} style={styles.avatarImage} />
-            </View>
-            <Text style={styles.authorName}>John Nick</Text>
+        {isLoading || isCategoriesLoading ? (
+          <View
+            style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <ActivityIndicator size="large" />
           </View>
-
-          {/* Title */}
-          <Text style={styles.docTitle}>Medical History</Text>
-
-          {/* Meta Info */}
-          <View style={styles.metaRow}>
-            <AppBadge bgColor="#FFF6E6" dotColor="#E8A23A" text="Health" />
-            <Text style={styles.metaLabel}>Last Update:</Text>
-            <Calendar />
-            <Text style={styles.metaDate}>Dec 12, 2022</Text>
-          </View>
-
-          {/* Editor */}
-          <View style={styles.editorContainer}>
-            <RichEditor
-              ref={editor}
-              useContainer
-              initialContentHTML=""
-              placeholder="Start writing here..."
-              onChange={setText}
-              editorStyle={styles.editorInput}
-              scrollEnabled={true} // ✅ Internal scroll enabled
-              onCursorPosition={handleCursorPosition}
+        ) : (
+          <>
+            <KeyboardAwareScrollView
+              ref={scrollRef}
+              enableOnAndroid
+              enableAutomaticScroll
+              extraScrollHeight={20} // ⬆ increase this from 24 → 100
+              extraHeight={Platform.OS === 'ios' ? 120 : 200}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: spacing(150) }}
               showsVerticalScrollIndicator={false}
-            />
-          </View>
-          {/* </KeyboardAvoidingView> */}
-        </KeyboardAwareScrollView>
+            >
+              {/* Author Info */}
+              <View style={styles.authorRow}>
+                <SmartAvatar
+                  src={data?.user.photo || profile?.photo}
+                  name={data?.user.fullName || profile?.fullName}
+                  size={scale(22)}
+                  fontSize={fontSize(14)}
+                  style={styles.avatar}
+                />
+                <Text style={styles.authorName}>
+                  {data?.user.fullName || profile?.fullName}
+                </Text>
+              </View>
 
-        {/* Bottom Toolbar */}
-        {/* <ToolbarWithKeyboardPadding insetsBottom={insets.bottom}> */}
-        <View style={styles.toolbarContainer}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ flexDirection: 'row' }}>
-              <TouchableOpacity
-                style={styles.toolbarButton}
-                onPress={() =>
-                  editor.current?.sendAction('action', actions.undo)
-                }
-              >
-                <Undo />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.toolbarButton}
-                onPress={() =>
-                  editor.current?.sendAction('action', actions.redo)
-                }
-              >
-                <Redo />
-              </TouchableOpacity>
+              {/* Title */}
+              {localMode !== 'view' ? (
+                <Controller
+                  name="title"
+                  control={form.control}
+                  render={({ field }) => (
+                    <TextInput
+                      style={styles.transparentInput}
+                      placeholder="Enter Title..."
+                      placeholderTextColor={theme.colors.gray[500]}
+                      {...field}
+                      onChangeText={field.onChange}
+                    />
+                  )}
+                />
+              ) : (
+                <Text style={styles.docTitle}>{data?.title}</Text>
+              )}
+
+              {/* Meta Info */}
+              <View style={styles.metaRow}>
+                {localMode === 'view' ? (
+                  <AppBadge
+                    bgColor={data?.tag?.color.bg}
+                    dotColor={data?.tag?.color.text}
+                    text={data?.tag?.title}
+                  />
+                ) : (
+                  <Controller
+                    name="tag"
+                    control={form.control}
+                    render={({ field }) => {
+                      const selectedTag = categories?.find(
+                        _cat => _cat._id === field.value,
+                      );
+                      return (
+                        <TouchableButton
+                          style={styles.tagDropdown}
+                          onPress={() =>
+                            SheetManager.show('general-sheet', {
+                              payload: {
+                                paddingBottom: spacing(10),
+                                children: (
+                                  <DocumentCategorySheetBody
+                                    category={field.value}
+                                    fieldChange={field.onChange}
+                                  />
+                                ),
+                              },
+                            })
+                          }
+                          disabled={isPending || isEditing}
+                        >
+                          {selectedTag ? (
+                            <AppBadge
+                              bgColor={selectedTag?.color.bg}
+                              dotColor={selectedTag?.color.text}
+                              text={selectedTag?.title}
+                            />
+                          ) : (
+                            <Text
+                              style={{
+                                paddingHorizontal: spacing(5),
+                                color: theme.colors.gray[500],
+                              }}
+                            >
+                              Select tag
+                            </Text>
+                          )}
+                          <Feather
+                            name="chevron-down"
+                            size={fontSize(16)}
+                            color={theme.colors.gray[500]}
+                          />
+                        </TouchableButton>
+                      );
+                    }}
+                  />
+                )}
+                {localMode === 'view' && (
+                  <>
+                    <Text style={styles.metaLabel}>Last Update:</Text>
+                    <Calendar />
+                    <Text style={styles.metaDate}>
+                      {moment(data?.updatedAt).format('MMM DD, YYYY')}
+                    </Text>
+                  </>
+                )}
+              </View>
+
+              {/* Editor */}
+              <View style={styles.editorContainer}>
+                <RichEditor
+                  ref={editor}
+                  useContainer
+                  initialContentHTML={editorValue}
+                  placeholder="Start writing here..."
+                  onChange={setEditorValue}
+                  editorStyle={styles.editorInput}
+                  scrollEnabled={true} // ✅ Internal scroll enabled
+                  onCursorPosition={handleCursorPosition}
+                  showsVerticalScrollIndicator={false}
+                  disabled={localMode === 'view' || isPending || isEditing}
+                />
+              </View>
+              {/* </KeyboardAvoidingView> */}
+            </KeyboardAwareScrollView>
+
+            {/* Bottom Toolbar */}
+            {/* <ToolbarWithKeyboardPadding insetsBottom={insets.bottom}> */}
+            <View style={styles.toolbarContainer}>
+              {localMode !== 'view' && (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginTop: spacing(5),
+                  }}
+                >
+                  <View style={{ flexDirection: 'row' }}>
+                    <TouchableButton
+                      style={styles.toolbarButton}
+                      onPress={() =>
+                        editor.current?.sendAction('action', actions.undo)
+                      }
+                    >
+                      <Undo />
+                    </TouchableButton>
+                    <TouchableButton
+                      style={styles.toolbarButton}
+                      onPress={() =>
+                        editor.current?.sendAction('action', actions.redo)
+                      }
+                    >
+                      <Redo />
+                    </TouchableButton>
+                  </View>
+                  <RichToolbar
+                    editor={editor}
+                    actions={[
+                      actions.setBold,
+                      actions.setItalic,
+                      actions.setUnderline,
+                      actions.setStrikethrough,
+                      actions.insertOrderedList,
+                      actions.insertBulletsList,
+                      actions.insertLink,
+                    ]}
+                    iconMap={toolbarIconMap}
+                    style={styles.richToolbarContainer}
+                    selectedIconTint={theme.colors.primary}
+                    unselectedIconTint={theme.colors.gray[200]}
+                    unselectedButtonStyle={styles.unselectedToolbarButton}
+                    selectedButtonStyle={styles.unselectedToolbarButton}
+                  />
+                </View>
+              )}
+
+              <View style={styles.bottomButtonsRow}>
+                {localMode === 'view' && (
+                  <AppButton
+                    text="Edit"
+                    onPress={() => {
+                      setLocalMode('edit');
+                    }}
+                    leftIcon={
+                      <Octicons
+                        name="pencil"
+                        color={theme.colors.primary}
+                        size={16}
+                      />
+                    }
+                    variant="secondary-outline"
+                    style={{ marginRight: 'auto' }}
+                  />
+                )}
+                {localMode === 'edit' && (
+                  <AppButton
+                    text="Cancel"
+                    onPress={() => {
+                      setLocalMode('view');
+                    }}
+                    variant="secondary-outline"
+                    style={{ marginRight: 'auto' }}
+                    disabled={isEditing}
+                  />
+                )}
+                <AppButton
+                  text="Coach AI"
+                  leftIcon={<WhiteCoachAi />}
+                  style={{ backgroundColor: '#37405d' }}
+                />
+                {localMode !== 'view' ? (
+                  <AppButton
+                    text="Save Changes"
+                    leftIcon={
+                      <Feather
+                        name="save"
+                        color={theme.colors.white}
+                        size={18}
+                      />
+                    }
+                    onPress={form.handleSubmit(onSubmit, onError)}
+                    isLoading={isEditing || isPending}
+                  />
+                ) : (
+                  <AppButton
+                    text="Download"
+                    leftIcon={
+                      <Feather
+                        name="download"
+                        size={18}
+                        color={theme.colors.white}
+                      />
+                    }
+                    onPress={() =>
+                      Alert.alert('Downloaded', 'Document is downloaded')
+                    }
+                  />
+                )}
+              </View>
             </View>
-            <RichToolbar
-              editor={editor}
-              actions={[
-                actions.setBold,
-                actions.setItalic,
-                actions.setUnderline,
-                actions.setStrikethrough,
-                actions.insertOrderedList,
-                actions.insertBulletsList,
-                actions.insertLink,
-              ]}
-              iconMap={toolbarIconMap}
-              style={styles.richToolbarContainer}
-              selectedIconTint={theme.colors.primary}
-              unselectedIconTint={theme.colors.gray[200]}
-              unselectedButtonStyle={styles.unselectedToolbarButton}
-              selectedButtonStyle={styles.unselectedToolbarButton}
-            />
-          </View>
-
-          <View style={styles.bottomButtonsRow}>
-            {localMode === 'view' && (
-              <AppButton
-                text="Edit"
-                onPress={() => {
-                  setLocalMode('edit');
-                }}
-                leftIcon={
-                  <Octicons
-                    name="pencil"
-                    color={theme.colors.primary}
-                    size={18}
-                  />
-                }
-                variant="secondary-outline"
-                style={{ marginRight: 'auto' }}
-              />
-            )}
-            <AppButton
-              text="Coach AI"
-              leftIcon={<WhiteCoachAi />}
-              style={{ backgroundColor: '#37405d' }}
-            />
-            {localMode !== 'view' ? (
-              <AppButton
-                text="Save Changes"
-                onPress={() => {
-                  setLocalMode('view');
-                  Alert.alert('Saved', 'Document is saved');
-                }}
-              />
-            ) : (
-              <AppButton
-                text="Download"
-                leftIcon={
-                  <Feather
-                    name="download"
-                    size={18}
-                    color={theme.colors.white}
-                  />
-                }
-                onPress={() =>
-                  Alert.alert('Downloaded', 'Document is downloaded')
-                }
-              />
-            )}
-          </View>
-        </View>
+          </>
+        )}
         {/* </ToolbarWithKeyboardPadding> */}
       </View>
     </KeyboardAvoidingView>
@@ -297,6 +544,7 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: spacing(4),
+    paddingHorizontal: spacing(10),
   },
   headerTitle: {
     fontSize: fontSize(18),
@@ -312,16 +560,7 @@ const styles = StyleSheet.create({
     marginTop: spacing(10),
   },
   avatar: {
-    width: fontSize(22),
-    height: fontSize(22),
-    borderRadius: fontSize(14),
-    backgroundColor: theme.colors.gray[300],
     marginRight: spacing(8),
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
   },
   authorName: {
     fontSize: fontSize(13),
@@ -338,6 +577,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(20),
   },
 
+  transparentInput: {
+    fontSize: fontSize(20),
+    fontFamily: theme.fonts.archivo.semiBold,
+    color: theme.colors.gray[950],
+    marginTop: spacing(16),
+    paddingVertical: spacing(5),
+    paddingHorizontal: spacing(20),
+  },
+
   // Meta row
   metaRow: {
     flexDirection: 'row',
@@ -345,6 +593,16 @@ const styles = StyleSheet.create({
     marginTop: spacing(16),
     paddingHorizontal: spacing(20),
     gap: spacing(6),
+  },
+
+  tagDropdown: {
+    padding: spacing(5),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(2),
+    borderWidth: 1,
+    borderColor: theme.colors.gray[400],
+    borderRadius: spacing(20),
   },
 
   metaLabel: {
@@ -385,7 +643,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
     borderTopWidth: 1,
     borderTopColor: theme.colors.gray[200],
-    paddingTop: spacing(10),
+    paddingTop: spacing(5),
     paddingBottom: spacing(12),
     paddingHorizontal: spacing(16),
     shadowColor: '#000',
@@ -450,5 +708,18 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     fontSize: fontSize(14),
     fontFamily: theme.fonts.archivo.medium,
+  },
+  heading: {
+    fontFamily: theme.fonts.archivo.medium,
+    fontSize: fontSize(18),
+    color: theme.colors.black,
+    marginBottom: spacing(20),
+  },
+  category: {
+    paddingVertical: spacing(10),
+    paddingHorizontal: spacing(5),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
 });

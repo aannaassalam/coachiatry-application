@@ -10,9 +10,15 @@ export type AppStackParamList = {
   Documents: undefined;
   DocumentEditor: {
     mode?: 'edit' | 'view' | 'add';
+    documentId?: string;
   };
   Profile: undefined;
   BottomTabs: undefined;
-  TaskDetails: undefined;
+  TaskDetails: { taskId: string };
+  AddEditTask: {
+    taskId?: string;
+    predefinedStatus?: string;
+    predefinedDueDate?: string;
+  };
   EditProfile: undefined;
 };

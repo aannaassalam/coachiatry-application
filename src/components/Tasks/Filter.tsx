@@ -1,5 +1,12 @@
 import { useRef, useState } from 'react';
-import { Image, Platform, Pressable, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Platform,
+  Pressable,
+  Text,
+  View,
+} from 'react-native';
 import ActionSheet, {
   ActionSheetRef,
   ScrollView,
@@ -7,11 +14,14 @@ import ActionSheet, {
   SheetProps,
 } from 'react-native-actions-sheet';
 import { createStyleSheet } from 'react-native-unistyles';
-import Feather from 'react-native-vector-icons/Feather';
+import { Feather } from '@react-native-vector-icons/feather';
 import { assets } from '../../assets';
 import { theme } from '../../theme';
-import { fontSize, scale, spacing } from '../../utils';
+import { fontSize, scale, spacing, verticalScale } from '../../utils';
 import AppButton from '../ui/AppButton';
+import { useQueries } from '@tanstack/react-query';
+import { getAllCategories } from '../../api/functions/category.api';
+import { getAllStatuses } from '../../api/functions/status.api';
 
 type Filter = {
   selectedKey: string;
@@ -19,9 +29,19 @@ type Filter = {
   selectedValue: string;
 };
 
-export default function Filter() {
+type FilterOption = {
+  compareOperator: { label: string; value: string }[];
+  compareWith: { label: string; value: string }[];
+};
+
+export default function Filter({
+  filters,
+  setFilters,
+}: {
+  filters: Filter[];
+  setFilters: React.Dispatch<React.SetStateAction<Filter[]>>;
+}) {
   const sheetRef = useRef<ActionSheetRef>(null);
-  const [filters, setFilters] = useState<Filter[]>([]);
   const [view, setView] = useState<'view' | 'add'>('view');
   const [filterMode, setFilterMode] = useState<'key' | 'operator' | 'value'>(
     'key',
@@ -68,6 +88,69 @@ export default function Filter() {
     setFilters(prev => prev.filter((_, idx) => idx !== id));
   };
 
+  const [
+    { data: categories = [], isLoading: isCategoryLoading },
+    { data: statuses = [], isLoading: isStatusLoading },
+  ] = useQueries({
+    queries: [
+      {
+        queryKey: ['categories'],
+        queryFn: getAllCategories,
+      },
+      {
+        queryKey: ['status'],
+        queryFn: getAllStatuses,
+      },
+    ],
+  });
+
+  const filterOptions: Record<string, FilterOption> = {
+    status: {
+      compareOperator: [
+        { label: 'is', value: 'is' },
+        { label: 'is not', value: 'is not' },
+      ],
+      compareWith: statuses.map(_status => ({
+        label: _status.title,
+        value: _status._id,
+      })),
+    },
+    dueDate: {
+      compareOperator: [
+        { label: 'is', value: 'is' },
+        { label: 'is not', value: 'is not' },
+      ],
+      compareWith: [
+        { label: 'Today', value: 'today' },
+        { label: 'Yesterday', value: 'yesterday' },
+        { label: 'Tomorrow', value: 'tomorrow' },
+        { label: 'This Week', value: 'thisWeek' },
+        { label: 'Next Week', value: 'nextWeek' },
+      ],
+    },
+    category: {
+      compareOperator: [
+        { label: 'is', value: 'is' },
+        { label: 'is not', value: 'is not' },
+      ],
+      compareWith: categories.map(_cat => ({
+        label: _cat.title,
+        value: _cat._id,
+      })),
+    },
+    priority: {
+      compareOperator: [
+        { label: 'is', value: 'is' },
+        { label: 'is not', value: 'is not' },
+      ],
+      compareWith: [
+        { label: 'High', value: 'high' },
+        { label: 'Medium', value: 'medium' },
+        { label: 'Low', value: 'low' },
+      ],
+    },
+  };
+
   return (
     <View>
       <Pressable style={styles.filterIcon} onPress={present}>
@@ -100,7 +183,7 @@ export default function Filter() {
                 style={{
                   paddingTop: spacing(32),
                   alignItems: 'center',
-                  // marginBottom: spacing(72),
+                  marginBottom: spacing(72),
                 }}
               >
                 <Image
@@ -221,36 +304,34 @@ export default function Filter() {
               </Pressable>
             </View>
           ) : filterMode === 'value' ? (
-            <View>
-              <Pressable
-                style={styles.box}
-                onPress={() => handleFilterProgress('one')}
+            isCategoryLoading || isStatusLoading ? (
+              <View
+                style={{
+                  height: verticalScale(150),
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
-                <Text style={styles.boxText}>One</Text>
-                {/* <Feather name="check" /> */}
-              </Pressable>
-              <Pressable
-                style={styles.box}
-                onPress={() => handleFilterProgress('two')}
-              >
-                <Text style={styles.boxText}>Two</Text>
-                {/* <Feather name="check" /> */}
-              </Pressable>
-              <Pressable
-                style={styles.box}
-                onPress={() => handleFilterProgress('three')}
-              >
-                <Text style={styles.boxText}>Three</Text>
-                {/* <Feather name="check" /> */}
-              </Pressable>
-              <Pressable
-                style={styles.box}
-                onPress={() => handleFilterProgress('four')}
-              >
-                <Text style={styles.boxText}>Four</Text>
-                {/* <Feather name="check" /> */}
-              </Pressable>
-            </View>
+                <ActivityIndicator size="small" />
+              </View>
+            ) : (
+              <View>
+                {filterOptions[
+                  activeFilter?.selectedKey ?? 'status'
+                ].compareWith.map(_item => {
+                  return (
+                    <Pressable
+                      style={styles.box}
+                      onPress={() => handleFilterProgress(_item.value)}
+                      key={_item.value}
+                    >
+                      <Text style={styles.boxText}>{_item.label}</Text>
+                      {/* <Feather name="check" /> */}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )
           ) : null}
         </ScrollView>
         <View style={styles.footerContainer}>

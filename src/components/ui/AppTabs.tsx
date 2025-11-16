@@ -1,13 +1,8 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
+import TouchableButton from '../TouchableButton';
 
 export interface TabItem {
   key: string;
@@ -16,14 +11,14 @@ export interface TabItem {
 
 interface AppTabsProps {
   tabs: TabItem[];
-  renderContent: (activeTab: string) => React.ReactNode;
+  RenderContent: React.ComponentType<{ activeTab: string }>;
   initialTab?: string;
   containerStyle?: object;
 }
 
 const AppTabs: React.FC<AppTabsProps> = ({
   tabs,
-  renderContent,
+  RenderContent,
   initialTab,
   containerStyle,
 }) => {
@@ -34,7 +29,7 @@ const AppTabs: React.FC<AppTabsProps> = ({
       {/* Tabs Header */}
       <View style={styles.tabRow}>
         {tabs.map(tab => (
-          <TouchableOpacity
+          <TouchableButton
             key={tab.key}
             onPress={() => setActiveTab(tab.key)}
             style={[
@@ -50,17 +45,14 @@ const AppTabs: React.FC<AppTabsProps> = ({
             >
               {tab.label}
             </Text>
-          </TouchableOpacity>
+          </TouchableButton>
         ))}
       </View>
 
       {/* Tab Content */}
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {renderContent(activeTab)}
-      </ScrollView>
+      <View style={styles.scrollContent}>
+        <RenderContent activeTab={activeTab} />
+      </View>
     </View>
   );
 };
@@ -105,5 +97,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: spacing(20),
+    flex: 1,
   },
 });

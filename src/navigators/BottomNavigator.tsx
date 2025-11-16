@@ -1,16 +1,9 @@
-import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Text, View } from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Text } from 'react-native';
 import { theme } from '../theme';
 import { fontSize, spacing } from '../utils';
 
-import TaskList from '../screens/Tasks/TaskList';
-import ChatList from '../screens/Chats/ChatList';
-import Documents from '../screens/Documents/Documents';
-import Dashboard from '../screens/Dashboard/Dashboard';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChatActive,
   ChatInactive,
@@ -21,6 +14,10 @@ import {
   TasksActive,
   TasksInactive,
 } from '../assets';
+import ChatList from '../screens/Chats/ChatList';
+import Dashboard from '../screens/Dashboard/Dashboard';
+import Documents from '../screens/Documents/Documents';
+import TaskList from '../screens/Tasks/TaskList';
 
 export type AppTabParamList = {
   Dashboard: undefined;

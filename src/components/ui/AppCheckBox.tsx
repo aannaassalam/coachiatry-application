@@ -1,9 +1,9 @@
-import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
-import Entypo from 'react-native-vector-icons/Entypo';
+import { Entypo } from '@react-native-vector-icons/entypo';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
+import TouchableButton from '../TouchableButton';
 
 function AppCheckBox({
   text,
@@ -17,7 +17,7 @@ function AppCheckBox({
   const { styles } = useStyles(stylesheet);
 
   return (
-    <TouchableOpacity
+    <TouchableButton
       onPress={() => toggleCheck()}
       activeOpacity={0.8}
       style={styles.checkboxRow}
@@ -33,7 +33,7 @@ function AppCheckBox({
         )}
       </View>
       <Text style={styles.checkboxText}>Remember device for 30 days</Text>
-    </TouchableOpacity>
+    </TouchableButton>
   );
 }
 

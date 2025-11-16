@@ -1,256 +1,63 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SheetManager } from 'react-native-actions-sheet';
 import { createStyleSheet } from 'react-native-unistyles';
-import Feather from 'react-native-vector-icons/Feather';
+import { Feather } from '@react-native-vector-icons/feather';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
+import { Status } from '../../typescript/interface/status.interface';
+import { useQuery } from '@tanstack/react-query';
+import { getAllStatuses } from '../../api/functions/status.api';
 
-const StatusBoxSheetBody = () => {
+const StatusBoxSheetBody = ({ status }: { status: Status }) => {
+  const { data = [] } = useQuery({
+    queryKey: ['status'],
+    queryFn: getAllStatuses,
+  });
+
   return (
     <View>
       <Text style={styles.heading}>Status</Text>
-      <ScrollView contentContainerStyle={styles.statuses}>
-        <Pressable style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
+      <FlatList
+        data={data}
+        contentContainerStyle={styles.statuses}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        keyExtractor={item => item._id}
+        scrollEnabled={false}
+        renderItem={({ item }) => (
+          <Pressable style={styles.status}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: spacing(8),
+              }}
+            >
+              <View style={styles.statusOutsideBox(item.color.text, 12)}>
+                <View style={styles.statusInsideBox(10)} />
+              </View>
+              <Text style={styles.statusText}>{item.title}</Text>
             </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-          <Feather name="check" size={fontSize(16)} />
-        </Pressable>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-        </View>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-        </View>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-        </View>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-        </View>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-        </View>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-        </View>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-        </View>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-        </View>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-        </View>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-        </View>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-        </View>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-        </View>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-        </View>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-        </View>
-        <View style={styles.status}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing(8),
-            }}
-          >
-            <View style={styles.statusOutsideBox('#ff0000', 12)}>
-              <View style={styles.statusInsideBox(10)} />
-            </View>
-            <Text style={styles.statusText}>Due Date</Text>
-          </View>
-          <Feather name="check" size={fontSize(16)} />
-        </View>
-      </ScrollView>
+            {status._id === item._id && (
+              <Feather name="check" size={fontSize(16)} />
+            )}
+          </Pressable>
+        )}
+      />
     </View>
   );
 };
 
-export default function StatusBox() {
+export default function StatusBox({ status }: { status: Status }) {
   return (
     <View style={{ paddingHorizontal: spacing(10) }}>
       <Pressable
-        style={styles.statusOutsideBox('#ff0000', 14)}
+        style={styles.statusOutsideBox(status.color.text, 14)}
         onPress={() =>
           SheetManager.show('general-sheet', {
             payload: {
               paddingBottom: spacing(10),
-              children: <StatusBoxSheetBody />,
+              children: <StatusBoxSheetBody status={status} />,
             },
           })
         }

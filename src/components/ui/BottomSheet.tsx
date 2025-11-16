@@ -1,5 +1,4 @@
-import { ReactNode } from 'react';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 import ActionSheet, {
   ScrollView,
   SheetProps,
@@ -16,6 +15,7 @@ export default function BottomSheet(props: SheetProps<'general-sheet'>) {
       closeOnTouchBackdrop
       indicatorStyle={{ display: 'none' }}
       gestureEnabled
+      drawUnderStatusBar
       containerStyle={{
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,

@@ -64,6 +64,6 @@ const styles = createStyleSheet({
     width: '100%',
     position: 'absolute',
     display: 'flex',
-    alignItems: 'center',
+    // alignItems: 'center',
   },
 });

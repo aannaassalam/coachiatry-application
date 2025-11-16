@@ -1,19 +1,34 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { createStyleSheet } from 'react-native-unistyles';
-import AntDesign from 'react-native-vector-icons/AntDesign';
-import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import { AntDesign } from '@react-native-vector-icons/ant-design';
+import { FontAwesome5 } from '@react-native-vector-icons/fontawesome5';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
 import TaskBadge from './TaskBadge';
 import IndividualTask from './IndividualTask';
 import AccordionItem from '../ui/Accordion';
 import { useState } from 'react';
+import { Status } from '../../typescript/interface/status.interface';
+import { Task } from '../../typescript/interface/task.interface';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { AppStackParamList } from '../../types/navigation';
+import { useNavigation } from '@react-navigation/native';
+
+type TaskListNavigationProp = NativeStackNavigationProp<
+  AppStackParamList,
+  'Tasks'
+>;
 
 export default function TaskCard({
   defaultExpanded = false,
+  status,
+  tasks,
 }: {
   defaultExpanded?: boolean;
+  status: Status;
+  tasks: Task[];
 }) {
+  const navigation = useNavigation<TaskListNavigationProp>();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   return (
@@ -25,36 +40,36 @@ export default function TaskCard({
         >
           <FontAwesome5
             name={isExpanded ? 'caret-down' : 'caret-right'}
+            iconStyle="solid"
             size={fontSize(16)}
             color={theme.colors.black}
           />
         </Pressable>
-        <TaskBadge
-          title="Todo"
-          count={15}
-          labelColor={theme.colors.primary}
-          backgroundColor="#E7E8EB"
-        />
+        <Pressable onPress={() => setIsExpanded(prev => !prev)}>
+          <TaskBadge
+            title={status.title}
+            count={tasks.length}
+            labelColor={status.color.text}
+            backgroundColor={status.color.bg}
+          />
+        </Pressable>
 
-        <Pressable style={styles.addTaskButton}>
+        <Pressable
+          style={styles.addTaskButton}
+          onPress={() =>
+            navigation.navigate('AddEditTask', { predefinedStatus: status._id })
+          }
+        >
           <AntDesign name="plus" color="#838383" size={spacing(14)} />
           <Text style={styles.addTaskButtonText}>Add Task</Text>
         </Pressable>
       </View>
       <AccordionItem isExpanded={isExpanded} viewKey={'he'} duration={0}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.task}
-          removeClippedSubviews
-        >
-          <View>
-            <IndividualTask />
-            <IndividualTask />
-            <IndividualTask />
-            <IndividualTask />
-          </View>
-        </ScrollView>
+        <View style={styles.taskList}>
+          {tasks.map(_task => (
+            <IndividualTask task={_task} key={_task._id} />
+          ))}
+        </View>
         {/* <View style={styles.addTaskRow}>
           <Pressable style={[styles.addTaskButton, { marginLeft: 0 }]}>
             <AntDesign name="plus" color="#838383" size={spacing(14)} />
@@ -95,9 +110,12 @@ const styles = createStyleSheet({
     fontFamily: theme.fonts.lato.regular,
     fontSize: fontSize(12),
   },
-  task: {
-    backgroundColor: theme.colors.white,
-    paddingHorizontal: spacing(16),
+  taskList: {
+    backgroundColor: theme.colors.secondary,
+    borderRadius: fontSize(12),
+    paddingVertical: spacing(10),
+    paddingHorizontal: spacing(20),
+    gap: spacing(10),
   },
   addTaskRow: {
     paddingHorizontal: spacing(20),

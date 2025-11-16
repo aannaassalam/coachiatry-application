@@ -8,13 +8,15 @@ export const getAllDocuments = async ({
   sort,
   tab,
   limit,
+  page,
 }: {
   sort?: string;
   tab: string;
   limit?: number;
+  page: number;
 }): Promise<PaginatedResponse<Document[]>> => {
   const res = await axiosInstance.get(endpoints.document.getAll, {
-    params: { sort, tab, select: '-shareId', populate: 'tag', limit },
+    params: { sort, tab, select: '-shareId', populate: 'tag', limit, page },
   });
   return res.data;
 };

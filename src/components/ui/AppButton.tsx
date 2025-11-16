@@ -1,15 +1,15 @@
 import React from 'react';
 import {
-  Text,
-  TouchableOpacity,
-  StyleSheet,
   StyleProp,
-  ViewStyle,
+  StyleSheet,
+  Text,
   TextStyle,
+  ViewStyle,
 } from 'react-native';
+import { ActivityIndicator } from 'react-native-paper';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
-import { ActivityIndicator } from 'react-native-paper';
+import TouchableButton from '../TouchableButton';
 
 interface AppButtonProps {
   text?: string;
@@ -33,7 +33,7 @@ const AppButton: React.FC<AppButtonProps> = ({
   isLoading,
 }) => {
   return (
-    <TouchableOpacity
+    <TouchableButton
       activeOpacity={0.8}
       onPress={onPress}
       style={[
@@ -69,7 +69,7 @@ const AppButton: React.FC<AppButtonProps> = ({
       >
         {text}
       </Text>
-    </TouchableOpacity>
+    </TouchableButton>
   );
 };
 

@@ -98,7 +98,7 @@ export default function AuthSwitchingLoader({
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#eee',
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',

@@ -62,6 +62,7 @@ export const getUserSuggestions = async (
   search: string,
   type: 'group' | 'watchers' = 'group',
 ): Promise<Pick<User, '_id' | 'fullName' | 'email' | 'photo'>[]> => {
+  console.log(search);
   const res = await axiosInstance.get(endpoints.user.suggestUsers, {
     params: { search, type },
   });

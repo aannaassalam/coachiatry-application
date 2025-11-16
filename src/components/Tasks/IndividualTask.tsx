@@ -1,66 +1,147 @@
-import React from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { createStyleSheet } from 'react-native-unistyles';
-import { SmartAvatar } from '../ui/SmartAvatar';
-import { fontSize, scale, spacing } from '../../utils';
-import { theme } from '../../theme';
-import StatusBox from './StatusBox';
-import Badge from '../ui/Badge';
-import Priority from '../ui/Priority';
-import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useMutation } from '@tanstack/react-query';
+import moment from 'moment';
+import { Alert, Dimensions, Text, TouchableOpacity, View } from 'react-native';
+import { showMessage } from 'react-native-flash-message';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
+import {
+  Menu,
+  MenuOption,
+  MenuOptions,
+  MenuTrigger,
+  renderers,
+} from 'react-native-popup-menu';
+import { createStyleSheet } from 'react-native-unistyles';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Octicons } from '@react-native-vector-icons/octicons';
+import { deleteTask } from '../../api/functions/task.api';
+import { hapticOptions } from '../../helpers/utils';
+import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
+import { Task } from '../../typescript/interface/task.interface';
+import { fontSize, scale, spacing } from '../../utils';
+import TouchableButton from '../TouchableButton';
 
 type TaskScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
-  'TaskDetails'
+  'Tasks'
 >;
 
-export default function IndividualTask() {
+export default function IndividualTask({ task }: { task: Task }) {
   const navigation = useNavigation<TaskScreenNavigationProp>();
+  const width = Dimensions.get('screen').width;
+
+  const { mutate } = useMutation({
+    mutationFn: deleteTask,
+    onMutate: () => {
+      showMessage({
+        type: 'info',
+        message: 'Deleting...',
+        description: 'Deleting task, Please wait...',
+      });
+    },
+    meta: {
+      invalidateQueries: ['tasks'],
+    },
+  });
 
   return (
-    <View style={styles.container}>
-      <View style={styles.cell}>
-        <Pressable style={styles.caretButton}>
-          <FontAwesome5
-            name={'caret-right'}
-            size={fontSize(16)}
-            color={theme.colors.black}
-          />
-        </Pressable>
-        <StatusBox />
-        <Pressable onPress={() => navigation.navigate('TaskDetails')}>
-          <Text
-            style={[styles.cellText, { width: scale(280) }]}
-            numberOfLines={1}
-          >
-            A very very very very long text for reference
-          </Text>
-        </Pressable>
-      </View>
-      <View style={[styles.cell, { justifyContent: 'center' }]}>
-        <SmartAvatar
-          src="https://coachiatry.s3.us-east-1.amazonaws.com/Logo+Mark+(1).png"
-          name="Coachiatry"
-          size={spacing(20)}
-          fontSize={fontSize(10)}
-        />
-        <Text style={styles.cellText}>John Nick</Text>
-      </View>
-      <View style={[styles.cell, { justifyContent: 'center' }]}>
-        <Text style={styles.cellText}>13-11-2025</Text>
-      </View>
-      <View style={[styles.cell, { justifyContent: 'center' }]}>
-        <Badge title="Health" bgColor="#FFF0D8" color="#F4A118" />
-      </View>
-      <View
-        style={[styles.cell, { borderRightWidth: 0, justifyContent: 'center' }]}
+    <Menu
+      key={task._id}
+      renderer={renderers.Popover}
+      onOpen={() =>
+        ReactNativeHapticFeedback.trigger('impactMedium', hapticOptions)
+      }
+      rendererProps={{
+        placement: 'bottom',
+        anchorStyle: {
+          marginLeft: width * 0.85,
+          marginTop: -30,
+        },
+      }}
+    >
+      <MenuTrigger
+        triggerOnLongPress
+        onAlternativeAction={() =>
+          navigation.navigate('TaskDetails', { taskId: task._id })
+        }
+        customStyles={{
+          TriggerTouchableComponent: TouchableButton,
+          triggerTouchable: {
+            activeOpacity: 0.5,
+          },
+        }}
+        style={styles.taskCard}
       >
-        <Priority priority="high" />
-      </View>
-    </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.taskTitle}>{task.title}</Text>
+          <Text style={styles.taskDate}>
+            {task.dueDate
+              ? moment(task.dueDate).format('D MMM, YYYY')
+              : 'No due date available'}
+          </Text>
+        </View>
+        {(task.subtasks ?? [])?.length > 0 && (
+          <View style={styles.progressContainer}>
+            <Ionicons
+              name="git-branch-outline"
+              size={fontSize(16)}
+              color={theme.colors.gray[700]}
+            />
+            <Text style={styles.progressText}>
+              {task.subtasks?.filter(_st => _st.completed).length}/
+              {task.subtasks?.length}
+            </Text>
+          </View>
+        )}
+      </MenuTrigger>
+      <MenuOptions
+        customStyles={{
+          optionsContainer: {
+            width: scale(100),
+            borderRadius: 10,
+            paddingVertical: scale(5),
+          },
+        }}
+      >
+        <MenuOption
+          style={styles.option}
+          onSelect={() =>
+            navigation.navigate('AddEditTask', { taskId: task._id })
+          }
+        >
+          <Octicons
+            name="pencil"
+            color={theme.colors.gray[900]}
+            size={fontSize(16)}
+          />
+          <Text style={styles.optionText}>Edit</Text>
+        </MenuOption>
+        <MenuOption
+          value={1}
+          style={styles.option}
+          onSelect={() =>
+            Alert.prompt(
+              'Delete task',
+              'Are you sure you want to delete this task?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: () => mutate(task._id),
+                },
+              ],
+              'default',
+            )
+          }
+        >
+          <Octicons name="trash" color="#ef4444" size={fontSize(16)} />
+          <Text style={[styles.optionText, { color: '#ef4444' }]}>Delete</Text>
+        </MenuOption>
+      </MenuOptions>
+    </Menu>
   );
 }
 
@@ -77,32 +158,53 @@ const styles = createStyleSheet({
     justifyContent: 'center',
     paddingHorizontal: spacing(8),
   },
-  cell: {
-    minWidth: spacing(120),
+  taskCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing(10),
-    borderRightWidth: 1,
-    borderRightColor: theme.colors.gray[200],
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.white,
+    borderRadius: fontSize(10),
+    paddingVertical: spacing(10),
+    paddingHorizontal: spacing(14),
+    gap: spacing(5),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  statusOutsideBox: backgroundColor => ({
-    width: 14,
-    height: 14,
-    borderRadius: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor,
-  }),
-  statusInsideBox: {
-    width: 12,
-    height: 12,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: theme.colors.white,
-  },
-  cellText: {
-    fontFamily: theme.fonts.lato.regular,
+  taskTitle: {
     fontSize: fontSize(14),
-    color: '#333',
+    fontFamily: theme.fonts.lato.regular,
+    color: theme.colors.gray[900],
+    marginBottom: spacing(4),
+  },
+  taskDate: {
+    fontSize: fontSize(12),
+    fontFamily: theme.fonts.lato.regular,
+    color: theme.colors.gray[700],
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.gray[100],
+    paddingHorizontal: spacing(8),
+    paddingVertical: spacing(4),
+    borderRadius: fontSize(8),
+  },
+  progressText: {
+    marginLeft: spacing(4),
+    fontSize: fontSize(13),
+    color: theme.colors.gray[700],
+    fontFamily: theme.fonts.lato.regular,
+  },
+  option: {
+    flexDirection: 'row',
+    gap: spacing(10),
+    paddingVertical: scale(5),
+    paddingHorizontal: scale(10),
+  },
+  optionText: {
+    fontSize: fontSize(16),
   },
 });

@@ -1,11 +1,8 @@
-import {
-  Filter,
-  PaginatedResponse,
-} from '../../typescript/interface/common.interface';
+import moment from 'moment';
+import { Filter } from '../../typescript/interface/common.interface';
 import { Task, TaskBody } from '../../typescript/interface/task.interface';
 import axiosInstance from '../axiosInstance';
 import { endpoints } from '../endpoints';
-import moment from 'moment';
 
 function getDueDateQuery(value: string) {
   const today = moment().startOf('day');
@@ -101,7 +98,7 @@ export const getAllTasks = async ({
 
   const res = await axiosInstance.get(endpoints.task.getAll, {
     params: {
-      populate: 'category,status,user',
+      populate: 'category,status,assignedTo',
       sort,
       ...filterQuery,
       dueDate:
@@ -124,7 +121,7 @@ export const getAllTasksByCoach = async ({
 
   const res = await axiosInstance.get(endpoints.task.getAll, {
     params: {
-      populate: 'category,status,user',
+      populate: 'category,status,assignedTo',
       sort,
       ...filterQuery,
       user: userId,
@@ -136,7 +133,7 @@ export const getAllTasksByCoach = async ({
 export const getTask = async (id: string): Promise<Task> => {
   const res = await axiosInstance.get(endpoints.task.getOne(id), {
     params: {
-      populate: 'category,status,user',
+      populate: 'category,status,assignedTo',
     },
   });
   return res.data;

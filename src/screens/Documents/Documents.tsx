@@ -1,31 +1,238 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useInfiniteQuery, useMutation } from '@tanstack/react-query';
+import moment from 'moment';
 import { useState } from 'react';
 import {
-  ScrollView,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { showMessage } from 'react-native-flash-message';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
+import {
+  Menu,
+  MenuOption,
+  MenuOptions,
+  MenuTrigger,
+  renderers,
+} from 'react-native-popup-menu';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Octicons } from '@react-native-vector-icons/octicons';
+import {
+  deleteDocument,
+  getAllDocuments,
+} from '../../api/functions/document.api';
 import { Calendar } from '../../assets';
+import TouchableButton from '../../components/TouchableButton';
 import AppBadge from '../../components/ui/AppBadge';
 import AppHeader from '../../components/ui/AppHeader';
 import AppTabs from '../../components/ui/AppTabs';
+import { hapticOptions } from '../../helpers/utils';
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
-import { fontSize, spacing } from '../../utils';
-import { useQuery } from '@tanstack/react-query';
-import { getAllDocuments } from '../../api/functions/document.api';
+import { PaginatedResponse } from '../../typescript/interface/common.interface';
+import { Document } from '../../typescript/interface/document.interface';
+import { fontSize, scale, spacing } from '../../utils';
 
 type DocumentScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
   'DocumentEditor'
 >;
 
+const RenderItem = ({
+  item,
+  navigate,
+}: {
+  item: Document;
+  navigate: (mode: 'view' | 'edit' | 'add') => void;
+}) => {
+  const width = Dimensions.get('screen').width;
+
+  const { mutate } = useMutation({
+    mutationFn: deleteDocument,
+    onMutate: () => {
+      showMessage({
+        type: 'info',
+        message: 'Deleting...',
+        description: 'Deleting document, Please wait...',
+      });
+    },
+    meta: {
+      invalidateQueries: ['documents'],
+    },
+  });
+
+  return (
+    <Menu
+      renderer={renderers.Popover}
+      onOpen={() =>
+        ReactNativeHapticFeedback.trigger('impactMedium', hapticOptions)
+      }
+      rendererProps={{
+        placement: 'bottom',
+        anchorStyle: {
+          marginLeft: width * 0.85,
+          marginTop: -30,
+        },
+      }}
+    >
+      <MenuTrigger
+        triggerOnLongPress
+        onAlternativeAction={() => navigate('view')}
+        customStyles={{
+          TriggerTouchableComponent: TouchableOpacity,
+          triggerTouchable: {
+            activeOpacity: 0.5,
+          },
+        }}
+        style={styles.card}
+      >
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>{item.title}</Text>
+        </View>
+
+        <View style={styles.cardFooter}>
+          <AppBadge
+            bgColor={item.tag?.color.bg}
+            dotColor={item.tag?.color.text}
+            text={item.tag?.title}
+          />
+
+          <View style={styles.dateRow}>
+            <Calendar />
+            <Text style={styles.dateText}>
+              {moment(item.createdAt).format('D MMM, YYYY')}
+            </Text>
+          </View>
+        </View>
+      </MenuTrigger>
+      <MenuOptions
+        customStyles={{
+          optionsContainer: {
+            width: scale(100),
+            borderRadius: 10,
+            paddingVertical: scale(5),
+          },
+        }}
+      >
+        <MenuOption style={styles.option} onSelect={() => navigate('edit')}>
+          <Octicons
+            name="pencil"
+            color={theme.colors.gray[900]}
+            size={fontSize(16)}
+          />
+          <Text style={styles.optionText}>Edit</Text>
+        </MenuOption>
+        <MenuOption
+          value={1}
+          style={styles.option}
+          onSelect={() =>
+            Alert.prompt(
+              'Delete Document',
+              'Are you sure you want to delete this document?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: () => mutate(item._id),
+                },
+              ],
+              'default',
+            )
+          }
+        >
+          <Octicons name="trash" color="#ef4444" size={fontSize(16)} />
+          <Text style={[styles.optionText, { color: '#ef4444' }]}>Delete</Text>
+        </MenuOption>
+      </MenuOptions>
+    </Menu>
+  );
+};
+
+const RenderContent = ({ activeTab }: { activeTab: string }) => {
+  const navigation = useNavigation<DocumentScreenNavigationProp>();
+
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+    refetch,
+    isRefetching,
+  } = useInfiniteQuery<PaginatedResponse<Document[]>>({
+    queryKey: ['documents', activeTab],
+    queryFn: ({ pageParam = 1 }) =>
+      getAllDocuments({ tab: activeTab, page: pageParam as number }),
+    getNextPageParam: lastPage => {
+      const { currentPage, totalPages } = lastPage.meta;
+      return currentPage < totalPages ? currentPage + 1 : undefined;
+    },
+    initialPageParam: 1,
+    staleTime: 60 * 1000,
+  });
+
+  if (isLoading)
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+
+  const documents = data?.pages.flatMap(page => page.data) ?? [];
+  const isRefreshing =
+    !!data && isRefetching && !isFetchingNextPage && !isLoading;
+
+  return (
+    <FlatList
+      data={documents}
+      renderItem={({ item }) => (
+        <RenderItem
+          item={item}
+          navigate={(mode: 'view' | 'edit' | 'add') =>
+            navigation.navigate('DocumentEditor', {
+              mode,
+              documentId: item._id,
+            })
+          }
+        />
+      )}
+      keyExtractor={item => item._id}
+      refreshing={isRefreshing}
+      onRefresh={refetch}
+      showsVerticalScrollIndicator={false}
+      onEndReached={() => {
+        if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+      }}
+      onEndReachedThreshold={0.3}
+      ListFooterComponent={
+        isFetchingNextPage ? (
+          <View style={{ paddingVertical: spacing(10), alignItems: 'center' }}>
+            <Text
+              style={{ color: theme.colors.gray[500], fontSize: fontSize(14) }}
+            >
+              Loading...
+            </Text>
+          </View>
+        ) : null
+      }
+      ListEmptyComponent={
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No documents found.</Text>
+        </View>
+      }
+    />
+  );
+};
+
 export default function Documents() {
-  const [search, setSearch] = useState('');
   const navigation = useNavigation<DocumentScreenNavigationProp>();
   const TABS = [
     { key: 'all', label: 'All' },
@@ -33,116 +240,9 @@ export default function Documents() {
     { key: 'shared', label: 'Shared' },
   ];
 
-  const DOCS = {
-    all: [
-      {
-        id: '1',
-        title: 'Mental Health Assessment – [04 Dec, 2024]',
-        tag: 'Goals',
-        tagColor: '#F4A118',
-        tagBg: '#FFF0D8',
-        date: '05-06-2025',
-      },
-      {
-        id: '2',
-        title: 'Medical History Summary – Uploaded (January 2025)',
-        tag: 'Contract',
-        tagColor: '#F16A24',
-        tagBg: '#F16A241F',
-        date: '05-06-2025',
-      },
-      {
-        id: '3',
-        title: 'Therapy Session Notes – Dr. R.K. Mehta (30 June 2025)',
-        tag: 'Weekly',
-        tagColor: '#52A86E',
-        tagBg: '#E8F6ED',
-        date: '05-06-2025',
-      },
-      {
-        id: '4',
-        title: 'Medical History Summary – Uploaded (January 2025)',
-        tag: 'Contract',
-        tagColor: '#F16A24',
-        tagBg: '#F16A241F',
-        date: '05-06-2025',
-      },
-      {
-        id: '5',
-        title: 'Therapy Session Notes – Dr. R.K. Mehta (30 June 2025)',
-        tag: 'Weekly',
-        tagColor: '#52A86E',
-        tagBg: '#E8F6ED',
-        date: '05-06-2025',
-      },
-    ],
-    myDocs: [],
-    shared: [],
-    archived: [],
-  };
-
-  const renderContent = (activeTab: string) => {
-    const key = activeTab as keyof typeof DOCS;
-    const docs = DOCS[key] || [];
-
-    const {
-      data = { data: [] },
-      isLoading,
-      isFetching,
-    } = useQuery({
-      queryKey: ['documents', activeTab],
-      queryFn: () => getAllDocuments({ tab: activeTab }),
-    });
-
-    if (docs.length === 0) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No documents found.</Text>
-        </View>
-      );
-    }
-
-    return docs.map(doc => (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        key={doc.id}
-        onPress={() => navigation.navigate('DocumentEditor', { mode: 'view' })}
-        style={styles.card}
-      >
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>{doc.title}</Text>
-          <Ionicons
-            name="ellipsis-horizontal"
-            size={fontSize(18)}
-            color={theme.colors.gray[700]}
-          />
-        </View>
-
-        <View style={styles.cardFooter}>
-          <AppBadge
-            bgColor={doc.tagBg}
-            dotColor={doc.tagColor}
-            text={doc.tag}
-          />
-
-          <View style={styles.dateRow}>
-            <Calendar />
-            <Text style={styles.dateText}>{doc.date}</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    ));
-  };
-
   return (
     <View style={styles.container}>
-      <AppHeader
-        heading="Documents"
-        showSearch
-        searchValue={search}
-        onSearchChange={setSearch}
-        onSettingsPress={() => console.log('Settings pressed')}
-      />
+      <AppHeader heading="Documents" showSearch />
       <View
         style={{
           flex: 1,
@@ -150,18 +250,19 @@ export default function Documents() {
           marginTop: spacing(6),
         }}
       >
-        <AppTabs tabs={TABS} renderContent={renderContent} />
+        <AppTabs tabs={TABS} RenderContent={RenderContent} />
       </View>
-      <TouchableOpacity
+      <TouchableButton
         activeOpacity={0.8}
         style={styles.addBtn}
         onPress={() => navigation.navigate('DocumentEditor', { mode: 'add' })}
       >
         <Ionicons name="add" size={25} color={theme.colors.white} />
-      </TouchableOpacity>
+      </TouchableButton>
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     backgroundColor: theme.colors.white,
@@ -220,10 +321,25 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     position: 'absolute',
-    bottom: spacing(14),
-    right: spacing(14),
-    padding: spacing(6),
+    bottom: spacing(16),
+    right: spacing(16),
+    padding: spacing(10),
     backgroundColor: theme.colors.primary,
     borderRadius: 100,
+  },
+  option: {
+    flexDirection: 'row',
+    gap: spacing(10),
+    paddingVertical: scale(5),
+    paddingHorizontal: scale(10),
+  },
+  optionText: {
+    fontSize: fontSize(16),
+  },
+  loaderOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

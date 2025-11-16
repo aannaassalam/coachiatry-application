@@ -1,34 +1,34 @@
 // App.tsx
 import { NavigationContainer } from '@react-navigation/native';
 import {
+  MutationCache,
+  QueryClient,
+  QueryClientProvider,
+  QueryKey,
+} from '@tanstack/react-query';
+import { AxiosResponse } from 'axios';
+import { useState } from 'react';
+import {
   StyleSheet as RNStyleSheet,
   StatusBar,
   useColorScheme,
   View,
 } from 'react-native';
 import { SheetProvider } from 'react-native-actions-sheet';
+import FlashMessage, { showMessage } from 'react-native-flash-message';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { UnistylesProvider } from 'react-native-unistyles';
+import AuthSwitchingLoader from './src/components/AuthSwithcingLoader';
 import AuthProvider, { useAuth } from './src/hooks/useAuth';
 import AppNavigator from './src/navigators/AppNavigator';
 import AuthNavigator from './src/navigators/AuthNavigator';
+import { MenuProvider } from 'react-native-popup-menu';
 import './src/sheets';
 import { theme } from './src/theme';
 import './src/unistyles';
-import {
-  MutationCache,
-  QueryClient,
-  QueryClientProvider,
-  QueryKey,
-} from '@tanstack/react-query';
-import FlashMessage, { showMessage } from 'react-native-flash-message';
-import { AxiosResponse } from 'axios';
-import AuthSwitchingLoader from './src/components/AuthSwithcingLoader';
-import { useState } from 'react';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
+import { hapticOptions } from './src/helpers/utils';
 
 interface ErrorData {
   response: {
@@ -44,21 +44,18 @@ function AppContent() {
 
   return (
     <View style={styles.container}>
-      {/* {token ? <AppNavigator /> : <AuthNavigator />}
+      {token ? <AppNavigator /> : <AuthNavigator />}
       {showLoader && (
         <AuthSwitchingLoader
           onFinish={() => {
-            // setShowLoader(false);
+            setShowLoader(false);
           }}
         />
-      )} */}
-      <AuthSwitchingLoader
-        onFinish={() => {
-          // setShowLoader(false);
-        }}
-      />
+      )}
       <FlashMessage
         position="top"
+        hideStatusBar={false}
+        // statusBarHeight={StatusBar.currentHeight}
         icon={{ icon: 'auto', position: 'left', props: {} }}
       />
     </View>
@@ -79,6 +76,7 @@ export const queryClient = new QueryClient({
       const message = _data.headers ? _data.headers['x-message'] : null;
       const showToast = mutation.meta?.showToast !== false;
       if (showToast && message) {
+        ReactNativeHapticFeedback.trigger('notificationSuccess', hapticOptions);
         showMessage({
           message: 'Success',
           description: message,
@@ -88,7 +86,7 @@ export const queryClient = new QueryClient({
     },
     onError: res => {
       const result = res as unknown as ErrorData;
-      console.log(result);
+      ReactNativeHapticFeedback.trigger('notificationError', hapticOptions);
       if (result?.response?.data?.message) {
         showMessage({
           message: 'Failed',
@@ -122,15 +120,17 @@ export default function App() {
       <UnistylesProvider>
         <SafeAreaProvider>
           <StatusBar backgroundColor="#fff" barStyle="dark-content" />
-          <SheetProvider>
-            <QueryClientProvider client={queryClient}>
-              <AuthProvider>
-                <NavigationContainer>
-                  <AppContent />
-                </NavigationContainer>
-              </AuthProvider>
-            </QueryClientProvider>
-          </SheetProvider>
+          <QueryClientProvider client={queryClient}>
+            <SheetProvider>
+              <MenuProvider>
+                <AuthProvider>
+                  <NavigationContainer>
+                    <AppContent />
+                  </NavigationContainer>
+                </AuthProvider>
+              </MenuProvider>
+            </SheetProvider>
+          </QueryClientProvider>
         </SafeAreaProvider>
       </UnistylesProvider>
     </GestureHandlerRootView>

@@ -6,8 +6,10 @@ import { fontSize, scale, spacing } from '../../utils';
 
 export default function Priority({
   priority,
+  size = scale(18),
 }: {
   priority: 'high' | 'medium' | 'low';
+  size?: number;
 }) {
   return (
     <View style={[styles.priority]}>
@@ -19,8 +21,8 @@ export default function Priority({
               ? '#F4A118'
               : '#52A86E'
         }
-        width={scale(18)}
-        height={scale(18)}
+        width={size}
+        height={size}
       />
       <Text style={[styles.text]}>{priority}</Text>
     </View>

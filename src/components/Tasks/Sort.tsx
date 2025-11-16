@@ -1,38 +1,45 @@
 import { Image, Pressable, Text, View } from 'react-native';
 import { SheetManager } from 'react-native-actions-sheet';
 import { createStyleSheet } from 'react-native-unistyles';
-import Feather from 'react-native-vector-icons/Feather';
+import { Feather } from '@react-native-vector-icons/feather';
 import { assets } from '../../assets';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
 
-const SortSheetBody = () => {
+const SortSheetBody = ({
+  sort,
+  setSort,
+}: {
+  sort: string;
+  setSort: React.Dispatch<React.SetStateAction<string>>;
+}) => {
   return (
     <View>
       <Text style={styles.heading}>Sort by</Text>
       <View>
-        <Pressable style={styles.status}>
+        <Pressable
+          style={styles.status}
+          onPress={() => setSort(prev => (prev === 'name' ? '' : 'name'))}
+        >
+          <Text style={styles.statusText}>Name</Text>
+          {sort === 'name' && <Feather name="check" />}
+        </Pressable>
+        <Pressable
+          style={styles.status}
+          onPress={() => setSort(prev => (prev === 'dueDate' ? '' : 'dueDate'))}
+        >
           <Text style={styles.statusText}>Due Date</Text>
-          <Feather name="check" />
-        </Pressable>
-        <Pressable style={styles.status}>
-          <Text style={styles.statusText}>Category</Text>
-          <Feather name="check" />
-        </Pressable>
-        <Pressable style={styles.status}>
-          <Text style={styles.statusText}>Status</Text>
-          <Feather name="check" />
-        </Pressable>
-        <Pressable style={styles.status}>
-          <Text style={styles.statusText}>Priority</Text>
-          <Feather name="check" />
+          {sort === 'dueDate' && <Feather name="check" />}
         </Pressable>
       </View>
     </View>
   );
 };
 
-export default function Sort() {
+export default function Sort(props: {
+  sort: string;
+  setSort: React.Dispatch<React.SetStateAction<string>>;
+}) {
   return (
     <View>
       <Pressable
@@ -40,7 +47,9 @@ export default function Sort() {
         onPress={() =>
           SheetManager.show('general-sheet', {
             payload: {
-              children: <SortSheetBody />,
+              children: (
+                <SortSheetBody sort={props.sort} setSort={props.setSort} />
+              ),
             },
           })
         }

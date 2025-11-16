@@ -29,6 +29,7 @@ import { useMutation } from '@tanstack/react-query';
 import { forgotPassword } from '../../api/functions/auth.api';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { onError } from '../../helpers/utils';
+import TouchableButton from '../../components/TouchableButton';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<
   AuthStackParamList,
@@ -63,6 +64,7 @@ export default function ForgotPassword() {
 
   return (
     <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[
         styles.container,
         { paddingBottom: insets.bottom, paddingTop: insets.top },
@@ -107,12 +109,12 @@ export default function ForgotPassword() {
             {/* Signup */}
             <View style={styles.signupRow}>
               <Text style={styles.signupText}>Already have an account? </Text>
-              <TouchableOpacity
+              <TouchableButton
                 onPress={() => navigation.navigate('Login')}
                 disabled={isPending}
               >
                 <Text style={styles.signupLink}>Sign In</Text>
-              </TouchableOpacity>
+              </TouchableButton>
             </View>
           </View>
         </TouchableWithoutFeedback>
@@ -125,13 +127,11 @@ const stylesheet = createStyleSheet({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
     position: 'relative',
   },
   bgImage: {
-    position: 'absolute',
-    bottom: 0,
+    flex: 1,
+    justifyContent: 'center',
     width: SCREEN_WIDTH,
   },
   card: {
@@ -145,6 +145,7 @@ const stylesheet = createStyleSheet({
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 4,
+    marginInline: 'auto',
   },
   title: {
     fontSize: fontSize(20),

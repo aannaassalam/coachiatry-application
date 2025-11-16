@@ -1,5 +1,5 @@
 import { registerSheet, SheetDefinition } from 'react-native-actions-sheet';
-import { FilterSheet } from './components/Tasks/Filter';
+import FilterSheet from './components/Tasks/Filter';
 import BottomSheet from './components/ui/BottomSheet';
 import { ReactNode } from 'react';
 

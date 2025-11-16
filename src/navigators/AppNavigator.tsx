@@ -9,6 +9,7 @@ import TaskDetailsScreen from '../screens/Tasks/TaskDetails';
 import Profile from '../screens/Profile/Profile';
 import EditProfile from '../screens/Profile/EditProfile';
 import { theme } from '../theme';
+import AddEditTask from '../screens/Tasks/AddEditTask';
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -29,6 +30,7 @@ const AppNavigator = () => {
         <Stack.Screen name="BottomTabs" component={BottomNavigator} />
         <Stack.Screen name="DocumentEditor" component={DocumentEditor} />
         <Stack.Screen name="TaskDetails" component={TaskDetailsScreen} />
+        <Stack.Screen name="AddEditTask" component={AddEditTask} />
         <Stack.Screen name="Profile" component={Profile} />
         <Stack.Screen name="EditProfile" component={EditProfile} />
       </Stack.Navigator>

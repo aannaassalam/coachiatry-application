@@ -1,32 +1,33 @@
-import React, { useState } from 'react';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useNavigation } from '@react-navigation/native';
+import { useMutation } from '@tanstack/react-query';
+import { useState } from 'react';
+import { FormProvider, useForm } from 'react-hook-form';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
+  Alert,
   ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
+  View,
 } from 'react-native';
 import { Asset, launchImageLibrary } from 'react-native-image-picker';
-import { theme } from '../../theme';
-import { fontSize, scale, spacing } from '../../utils';
-import AppInput from '../../components/ui/AppInput';
-import AppButton from '../../components/ui/AppButton';
-import { useNavigation } from '@react-navigation/native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { assets, ChevronLeft } from '../../assets';
-import { useAuth } from '../../hooks/useAuth';
 import * as yup from 'yup';
-import { useMutation } from '@tanstack/react-query';
+import { queryClient } from '../../../App';
 import {
   updateProfile,
   updateProfilePicture,
 } from '../../api/functions/user.api';
-import { FormProvider, useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import { queryClient } from '../../../App';
+import { ChevronLeft } from '../../assets';
+import TouchableButton from '../../components/TouchableButton';
+import AppButton from '../../components/ui/AppButton';
+import AppInput from '../../components/ui/AppInput';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
+import { useAuth } from '../../hooks/useAuth';
+import { theme } from '../../theme';
+import { fontSize, scale, spacing } from '../../utils';
+import { updatePassword } from '../../api/functions/auth.api';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 const schema = yup.object().shape({
   fullName: yup.string().required('Name is required'),
@@ -39,8 +40,7 @@ const EditProfile = () => {
   const [imageData, setImageData] = useState<Asset | null>(null);
 
   // Password handling
-  const [password, setPassword] = useState('******');
-  const [isEditingPassword, setIsEditingPassword] = useState(false);
+  const [password, setPassword] = useState('');
 
   const navigation = useNavigation();
 
@@ -58,6 +58,14 @@ const EditProfile = () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
   });
+
+  const { mutate: mutatePassword, isPending: isPasswordUpdatePending } =
+    useMutation({
+      mutationFn: updatePassword,
+      onSuccess: () => {
+        setPassword('');
+      },
+    });
 
   const form = useForm<yup.InferType<typeof schema>>({
     resolver: yupResolver(schema),
@@ -94,23 +102,42 @@ const EditProfile = () => {
     }
   };
 
+  const onUpdatePassword = () => {
+    if (password && password.trim()) {
+      Alert.prompt(
+        'Change Password',
+        'Are you sure you want to change password?',
+        [
+          { text: 'No', style: 'destructive' },
+          {
+            text: 'Yes',
+            style: 'default',
+            onPress: () => mutatePassword({ password }),
+          },
+        ],
+        'default',
+      );
+    }
+  };
+
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContainer}
+      style={{ backgroundColor: theme.colors.white }}
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableButton onPress={() => navigation.goBack()}>
           <ChevronLeft />
-        </TouchableOpacity>
+        </TouchableButton>
         <Text style={styles.headerTitle}>Edit Profile</Text>
         <View style={{ width: 24 }} />
       </View>
 
       {/* Avatar Section */}
       <View style={styles.avatarSection}>
-        <TouchableOpacity
+        <TouchableButton
           activeOpacity={0.8}
           style={styles.avatarWrapper}
           onPress={pickImage}
@@ -127,11 +154,11 @@ const EditProfile = () => {
             source={photo ? { uri: photo } : assets.images.Avatar2}
             style={styles.avatar}
           /> */}
-        </TouchableOpacity>
+        </TouchableButton>
 
-        <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
+        <TouchableButton onPress={pickImage} activeOpacity={0.8}>
           <Text style={styles.changePhoto}>Change Photo</Text>
-        </TouchableOpacity>
+        </TouchableButton>
       </View>
 
       {/* Input Fields */}
@@ -159,41 +186,35 @@ const EditProfile = () => {
         <View style={styles.passwordWrapper}>
           <Text style={styles.label}>Password</Text>
           <View style={styles.passwordBox}>
-            {isEditingPassword ? (
-              <TextInput
-                value={password === '******' ? '' : password}
-                onChangeText={setPassword}
-                placeholder="Enter new password"
-                secureTextEntry
-                style={styles.passwordInput}
-                autoFocus
-              />
-            ) : (
-              <Text style={styles.passwordText}>******</Text>
-            )}
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Enter new password"
+              // secureTextEntry
+              style={styles.passwordInput}
+              readOnly={isPasswordUpdatePending}
+            />
 
-            <TouchableOpacity
+            <TouchableButton
               style={styles.changeButton}
-              onPress={() => {
-                setIsEditingPassword(prev => !prev);
-                if (isEditingPassword) {
-                  setPassword('******');
-                }
-              }}
+              onPress={onUpdatePassword}
+              disabled={isPasswordUpdatePending}
             >
-              <Text style={styles.changeText}>
-                {isEditingPassword ? 'Cancel' : 'Change'}
-              </Text>
-            </TouchableOpacity>
+              <Text style={styles.changeText}>Change</Text>
+            </TouchableButton>
           </View>
         </View>
       </View>
 
       {/* Save Button */}
       <View style={styles.saveButtonContainer}>
-        <AppButton text="Save Changes" onPress={form.handleSubmit(onSubmit)} />
+        <AppButton
+          text="Save Changes"
+          onPress={form.handleSubmit(onSubmit)}
+          isLoading={isPending}
+        />
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 };
 

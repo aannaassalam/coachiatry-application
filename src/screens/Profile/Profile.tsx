@@ -1,48 +1,149 @@
-import React from 'react';
 import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
+  ActivityIndicator,
+  Alert,
   FlatList,
-  TouchableOpacity,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
-import { theme } from '../../theme';
-import { fontSize, scale, spacing } from '../../utils';
+import { AntDesign } from '@react-native-vector-icons/ant-design'; // or 'react-native-vector-icons/Octicons'
+import { Octicons } from '@react-native-vector-icons/octicons';
 import AppButton from '../../components/ui/AppButton';
-import Octicons from 'react-native-vector-icons/Octicons';
-import AntDesign from 'react-native-vector-icons/AntDesign'; // or 'react-native-vector-icons/Octicons'
+import { theme } from '../../theme';
+import { fontSize, scale, spacing, verticalScale } from '../../utils';
 // or 'react-native-vector-icons/Octicons'
 import { useNavigation } from '@react-navigation/native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { assets, ChevronLeft } from '../../assets';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AppStackParamList } from '../../types/navigation';
-import { removeToken } from '../../helpers/token-storage';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { queryClient } from '../../../App';
-import { useAuth } from '../../hooks/useAuth';
+import { assets, ChevronLeft } from '../../assets';
+import TouchableButton from '../../components/TouchableButton';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
+import { removeToken } from '../../helpers/token-storage';
+import { useAuth } from '../../hooks/useAuth';
+import { AppStackParamList } from '../../types/navigation';
+import {
+  addWatchers,
+  getMyProfile,
+  getUserSuggestions,
+  revokeViewAccess,
+} from '../../api/functions/user.api';
+import { useMutation, useQueries, useQuery } from '@tanstack/react-query';
+import { User } from '../../typescript/interface/user.interface';
+import { showMessage } from 'react-native-flash-message';
+import Clipboard from '@react-native-clipboard/clipboard';
+import { KeyboardAwareFlatList } from 'react-native-keyboard-aware-scroll-view';
+import { useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useDebounce } from '../../hooks/useDebounce';
+import Lucide from '@react-native-vector-icons/lucide';
+
 type ProfileScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
   'EditProfile'
 >;
+
+const RenderWatcher = ({ item }: { item: User }) => {
+  const { mutate: revokeMutate, isPending: isRevoking } = useMutation({
+    mutationFn: revokeViewAccess,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+    meta: {
+      invalidateQueries: ['settings-profile'],
+    },
+  });
+
+  return (
+    <View style={styles.watcherRow}>
+      <View style={styles.watcherLeft}>
+        <SmartAvatar
+          src={item.photo}
+          name={item.fullName}
+          size={fontSize(40)}
+          fontSize={fontSize(16)}
+        />
+        <View>
+          <Text style={styles.watcherName}>{item.fullName}</Text>
+          <Text style={styles.watcherEmail}>{item.email}</Text>
+        </View>
+      </View>
+      <TouchableButton
+        style={styles.revokeButton}
+        onPress={() =>
+          Alert.prompt(
+            'Revoke Access',
+            'Are you sure you want to revoke access from this user?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Revoke',
+                style: 'destructive',
+                onPress: () => revokeMutate(item._id),
+              },
+            ],
+            'default',
+          )
+        }
+      >
+        <Text style={styles.revokeText}>Revoke</Text>
+      </TouchableButton>
+    </View>
+  );
+};
+
+const FooterComponent = ({
+  isAdding,
+  mutate,
+}: {
+  isAdding: boolean;
+  mutate: () => void;
+}) => {
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      style={{
+        paddingHorizontal: spacing(20),
+        paddingTop: spacing(10),
+        paddingBottom: insets.bottom + spacing(10),
+        marginTop: 'auto',
+      }}
+    >
+      <AppButton text="Add" onPress={mutate} isLoading={isAdding} />
+    </View>
+  );
+};
+
 export default function Profile() {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
-  const { profile, setAuthData } = useAuth();
-  const watchers = [
-    {
-      id: '1',
-      name: 'Mom',
-      email: 'riya.mom@gmail.com',
-      avatar: assets.images.Avatar2,
-    },
-    {
-      id: '2',
-      name: 'Coach Saurav',
-      email: 'coach.s@email.com',
-      avatar: assets.images.Avatar3,
-    },
-  ];
+  const insets = useSafeAreaInsets();
+  const { setAuthData } = useAuth();
+  const [addPersonModal, setAddPersonModal] = useState(false);
+  const [search, setSearch] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+
+  const debouncedSearch = useDebounce(search, 300);
+
+  const [
+    { data: profile, isLoading },
+    { data = [], isLoading: isPeopleLoading },
+  ] = useQueries({
+    queries: [
+      {
+        queryKey: ['settings-profile'],
+        queryFn: getMyProfile,
+      },
+      {
+        queryKey: ['suggest-users', debouncedSearch, 'watchers'],
+        queryFn: () => getUserSuggestions(debouncedSearch, 'watchers'),
+      },
+    ],
+  });
 
   const signOut = async () => {
     queryClient.removeQueries();
@@ -50,135 +151,267 @@ export default function Profile() {
     await removeToken();
   };
 
-  const renderWatcher = ({ item }: { item: any }) => (
-    <View style={styles.watcherRow}>
-      <View style={styles.watcherLeft}>
-        <Image source={item.avatar} style={styles.avatar} />
-        <View>
-          <Text style={styles.watcherName}>{item.name}</Text>
-          <Text style={styles.watcherEmail}>{item.email}</Text>
-        </View>
-      </View>
-      <TouchableOpacity style={styles.revokeButton}>
-        <Text style={styles.revokeText}>Revoke</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const handleCopyShareLink = async () => {
+    Clipboard.setString(
+      `https://coachiatry.vercel.app/share/user/${profile?.shareId}` || '',
+    );
+    showMessage({
+      message: 'Success',
+      description: 'Link copied to clipboard!',
+    });
+  };
+
+  const { mutate: watchersMutate, isPending: isAdding } = useMutation({
+    mutationFn: addWatchers,
+    onSuccess: () => {
+      setAddPersonModal(false);
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+    meta: {
+      invalidateQueries: ['settings-profile'],
+    },
+  });
 
   return (
     <View style={styles.container}>
       <View style={{ backgroundColor: theme.colors.white }}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableButton onPress={() => navigation.goBack()}>
             <ChevronLeft />
-          </TouchableOpacity>
+          </TouchableButton>
           <Text style={styles.headerTitle}>Profile</Text>
           <View style={{ width: 24 }} />
         </View>
 
         {/* Profile Info */}
-        <View style={styles.profileSection}>
-          <SmartAvatar
-            src={profile?.photo}
-            name={profile?.fullName}
-            imageStyle={styles.profilePic}
-            fontSize={fontSize(22)}
-            style={{ marginBottom: spacing(20) }}
-            size={scale(70)}
-            key={new Date().toDateString()}
-          />
-          {/* <Image source={assets.images.Avatar2} style={styles.profilePic} /> */}
-          <Text style={styles.name}>{profile?.fullName}</Text>
-          <Text style={styles.email}>{profile?.email}</Text>
+        {!isLoading && (
+          <View style={styles.profileSection}>
+            <SmartAvatar
+              src={profile?.photo}
+              name={profile?.fullName}
+              imageStyle={styles.profilePic}
+              fontSize={fontSize(22)}
+              style={{ marginBottom: spacing(20) }}
+              size={scale(70)}
+              key={new Date().toDateString()}
+            />
+            {/* <Image source={assets.images.Avatar2} style={styles.profilePic} /> */}
+            <Text style={styles.name}>{profile?.fullName}</Text>
+            <Text style={styles.email}>{profile?.email}</Text>
 
-          {/* Buttons */}
-          <View style={styles.buttonRow}>
+            {/* Buttons */}
+            <View style={styles.buttonRow}>
+              <AppButton
+                text="Edit Profile"
+                onPress={() => navigation.navigate('EditProfile')}
+                leftIcon={
+                  <Octicons
+                    name="pencil"
+                    color={theme.colors.primary}
+                    size={14}
+                  />
+                }
+                variant="secondary-outline"
+                style={{
+                  flex: 1,
+                  padding: spacing(8),
+                  borderRadius: fontSize(6),
+                }}
+                textStyle={{ fontSize: fontSize(14) }}
+              />
+              <AppButton
+                text="Logout"
+                onPress={signOut}
+                leftIcon={
+                  <AntDesign
+                    name="logout"
+                    color={theme.colors.primary}
+                    size={18}
+                  />
+                }
+                variant="secondary-outline"
+                style={{
+                  flex: 1,
+                  padding: spacing(8),
+                  borderRadius: fontSize(6),
+                }}
+                textStyle={{ fontSize: fontSize(14) }}
+              />
+            </View>
+          </View>
+        )}
+      </View>
+      {isLoading ? (
+        <View
+          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <ActivityIndicator size="large" />
+        </View>
+      ) : (
+        <View style={styles.watchersSection}>
+          <Text style={styles.sectionTitle}>Watchers</Text>
+          <FlatList
+            data={profile?.sharedViewers}
+            keyExtractor={item => item.id}
+            renderItem={({ item }) => <RenderWatcher item={item} />}
+            scrollEnabled={false}
+            contentContainerStyle={{ gap: spacing(12), marginTop: spacing(10) }}
+            ListEmptyComponent={() => (
+              <View
+                style={{
+                  height: verticalScale(50),
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: fontSize(12),
+                    fontStyle: 'italic',
+                    color: theme.colors.gray[500],
+                  }}
+                >
+                  No watchers added
+                </Text>
+              </View>
+            )}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
+
+          <View style={styles.bottomButtons}>
             <AppButton
-              text="Edit Profile"
-              onPress={() => navigation.navigate('EditProfile')}
+              text="Copy Link"
+              onPress={handleCopyShareLink}
               leftIcon={
-                <Octicons
-                  name="pencil"
-                  color={theme.colors.primary}
-                  size={14}
+                <Ionicons
+                  name="link-outline"
+                  size={18}
+                  color={theme.colors.gray[700]}
                 />
               }
-              variant="secondary-outline"
               style={{
-                flex: 1,
-                padding: spacing(8),
-                borderRadius: fontSize(6),
+                backgroundColor: theme.colors.gray[200],
+                paddingVertical: spacing(8),
+                paddingHorizontal: spacing(14),
               }}
-              textStyle={{ fontSize: fontSize(14) }}
+              textStyle={{
+                color: theme.colors.gray[900],
+                fontSize: fontSize(14),
+              }}
             />
             <AppButton
-              text="Logout"
-              onPress={signOut}
-              leftIcon={
-                <AntDesign
-                  name="logout"
-                  color={theme.colors.primary}
-                  size={18}
-                />
-              }
-              variant="secondary-outline"
+              text="+ Add Person"
+              onPress={() => setAddPersonModal(true)}
+              variant="primary"
               style={{
-                flex: 1,
-                padding: spacing(8),
-                borderRadius: fontSize(6),
+                paddingVertical: spacing(8),
+                paddingHorizontal: spacing(14),
               }}
               textStyle={{ fontSize: fontSize(14) }}
             />
           </View>
         </View>
-      </View>
-
-      {/* Watchers */}
-      <View style={styles.watchersSection}>
-        <Text style={styles.sectionTitle}>Watchers</Text>
-        <FlatList
-          data={watchers}
-          keyExtractor={item => item.id}
-          renderItem={renderWatcher}
-          scrollEnabled={false}
-          contentContainerStyle={{ gap: spacing(12), marginTop: spacing(10) }}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-        />
-
-        <View style={styles.bottomButtons}>
-          <AppButton
-            text="Copy Link"
-            onPress={() => {}}
-            leftIcon={
-              <Ionicons
-                name="link-outline"
-                size={18}
-                color={theme.colors.gray[700]}
+      )}
+      <Modal
+        visible={addPersonModal}
+        onRequestClose={() => setAddPersonModal(false)}
+        animationType="slide"
+      >
+        <View style={{ flex: 1, paddingTop: insets.top }}>
+          <View style={styles.searchHeader}>
+            <Text style={styles.heading}>Add Person</Text>
+            <View style={styles.searchRow}>
+              <TextInput
+                placeholder="Search..."
+                style={styles.searchHeaderInput}
+                placeholderTextColor={theme.colors.gray[500]}
+                value={search}
+                onChangeText={val => setSearch(val)}
+                autoFocus
               />
-            }
-            style={{
-              backgroundColor: theme.colors.gray[200],
-              paddingVertical: spacing(8),
-              paddingHorizontal: spacing(14),
-            }}
-            textStyle={{
-              color: theme.colors.gray[900],
-              fontSize: fontSize(14),
-            }}
-          />
-          <AppButton
-            text="+ Add Person"
-            onPress={() => {}}
-            variant="primary"
-            style={{
-              paddingVertical: spacing(8),
-              paddingHorizontal: spacing(14),
-            }}
-            textStyle={{ fontSize: fontSize(14) }}
-          />
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={() => setAddPersonModal(false)}
+              >
+                <Text>Cancel</Text>
+              </Pressable>
+            </View>
+          </View>
+          {isPeopleLoading ? (
+            <View
+              style={{
+                flex: 1,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <ActivityIndicator size="large" />
+            </View>
+          ) : (
+            <>
+              <KeyboardAwareFlatList
+                data={data.filter(
+                  _data =>
+                    !profile?.sharedViewers
+                      .map(_sv => _sv._id)
+                      .includes(_data._id),
+                )}
+                contentContainerStyle={[
+                  styles.searchContentContainer,
+                  { paddingBottom: insets.bottom },
+                ]}
+                style={{
+                  backgroundColor: theme.colors.gray[50],
+                  flex: 1,
+                }}
+                renderItem={({ item }) => (
+                  <TouchableButton
+                    style={styles.watcherRow}
+                    onPress={() =>
+                      setSelectedUsers(prev =>
+                        prev.includes(item._id)
+                          ? prev.filter(_p => _p !== item._id)
+                          : [...prev, item._id],
+                      )
+                    }
+                    disabled={isAdding}
+                  >
+                    <View style={styles.watcherLeft}>
+                      <SmartAvatar
+                        src={item.photo}
+                        name={item.fullName}
+                        size={fontSize(40)}
+                        fontSize={fontSize(16)}
+                      />
+                      <View>
+                        <Text style={styles.watcherName}>{item.fullName}</Text>
+                        <Text style={styles.watcherEmail}>{item.email}</Text>
+                      </View>
+                    </View>
+                    {selectedUsers.includes(item._id) && (
+                      <Lucide
+                        name="check"
+                        size={fontSize(14)}
+                        color={theme.colors.gray[500]}
+                      />
+                    )}
+                  </TouchableButton>
+                )}
+                ItemSeparatorComponent={() => (
+                  <View
+                    style={[styles.separator, { marginBottom: spacing(10) }]}
+                  />
+                )}
+              />
+              <FooterComponent
+                isAdding={isAdding}
+                mutate={() => watchersMutate(selectedUsers)}
+              />
+            </>
+          )}
         </View>
-      </View>
+      </Modal>
     </View>
   );
 }
@@ -249,11 +482,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing(10),
   },
-  avatar: {
-    width: fontSize(40),
-    height: fontSize(40),
-    borderRadius: fontSize(20),
-  },
   watcherName: {
     fontSize: fontSize(14),
     fontFamily: theme.fonts.archivo.medium,
@@ -287,5 +515,41 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     marginTop: spacing(40),
     marginBottom: spacing(16),
+  },
+  heading: {
+    fontSize: fontSize(18),
+    fontFamily: theme.fonts.archivo.medium,
+    color: theme.colors.gray[950],
+    textAlign: 'center',
+  },
+  searchContentContainer: {
+    padding: spacing(20),
+    paddingHorizontal: spacing(20),
+    paddingTop: spacing(15),
+    // alignItems: 'center',
+    // justifyContent: 'center',
+  },
+  searchHeader: {
+    paddingHorizontal: spacing(20),
+    paddingVertical: spacing(20),
+    backgroundColor: '#fff',
+    paddingBottom: spacing(10),
+    gap: spacing(15),
+  },
+  searchRow: {
+    flexDirection: 'row',
+    gap: spacing(10),
+    alignItems: 'center',
+  },
+  searchHeaderInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.gray[300],
+    borderRadius: 10,
+    paddingHorizontal: Platform.OS === 'ios' ? spacing(15) : spacing(15),
+    paddingVertical: Platform.OS === 'ios' ? spacing(12) : spacing(10),
+    flex: 1,
+  },
+  cancelBtn: {
+    padding: spacing(5),
   },
 });

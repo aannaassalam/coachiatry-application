@@ -1,13 +1,15 @@
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQueries } from '@tanstack/react-query';
 import moment from 'moment';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -17,11 +19,13 @@ import { getAllStatuses } from '../../api/functions/status.api';
 import { getAllTasks } from '../../api/functions/task.api';
 import { ChevronLeft } from '../../assets';
 import TaskBadge from '../../components/Tasks/TaskBadge';
+import TouchableButton from '../../components/TouchableButton';
 import AppBadge from '../../components/ui/AppBadge';
 import AppHeader from '../../components/ui/AppHeader';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
 import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
+import { AppStackParamList } from '../../types/navigation';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
 import { Document } from '../../typescript/interface/document.interface';
 import { Status } from '../../typescript/interface/status.interface';
@@ -49,6 +53,16 @@ moment.updateLocale('en', {
   },
 });
 
+type TaskScreenNavigationProp = NativeStackNavigationProp<
+  AppStackParamList,
+  'TaskDetails'
+>;
+
+type DocumentScreenNavigationProp = NativeStackNavigationProp<
+  AppStackParamList,
+  'DocumentEditor'
+>;
+
 interface TaskCardProps {
   title: string;
   count: number;
@@ -64,6 +78,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
   labelColor,
   tasks = [],
 }) => {
+  const navigation = useNavigation<TaskScreenNavigationProp>();
+
   return (
     <View>
       {/* Label */}
@@ -79,8 +95,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
       {tasks?.length > 0 && (
         <View style={styles.taskList}>
           {tasks.map(task => (
-            <View key={task._id} style={styles.taskCard}>
-              <View>
+            <Pressable
+              onPress={() =>
+                navigation.navigate('TaskDetails', { taskId: task._id })
+              }
+              key={task._id}
+              style={styles.taskCard}
+            >
+              <View style={{ flex: 1 }}>
                 <Text style={styles.taskTitle}>{task.title}</Text>
                 <Text style={styles.taskDate}>
                   {moment(task.dueDate).format('D MMM, YYYY')}
@@ -99,7 +121,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   </Text>
                 </View>
               )}
-            </View>
+            </Pressable>
           ))}
         </View>
       )}
@@ -143,19 +165,28 @@ const TasksSection = ({
             );
           })}
       </View>
-      <TouchableOpacity activeOpacity={0.8} style={styles.footerRow}>
+      <TouchableButton activeOpacity={0.8} style={styles.footerRow}>
         <Text style={styles.headerTitle}>View More</Text>
-        <TouchableOpacity style={{ transform: [{ rotateZ: '180deg' }] }}>
+        <TouchableButton style={{ transform: [{ rotateZ: '180deg' }] }}>
           <ChevronLeft />
-        </TouchableOpacity>
-      </TouchableOpacity>
+        </TouchableButton>
+      </TouchableButton>
     </View>
   );
 };
 
 const DocumentsSection = ({ documents }: { documents: Document[] }) => {
+  const navigation = useNavigation<DocumentScreenNavigationProp>();
   const renderItem = ({ item }: { item: Document }) => (
-    <View style={styles.docCard}>
+    <TouchableButton
+      style={styles.docCard}
+      onPress={() =>
+        navigation.navigate('DocumentEditor', {
+          mode: 'view',
+          documentId: item._id,
+        })
+      }
+    >
       <View style={styles.docLeft}>
         <View style={styles.iconContainer}>
           <Ionicons
@@ -186,16 +217,16 @@ const DocumentsSection = ({ documents }: { documents: Document[] }) => {
           text={item.tag?.title}
         />
       </View>
-    </View>
+    </TouchableButton>
   );
   return (
     <View style={styles.card}>
-      <TouchableOpacity activeOpacity={0.8} style={styles.headerRow}>
+      <TouchableButton activeOpacity={0.8} style={styles.headerRow}>
         <Text style={styles.headerTitle}>Documents</Text>
-        <TouchableOpacity style={{ transform: [{ rotateZ: '180deg' }] }}>
+        <TouchableButton style={{ transform: [{ rotateZ: '180deg' }] }}>
           <ChevronLeft />
-        </TouchableOpacity>
-      </TouchableOpacity>
+        </TouchableButton>
+      </TouchableButton>
 
       {/* List */}
       <FlatList
@@ -235,7 +266,7 @@ const ChatSection = ({ chats }: { chats: ChatConversation[] }) => {
     }
 
     return (
-      <TouchableOpacity
+      <TouchableButton
         activeOpacity={0.8}
         style={[styles.chatCard, isLast && { borderBottomWidth: 0 }]}
       >
@@ -275,19 +306,19 @@ const ChatSection = ({ chats }: { chats: ChatConversation[] }) => {
             </Text>
           </View>
         </View>
-      </TouchableOpacity>
+      </TouchableButton>
     );
   };
 
   return (
     <View style={styles.card}>
       {/* Header */}
-      <TouchableOpacity activeOpacity={0.8} style={styles.headerRow}>
+      <TouchableButton activeOpacity={0.8} style={styles.headerRow}>
         <Text style={styles.headerTitle}>All messages</Text>
-        <TouchableOpacity style={{ transform: [{ rotateZ: '180deg' }] }}>
+        <TouchableButton style={{ transform: [{ rotateZ: '180deg' }] }}>
           <ChevronLeft />
-        </TouchableOpacity>
-      </TouchableOpacity>
+        </TouchableButton>
+      </TouchableButton>
 
       {/* List */}
       <FlatList
@@ -347,7 +378,6 @@ function Dashboard() {
         showSearch
         searchValue={search}
         onSearchChange={setSearch}
-        onSettingsPress={() => console.log('Settings pressed')}
       />
       {isAllLoading ? (
         <View
@@ -368,13 +398,6 @@ function Dashboard() {
           <ChatSection chats={chats.data} />
         </ScrollView>
       )}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        style={styles.addBtn}
-        onPress={() => {}}
-      >
-        <Ionicons name="add" size={25} color={theme.colors.white} />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -435,6 +458,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: theme.colors.white,
+    gap: spacing(5),
     borderRadius: fontSize(10),
     paddingVertical: spacing(10),
     paddingHorizontal: spacing(14),
@@ -558,13 +582,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize(12),
     fontFamily: theme.fonts.lato.regular,
     color: theme.colors.gray[600],
-  },
-  addBtn: {
-    position: 'absolute',
-    bottom: spacing(14),
-    right: spacing(14),
-    padding: spacing(6),
-    backgroundColor: theme.colors.primary,
-    borderRadius: 100,
   },
 });

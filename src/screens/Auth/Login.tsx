@@ -31,6 +31,7 @@ import { AuthStackParamList } from '../../types/navigation';
 import { fontSize, SCREEN_WIDTH, spacing } from '../../utils';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { onError } from '../../helpers/utils';
+import TouchableButton from '../../components/TouchableButton';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<
   AuthStackParamList,
@@ -113,11 +114,11 @@ export default function Login() {
                 <View>
                   <View style={styles.passwordRow}>
                     <Text style={styles.label}>Password</Text>
-                    <TouchableOpacity
+                    <TouchableButton
                       onPress={() => navigation.navigate('ForgotPassword')}
                     >
                       <Text style={styles.forgot}>Forgot Password?</Text>
-                    </TouchableOpacity>
+                    </TouchableButton>
                   </View>
                   <Controller
                     control={form.control}
@@ -177,12 +178,12 @@ export default function Login() {
             {/* Signup */}
             <View style={styles.signupRow}>
               <Text style={styles.signupText}>Don’t have account? </Text>
-              <TouchableOpacity
+              <TouchableButton
                 onPress={() => navigation.navigate('Signup')}
                 disabled={isPending}
               >
                 <Text style={styles.signupLink}>Sign Up</Text>
-              </TouchableOpacity>
+              </TouchableButton>
             </View>
           </View>
         </TouchableWithoutFeedback>
