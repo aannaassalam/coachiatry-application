@@ -35,6 +35,7 @@ import TouchableButton from '../TouchableButton';
 import Badge from '../ui/Badge';
 import { SmartAvatar } from '../ui/SmartAvatar';
 import TaskBadge from './TaskBadge';
+import Lucide from '@react-native-vector-icons/lucide';
 
 type TaskScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -207,7 +208,7 @@ export default function WeekTaskCard({
                       navigation.navigate('AddEditTask', { taskId: task._id })
                     }
                   >
-                    <Octicons
+                    <Lucide
                       name="pencil"
                       color={theme.colors.gray[900]}
                       size={fontSize(16)}
@@ -218,7 +219,7 @@ export default function WeekTaskCard({
                     value={1}
                     style={styles.option}
                     onSelect={() =>
-                      Alert.prompt(
+                      Alert.alert(
                         'Delete task',
                         'Are you sure you want to delete this task?',
                         [

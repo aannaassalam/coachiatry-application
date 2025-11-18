@@ -2,7 +2,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Modal,
   Platform,
   Pressable,
@@ -11,37 +10,36 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { AntDesign } from '@react-native-vector-icons/ant-design'; // or 'react-native-vector-icons/Octicons'
-import { Octicons } from '@react-native-vector-icons/octicons';
 import AppButton from '../../components/ui/AppButton';
 import { theme } from '../../theme';
 import { fontSize, scale, spacing, verticalScale } from '../../utils';
 // or 'react-native-vector-icons/Octicons'
+import Clipboard from '@react-native-clipboard/clipboard';
+import Lucide from '@react-native-vector-icons/lucide';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useMutation, useQueries } from '@tanstack/react-query';
+import { useState } from 'react';
+import { showMessage } from 'react-native-flash-message';
+import { KeyboardAwareFlatList } from 'react-native-keyboard-aware-scroll-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import AntDesign from 'react-native-vector-icons/AntDesign';
 import { queryClient } from '../../../App';
-import { assets, ChevronLeft } from '../../assets';
-import TouchableButton from '../../components/TouchableButton';
-import { SmartAvatar } from '../../components/ui/SmartAvatar';
-import { removeToken } from '../../helpers/token-storage';
-import { useAuth } from '../../hooks/useAuth';
-import { AppStackParamList } from '../../types/navigation';
 import {
   addWatchers,
   getMyProfile,
   getUserSuggestions,
   revokeViewAccess,
 } from '../../api/functions/user.api';
-import { useMutation, useQueries, useQuery } from '@tanstack/react-query';
-import { User } from '../../typescript/interface/user.interface';
-import { showMessage } from 'react-native-flash-message';
-import Clipboard from '@react-native-clipboard/clipboard';
-import { KeyboardAwareFlatList } from 'react-native-keyboard-aware-scroll-view';
-import { useState } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChevronLeft } from '../../assets';
+import TouchableButton from '../../components/TouchableButton';
+import { SmartAvatar } from '../../components/ui/SmartAvatar';
+import { removeToken } from '../../helpers/token-storage';
+import { useAuth } from '../../hooks/useAuth';
 import { useDebounce } from '../../hooks/useDebounce';
-import Lucide from '@react-native-vector-icons/lucide';
+import { AppStackParamList } from '../../types/navigation';
+import { User } from '../../typescript/interface/user.interface';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -76,7 +74,7 @@ const RenderWatcher = ({ item }: { item: User }) => {
       <TouchableButton
         style={styles.revokeButton}
         onPress={() =>
-          Alert.prompt(
+          Alert.alert(
             'Revoke Access',
             'Are you sure you want to revoke access from this user?',
             [
@@ -87,7 +85,6 @@ const RenderWatcher = ({ item }: { item: User }) => {
                 onPress: () => revokeMutate(item._id),
               },
             ],
-            'default',
           )
         }
       >
@@ -158,6 +155,7 @@ export default function Profile() {
     showMessage({
       message: 'Success',
       description: 'Link copied to clipboard!',
+      type: 'success',
     });
   };
 
@@ -177,7 +175,13 @@ export default function Profile() {
       <View style={{ backgroundColor: theme.colors.white }}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableButton onPress={() => navigation.goBack()}>
+          <TouchableButton
+            onPress={() => navigation.goBack()}
+            style={{
+              paddingHorizontal: spacing(5),
+              paddingVertical: spacing(3),
+            }}
+          >
             <ChevronLeft />
           </TouchableButton>
           <Text style={styles.headerTitle}>Profile</Text>
@@ -206,7 +210,7 @@ export default function Profile() {
                 text="Edit Profile"
                 onPress={() => navigation.navigate('EditProfile')}
                 leftIcon={
-                  <Octicons
+                  <Lucide
                     name="pencil"
                     color={theme.colors.primary}
                     size={14}
@@ -253,7 +257,7 @@ export default function Profile() {
           <Text style={styles.sectionTitle}>Watchers</Text>
           <FlatList
             data={profile?.sharedViewers}
-            keyExtractor={item => item.id}
+            keyExtractor={item => item._id}
             renderItem={({ item }) => <RenderWatcher item={item} />}
             scrollEnabled={false}
             contentContainerStyle={{ gap: spacing(12), marginTop: spacing(10) }}
@@ -365,6 +369,7 @@ export default function Profile() {
                   backgroundColor: theme.colors.gray[50],
                   flex: 1,
                 }}
+                keyExtractor={item => item._id}
                 renderItem={({ item }) => (
                   <TouchableButton
                     style={styles.watcherRow}

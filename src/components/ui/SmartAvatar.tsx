@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { createStyleSheet } from 'react-native-unistyles';
 import { spacing, fontSize as fSize } from '../../utils';
+import Animated from 'react-native-reanimated';
 
 /**
  * Extract initials from a name.
@@ -79,7 +80,7 @@ export const SmartAvatar: React.FC<SmartAvatarProps> = ({
 
       {/* Actual Image */}
       {src && !error && (
-        <Image
+        <Animated.Image
           source={{ uri: src }}
           style={[
             StyleSheet.absoluteFillObject,

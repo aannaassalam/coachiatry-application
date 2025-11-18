@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { createStyleSheet } from 'react-native-unistyles';
-import { AntDesign } from '@react-native-vector-icons/ant-design';
+import AntDesign from 'react-native-vector-icons/AntDesign';
 import { FontAwesome5 } from '@react-native-vector-icons/fontawesome5';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
@@ -64,7 +64,12 @@ export default function TaskCard({
           <Text style={styles.addTaskButtonText}>Add Task</Text>
         </Pressable>
       </View>
-      <AccordionItem isExpanded={isExpanded} viewKey={'he'} duration={0}>
+      <AccordionItem
+        isExpanded={isExpanded}
+        viewKey={'he'}
+        duration={0}
+        style={{ paddingHorizontal: spacing(10), alignItems: 'center' }}
+      >
         <View style={styles.taskList}>
           {tasks.map(_task => (
             <IndividualTask task={_task} key={_task._id} />
@@ -114,7 +119,7 @@ const styles = createStyleSheet({
     backgroundColor: theme.colors.secondary,
     borderRadius: fontSize(12),
     paddingVertical: spacing(10),
-    paddingHorizontal: spacing(20),
+    paddingHorizontal: spacing(10),
     gap: spacing(10),
   },
   addTaskRow: {

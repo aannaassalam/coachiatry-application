@@ -42,6 +42,7 @@ import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { Subtask, Task } from '../../typescript/interface/task.interface';
 import { fontSize, scale, spacing, verticalScale } from '../../utils';
+import Lucide from '@react-native-vector-icons/lucide';
 
 type AddEditTaskNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -226,7 +227,7 @@ const TaskDetailsScreen = () => {
                   navigation.navigate('AddEditTask', { taskId: data?._id })
                 }
               >
-                <Octicons
+                <Lucide
                   name="pencil"
                   color={theme.colors.gray[900]}
                   size={fontSize(16)}
@@ -237,7 +238,7 @@ const TaskDetailsScreen = () => {
                 value={1}
                 style={styles.option}
                 onSelect={() =>
-                  Alert.prompt(
+                  Alert.alert(
                     'Delete Task',
                     'Are you sure you want to delete this task?',
                     [

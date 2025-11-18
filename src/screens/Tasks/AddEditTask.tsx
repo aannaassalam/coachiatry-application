@@ -403,7 +403,7 @@ export default function AddEditTask() {
                   value={1}
                   style={styles.option}
                   onSelect={() =>
-                    Alert.prompt(
+                    Alert.alert(
                       'Delete Task',
                       'Are you sure you want to delete this task?',
                       [

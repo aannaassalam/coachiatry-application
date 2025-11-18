@@ -13,25 +13,24 @@ import {
   Pressable,
   Text,
   TextInput,
-  TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import * as yup from 'yup';
 import { login } from '../../api/functions/auth.api';
 import { assets } from '../../assets';
+import TouchableButton from '../../components/TouchableButton';
 import AppButton from '../../components/ui/AppButton';
 import AppCheckBox from '../../components/ui/AppCheckBox';
 import AppInput from '../../components/ui/AppInput';
+import { onError } from '../../helpers/utils';
 import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
 import { AuthStackParamList } from '../../types/navigation';
 import { fontSize, SCREEN_WIDTH, spacing } from '../../utils';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { onError } from '../../helpers/utils';
-import TouchableButton from '../../components/TouchableButton';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<
   AuthStackParamList,

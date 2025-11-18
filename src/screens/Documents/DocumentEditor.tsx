@@ -47,6 +47,7 @@ import { onError } from '../../helpers/utils';
 import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
 import { fontSize, scale, spacing } from '../../utils';
+import Lucide from '@react-native-vector-icons/lucide';
 
 const schema = yup.object().shape({
   title: yup.string().required(),
@@ -425,7 +426,7 @@ export default function DocumentEditor() {
                       setLocalMode('edit');
                     }}
                     leftIcon={
-                      <Octicons
+                      <Lucide
                         name="pencil"
                         color={theme.colors.primary}
                         size={16}

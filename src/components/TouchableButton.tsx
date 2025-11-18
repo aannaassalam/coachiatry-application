@@ -27,16 +27,21 @@ const TouchableButton: React.FC<TouchableButtonProps> = ({
   ...rest
 }) => {
   if (Platform.OS === 'android') {
+    const { flex, ...extractedStyles } = StyleSheet.flatten(style) ?? {
+      flex: 0,
+    };
+
     return (
       <View
         style={{
-          borderRadius: StyleSheet.flatten(style).borderRadius,
+          borderRadius: extractedStyles?.borderRadius ?? 0,
+          flex,
           overflow: 'hidden',
         }}
       >
         <TouchableNativeFeedback useForeground {...(rest as AndroidProps)}>
           {/* TouchableNativeFeedback requires a single View wrapper for styling */}
-          <View style={style}>{children}</View>
+          <View style={extractedStyles}>{children}</View>
         </TouchableNativeFeedback>
       </View>
     );

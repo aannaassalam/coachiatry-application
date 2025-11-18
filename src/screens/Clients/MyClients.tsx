@@ -3,6 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Pressable,
   ScrollView,
@@ -18,95 +19,30 @@ import AppHeader from '../../components/ui/AppHeader';
 
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
-import { fontSize, spacing } from '../../utils';
+import { fontSize, scale, spacing } from '../../utils';
 import { Image } from 'react-native';
 import AppButton from '../../components/ui/AppButton';
 import { Modal } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { getClients } from '../../api/functions/coach.api';
+import { User } from '../../typescript/interface/user.interface';
+import { SmartAvatar } from '../../components/ui/SmartAvatar';
+
 type ClientScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
   'ClientDetails'
 >;
 function MyClients() {
-  const [search, setSearch] = useState('');
-  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [selectedClient, setSelectedClient] = useState<User | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const navigation = useNavigation<ClientScreenNavigationProp>();
 
-  const users = [
-    {
-      id: '1',
-      name: 'Wade Warren',
-      email: 'georgia.young@example.com',
-      age: 24,
-      gender: 'Male',
-      avatar: { uri: 'https://randomuser.me/api/portraits/men/32.jpg' },
-    },
-    {
-      id: '2',
-      name: 'Jane Cooper',
-      email: 'willie.jennings@example.com',
-      age: 21,
-      gender: 'Male',
-      avatar: { uri: 'https://randomuser.me/api/portraits/women/44.jpg' },
-    },
-    {
-      id: '3',
-      name: 'Guy Hawkins',
-      email: 'kenzi.lawson@example.com',
-      age: 34,
-      gender: 'Male',
-      avatar: { uri: 'https://randomuser.me/api/portraits/men/85.jpg' },
-    },
-    {
-      id: '4',
-      name: 'Jacob Jones',
-      email: 'georgia.young@example.com',
-      age: 48,
-      gender: 'Female',
-      avatar: { uri: 'https://randomuser.me/api/portraits/women/48.jpg' },
-    },
-    {
-      id: '5',
-      name: 'Jacob Jones',
-      email: 'alma.lawson@example.com',
-      age: 50,
-      gender: 'Male',
-      avatar: { uri: 'https://randomuser.me/api/portraits/men/48.jpg' },
-    },
-    {
-      id: '6',
-      name: 'Savannah Nguyen',
-      email: 'alma.lawson@example.com',
-      age: 23,
-      gender: 'Male',
-      avatar: { uri: 'https://randomuser.me/api/portraits/men/9.jpg' },
-    },
-    {
-      id: '7',
-      name: 'Wade Warren',
-      email: 'georgia.young@example.com',
-      age: 24,
-      gender: 'Male',
-      avatar: { uri: 'https://randomuser.me/api/portraits/men/32.jpg' },
-    },
-    {
-      id: '8',
-      name: 'Jane Cooper',
-      email: 'willie.jennings@example.com',
-      age: 21,
-      gender: 'Male',
-      avatar: { uri: 'https://randomuser.me/api/portraits/women/44.jpg' },
-    },
-    {
-      id: '9',
-      name: 'Guy Hawkins',
-      email: 'kenzi.lawson@example.com',
-      age: 34,
-      gender: 'Male',
-      avatar: { uri: 'https://randomuser.me/api/portraits/men/85.jpg' },
-    },
-  ];
-  const renderItem = ({ item }: { item: any }) => (
+  const { data = [], isLoading } = useQuery({
+    queryKey: ['clients'],
+    queryFn: getClients,
+  });
+
+  const renderItem = ({ item }: { item: User }) => (
     <TouchableOpacity
       activeOpacity={0.8}
       style={styles.userCard}
@@ -116,34 +52,28 @@ function MyClients() {
       }}
     >
       <View style={styles.userInfo}>
-        <Image source={item.avatar} style={styles.avatar} />
+        <SmartAvatar
+          src={item.photo}
+          size={scale(48)}
+          name={item.fullName}
+          fontSize={fontSize(22)}
+        />
         <View style={{ flex: 1 }}>
           <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
-            {item.name}
+            {item.fullName}
           </Text>
           <Text style={styles.email} numberOfLines={1} ellipsizeMode="tail">
             {item.email}
           </Text>
         </View>
       </View>
-
-      <View style={styles.rightInfo}>
-        <Text style={styles.age}>{item.age}</Text>
-        <Text style={styles.gender}>{item.gender}</Text>
-      </View>
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      <AppHeader
-        heading="All Clients"
-        showSearch
-        searchValue={search}
-        onSearchChange={setSearch}
-        onSettingsPress={() => console.log('Settings pressed')}
-      />
-      <View style={{ paddingHorizontal: spacing(16) }}>
+      <AppHeader heading="My Clients" showSearch />
+      {/* <View style={{ paddingHorizontal: spacing(16) }}>
         <View style={styles.buttonContainer}>
           <Pressable style={styles.filterIcon} onPress={() => {}}>
             <Image source={assets.icons.filter} style={styles.sortIcon} />
@@ -163,31 +93,37 @@ function MyClients() {
             textStyle={{ fontSize: fontSize(14) }}
           />
         </View>
-      </View>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          marginTop: spacing(6),
-          paddingHorizontal: spacing(16),
-        }}
-      >
+      </View> */}
+      {/* <ScrollView showsVerticalScrollIndicator={false}> */}
+      {isLoading ? (
+        <View
+          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <ActivityIndicator size="large" />
+        </View>
+      ) : (
         <FlatList
-          data={users}
+          contentContainerStyle={{
+            marginTop: spacing(6),
+            paddingHorizontal: spacing(16),
+            paddingVertical: spacing(4),
+          }}
+          data={data}
+          showsVerticalScrollIndicator={false}
           renderItem={renderItem}
-          keyExtractor={item => item.id}
-          scrollEnabled={false}
+          keyExtractor={item => item._id}
+          // scrollEnabled={false}
           ItemSeparatorComponent={() => (
             <View
               style={{
                 height: 1,
                 backgroundColor: theme.colors.gray[200],
-                marginLeft: spacing(56),
               }}
             />
           )}
-          contentContainerStyle={{ paddingVertical: spacing(4) }}
         />
-      </ScrollView>
+      )}
+      {/* </ScrollView> */}
 
       <Modal
         visible={modalVisible}
@@ -199,11 +135,14 @@ function MyClients() {
           <View style={styles.modalContainer}>
             {selectedClient && (
               <>
-                <Image
-                  source={selectedClient.avatar}
-                  style={styles.modalAvatar}
+                <SmartAvatar
+                  src={selectedClient.photo}
+                  size={scale(86)}
+                  style={{ marginVertical: spacing(12) }}
+                  name={selectedClient.fullName}
+                  fontSize={fontSize(36)}
                 />
-                <Text style={styles.modalName}>{selectedClient.name}</Text>
+                <Text style={styles.modalName}>{selectedClient.fullName}</Text>
                 <Text style={styles.modalEmail}>{selectedClient.email}</Text>
 
                 <View style={styles.buttonRow}>
@@ -217,7 +156,9 @@ function MyClients() {
                     text="View Profile"
                     onPress={() => {
                       setModalVisible(false);
-                      navigation.navigate('ClientDetails');
+                      navigation.navigate('ClientDetails', {
+                        userId: selectedClient._id,
+                      });
                     }}
                     style={{ flex: 1 }}
                   />
@@ -269,11 +210,6 @@ const styles = StyleSheet.create({
     gap: spacing(12),
     flex: 1,
   },
-  avatar: {
-    width: fontSize(48),
-    height: fontSize(48),
-    borderRadius: fontSize(40),
-  },
   name: {
     fontSize: fontSize(14),
     fontFamily: theme.fonts.archivo.regular,
@@ -317,12 +253,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 5,
-  },
-  modalAvatar: {
-    width: fontSize(86),
-    height: fontSize(86),
-    borderRadius: fontSize(40),
-    marginVertical: spacing(12),
   },
   modalName: {
     fontSize: fontSize(20),

@@ -1,35 +1,19 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Image,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import AppBadge from '../ui/AppBadge';
 import { assets, Calendar } from '../../assets';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AppStackParamList } from '../../types/navigation';
 
-type DocumentScreenNavigationProp = NativeStackNavigationProp<
-  AppStackParamList,
-  'DocumentEditor'
->;
+const AnimatedScrollView = Animated.createAnimatedComponent(
+  Animated.ScrollView,
+);
 
 const DocumentCard = ({ doc }: { doc: any }) => {
-  const navigation = useNavigation<DocumentScreenNavigationProp>();
-
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => navigation.navigate('DocumentEditor', { mode: 'edit' })}
-      style={styles.card}
-    >
+    <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{doc.title}</Text>
         <Ionicons
@@ -46,14 +30,13 @@ const DocumentCard = ({ doc }: { doc: any }) => {
           <Text style={styles.dateText}>{doc.date}</Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 
 const TranscriptionCard = ({ item }: { item: any }) => {
   return (
     <View style={styles.transCard}>
-      {/* Top Row */}
       <View style={styles.transTopRow}>
         <View style={styles.transLeft}>
           <Image source={item.avatar} style={styles.transAvatar} />
@@ -83,7 +66,7 @@ const TranscriptionCard = ({ item }: { item: any }) => {
   );
 };
 
-const ClientTabs = () => {
+const ClientTabs = ({ onScroll }: { onScroll: any }) => {
   const [activeTab, setActiveTab] = useState<'Transcriptions' | 'Documents'>(
     'Transcriptions',
   );
@@ -160,22 +143,30 @@ const ClientTabs = () => {
         })}
       </View>
 
-      {/* Tab Content */}
-      <View style={styles.content}>
-        {activeTab === 'Transcriptions' ? (
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {TRANS.map(item => (
-              <TranscriptionCard key={item.id} item={item} />
-            ))}
-          </ScrollView>
-        ) : (
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {DOCS.map(doc => (
-              <DocumentCard key={doc.id} doc={doc} />
-            ))}
-          </ScrollView>
-        )}
-      </View>
+      {/* Scrollable Tab Content */}
+      {activeTab === 'Transcriptions' ? (
+        <AnimatedScrollView
+          showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={{ padding: spacing(16), paddingBottom: 200 }}
+        >
+          {TRANS.map(item => (
+            <TranscriptionCard key={item.id} item={item} />
+          ))}
+        </AnimatedScrollView>
+      ) : (
+        <AnimatedScrollView
+          showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={{ padding: spacing(16), paddingBottom: 200 }}
+        >
+          {DOCS.map(doc => (
+            <DocumentCard key={doc.id} doc={doc} />
+          ))}
+        </AnimatedScrollView>
+      )}
     </View>
   );
 };
@@ -186,7 +177,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.white,
-    paddingTop: spacing(10),
   },
   tabHeader: {
     flexDirection: 'row',
@@ -216,30 +206,22 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: theme.colors.gray[950],
   },
-  content: {
-    paddingHorizontal: spacing(16),
-    paddingVertical: spacing(16),
-    marginBottom: spacing(20),
-  },
 
-  /** Document Card **/
+  /** Document Card */
   card: {
     backgroundColor: theme.colors.secondary,
     borderRadius: fontSize(12),
     paddingVertical: spacing(14),
     paddingHorizontal: spacing(12),
     marginBottom: spacing(16),
-    shadowColor: theme.colors.gray[400],
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.07,
-    elevation: 2,
   },
+
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
     marginBottom: spacing(16),
   },
+
   cardTitle: {
     flex: 1,
     fontFamily: theme.fonts.lato.regular,
@@ -247,15 +229,18 @@ const styles = StyleSheet.create({
     color: theme.colors.black,
     paddingRight: spacing(8),
   },
+
   cardFooter: {
     flexDirection: 'row',
     gap: spacing(16),
     alignItems: 'center',
   },
+
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   dateText: {
     marginLeft: spacing(6),
     fontSize: fontSize(12),
@@ -263,31 +248,25 @@ const styles = StyleSheet.create({
     color: theme.colors.gray[800],
   },
 
-  /** Transcription Card **/
+  /** Transcription Card */
   transCard: {
     backgroundColor: theme.colors.white,
     borderRadius: fontSize(12),
     paddingVertical: spacing(16),
     paddingHorizontal: spacing(12),
     marginBottom: spacing(16),
-    shadowColor: theme.colors.gray[400],
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.07,
-    elevation: 2,
     borderWidth: 1,
     borderColor: theme.colors.gray[100],
   },
   transTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
   },
   transLeft: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
     flex: 1,
     gap: spacing(16),
-    maxWidth: '60%',
+    maxWidth: '70%',
   },
   transAvatar: {
     width: fontSize(40),
@@ -302,18 +281,15 @@ const styles = StyleSheet.create({
   },
   transIcons: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: spacing(10),
   },
   transDateRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     marginTop: spacing(10),
   },
   transDateText: {
     marginLeft: spacing(6),
     fontSize: fontSize(14),
-    fontFamily: theme.fonts.lato.regular,
     color: theme.colors.gray[600],
   },
 });

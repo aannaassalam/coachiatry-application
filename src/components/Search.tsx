@@ -237,6 +237,7 @@ export default function Search() {
                 </TouchableButton>
               )}
               keyExtractor={item => item._id}
+              showsVerticalScrollIndicator={false}
             />
           )}
         </View>
@@ -247,6 +248,7 @@ export default function Search() {
 
 const styles = createStyleSheet({
   searchContainer: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing(10),
@@ -331,7 +333,7 @@ const styles = createStyleSheet({
     borderRadius: 6,
   },
   itemContainer: {
-    gap: spacing(8),
+    gap: Platform.OS === 'ios' ? spacing(8) : spacing(4),
   },
   itemText: {
     color: theme.colors.gray[700],
@@ -346,18 +348,19 @@ const styles = createStyleSheet({
   },
   badge: {
     paddingHorizontal: spacing(8),
-    paddingVertical: spacing(4),
+    paddingVertical: Platform.OS === 'ios' ? spacing(4) : spacing(1),
     backgroundColor: theme.colors.gray[200],
     borderRadius: 100,
   },
   badgeText: {
     color: theme.colors.gray[700],
     fontFamily: theme.fonts.archivo.medium,
-    fontSize: fontSize(12),
+    fontSize: Platform.OS === 'ios' ? fontSize(12) : fontSize(10),
     textTransform: 'capitalize',
   },
   calendarText: {
     color: theme.colors.gray[600],
     verticalAlign: 'middle',
+    fontSize: Platform.OS === 'ios' ? fontSize(14) : fontSize(12),
   },
 });

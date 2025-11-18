@@ -39,6 +39,7 @@ import { AppStackParamList } from '../../types/navigation';
 import { PaginatedResponse } from '../../typescript/interface/common.interface';
 import { Document } from '../../typescript/interface/document.interface';
 import { fontSize, scale, spacing } from '../../utils';
+import Lucide from '@react-native-vector-icons/lucide';
 
 type DocumentScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -122,7 +123,7 @@ const RenderItem = ({
         }}
       >
         <MenuOption style={styles.option} onSelect={() => navigate('edit')}>
-          <Octicons
+          <Lucide
             name="pencil"
             color={theme.colors.gray[900]}
             size={fontSize(16)}
@@ -133,7 +134,7 @@ const RenderItem = ({
           value={1}
           style={styles.option}
           onSelect={() =>
-            Alert.prompt(
+            Alert.alert(
               'Delete Document',
               'Are you sure you want to delete this document?',
               [

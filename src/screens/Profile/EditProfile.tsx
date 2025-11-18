@@ -104,7 +104,7 @@ const EditProfile = () => {
 
   const onUpdatePassword = () => {
     if (password && password.trim()) {
-      Alert.prompt(
+      Alert.alert(
         'Change Password',
         'Are you sure you want to change password?',
         [

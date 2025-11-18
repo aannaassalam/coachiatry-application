@@ -53,15 +53,7 @@ moment.updateLocale('en', {
   },
 });
 
-type TaskScreenNavigationProp = NativeStackNavigationProp<
-  AppStackParamList,
-  'TaskDetails'
->;
-
-type DocumentScreenNavigationProp = NativeStackNavigationProp<
-  AppStackParamList,
-  'DocumentEditor'
->;
+type ScreenNavigationProp = NativeStackNavigationProp<AppStackParamList>;
 
 interface TaskCardProps {
   title: string;
@@ -136,6 +128,8 @@ const TasksSection = ({
   status: Status[];
   tasks: Task[];
 }) => {
+  const navigation = useNavigation<ScreenNavigationProp>();
+
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
@@ -165,7 +159,11 @@ const TasksSection = ({
             );
           })}
       </View>
-      <TouchableButton activeOpacity={0.8} style={styles.footerRow}>
+      <TouchableButton
+        activeOpacity={0.8}
+        style={styles.footerRow}
+        onPress={() => navigation.navigate('Tasks')}
+      >
         <Text style={styles.headerTitle}>View More</Text>
         <TouchableButton style={{ transform: [{ rotateZ: '180deg' }] }}>
           <ChevronLeft />
@@ -176,7 +174,8 @@ const TasksSection = ({
 };
 
 const DocumentsSection = ({ documents }: { documents: Document[] }) => {
-  const navigation = useNavigation<DocumentScreenNavigationProp>();
+  const navigation = useNavigation<ScreenNavigationProp>();
+
   const renderItem = ({ item }: { item: Document }) => (
     <TouchableButton
       style={styles.docCard}
@@ -219,9 +218,14 @@ const DocumentsSection = ({ documents }: { documents: Document[] }) => {
       </View>
     </TouchableButton>
   );
+
   return (
     <View style={styles.card}>
-      <TouchableButton activeOpacity={0.8} style={styles.headerRow}>
+      <TouchableButton
+        activeOpacity={0.8}
+        style={styles.headerRow}
+        onPress={() => navigation.navigate('Documents')}
+      >
         <Text style={styles.headerTitle}>Documents</Text>
         <TouchableButton style={{ transform: [{ rotateZ: '180deg' }] }}>
           <ChevronLeft />
@@ -243,6 +247,7 @@ const DocumentsSection = ({ documents }: { documents: Document[] }) => {
 
 const ChatSection = ({ chats }: { chats: ChatConversation[] }) => {
   const { profile } = useAuth();
+  const navigation = useNavigation<ScreenNavigationProp>();
 
   const renderItem = ({
     item,
@@ -313,7 +318,11 @@ const ChatSection = ({ chats }: { chats: ChatConversation[] }) => {
   return (
     <View style={styles.card}>
       {/* Header */}
-      <TouchableButton activeOpacity={0.8} style={styles.headerRow}>
+      <TouchableButton
+        activeOpacity={0.8}
+        style={styles.headerRow}
+        onPress={() => navigation.navigate('Chats')}
+      >
         <Text style={styles.headerTitle}>All messages</Text>
         <TouchableButton style={{ transform: [{ rotateZ: '180deg' }] }}>
           <ChevronLeft />

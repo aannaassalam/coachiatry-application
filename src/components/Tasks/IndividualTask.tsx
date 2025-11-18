@@ -2,7 +2,14 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMutation } from '@tanstack/react-query';
 import moment from 'moment';
-import { Alert, Dimensions, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Dimensions,
+  Platform,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import {
@@ -22,6 +29,7 @@ import { AppStackParamList } from '../../types/navigation';
 import { Task } from '../../typescript/interface/task.interface';
 import { fontSize, scale, spacing } from '../../utils';
 import TouchableButton from '../TouchableButton';
+import Lucide from '@react-native-vector-icons/lucide';
 
 type TaskScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -111,7 +119,7 @@ export default function IndividualTask({ task }: { task: Task }) {
             navigation.navigate('AddEditTask', { taskId: task._id })
           }
         >
-          <Octicons
+          <Lucide
             name="pencil"
             color={theme.colors.gray[900]}
             size={fontSize(16)}
@@ -122,7 +130,7 @@ export default function IndividualTask({ task }: { task: Task }) {
           value={1}
           style={styles.option}
           onSelect={() =>
-            Alert.prompt(
+            Alert.alert(
               'Delete task',
               'Are you sure you want to delete this task?',
               [
@@ -180,9 +188,10 @@ const styles = createStyleSheet({
     marginBottom: spacing(4),
   },
   taskDate: {
-    fontSize: fontSize(12),
+    fontSize: Platform.OS === 'ios' ? fontSize(12) : fontSize(10),
     fontFamily: theme.fonts.lato.regular,
     color: theme.colors.gray[700],
+    marginTop: Platform.OS === 'ios' ? spacing(0) : spacing(2),
   },
   progressContainer: {
     flexDirection: 'row',
@@ -200,6 +209,7 @@ const styles = createStyleSheet({
   },
   option: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing(10),
     paddingVertical: scale(5),
     paddingHorizontal: scale(10),

@@ -24,7 +24,6 @@ type TaskListNavigationProp = NativeStackNavigationProp<
 
 function TaskList() {
   const navigation = useNavigation<TaskListNavigationProp>();
-  const isFetching = useIsFetching();
   const [tab, setTab] = useState('list');
   const [sort, setSort] = useState('');
   const [filters, setFilters] = useState<

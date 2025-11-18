@@ -1,37 +1,35 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Image,
-  Pressable,
-  KeyboardAvoidingView,
-  ImageBackground,
-  TouchableWithoutFeedback,
-  Keyboard,
-  Platform,
-} from 'react-native';
-import { createStyleSheet, useStyles } from 'react-native-unistyles';
-import { theme } from '../../theme';
-import { assets } from '../../assets';
-import { fontSize, SCREEN_WIDTH, spacing } from '../../utils';
-import AppInput from '../../components/ui/AppInput';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import AppCheckBox from '../../components/ui/AppCheckBox';
-import AppButton from '../../components/ui/AppButton';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../../types/navigation';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as yup from 'yup';
 import { useMutation } from '@tanstack/react-query';
-import { signup } from '../../api/functions/auth.api';
+import { useState } from 'react';
 import { Controller, FormProvider, useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import { useAuth } from '../../hooks/useAuth';
-import { onError } from '../../helpers/utils';
+import {
+  Image,
+  ImageBackground,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { createStyleSheet, useStyles } from 'react-native-unistyles';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import * as yup from 'yup';
+import { signup } from '../../api/functions/auth.api';
+import { assets } from '../../assets';
 import TouchableButton from '../../components/TouchableButton';
+import AppButton from '../../components/ui/AppButton';
+import AppInput from '../../components/ui/AppInput';
+import { onError } from '../../helpers/utils';
+import { useAuth } from '../../hooks/useAuth';
+import { theme } from '../../theme';
+import { AuthStackParamList } from '../../types/navigation';
+import { fontSize, SCREEN_WIDTH, spacing } from '../../utils';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<
   AuthStackParamList,

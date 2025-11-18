@@ -26,14 +26,24 @@ export const getAllDocumentsByCoach = async ({
   tab,
   limit,
   userId,
+  page,
 }: {
   sort: string;
   tab: string;
   limit?: number;
   userId: string;
+  page: number;
 }): Promise<PaginatedResponse<Document[]>> => {
   const res = await axiosInstance.get(endpoints.document.coachAccess, {
-    params: { sort, tab, select: '-shareId', populate: 'tag', limit, userId },
+    params: {
+      sort,
+      tab,
+      select: '-shareId',
+      populate: 'tag',
+      limit,
+      userId,
+      page,
+    },
   });
   return res.data;
 };
