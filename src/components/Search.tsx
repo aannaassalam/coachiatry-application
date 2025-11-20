@@ -26,6 +26,7 @@ import { theme } from '../theme';
 import { AppStackParamList } from '../types/navigation';
 import { fontSize, scale, spacing } from '../utils';
 import TouchableButton from './TouchableButton';
+import CoachAiSheet from './CoachAi';
 
 const renderSearchIcons = (type: string) => {
   switch (type) {
@@ -80,9 +81,10 @@ export default function Search() {
         <HeaderSearchIcon />
         <Text style={styles.searchInput}>Search</Text>
       </TouchableButton>
-      <TouchableButton activeOpacity={0.8}>
+      <CoachAiSheet />
+      {/* <TouchableButton activeOpacity={0.8}>
         <CoachAi />
-      </TouchableButton>
+      </TouchableButton> */}
       <Modal
         visible={searchModal}
         onRequestClose={() => setSearchModal(false)}

@@ -6,6 +6,7 @@ export const assets = {
     Avatar3: require('./Images/avatar3.png'),
     EmptyFiler: require('./Images/empty-filter.png'),
     logo: require('./Images/logo.png'),
+    CoachAiBackground: require('./Images/coach-ai-background.png'),
   },
   icons: {
     googleIcon: require('./Icons/google.png'),
@@ -36,3 +37,7 @@ export { default as RawLogo } from './Svgs/raw-logo.svg';
 export { default as User } from './Svgs/user.svg';
 export { default as Date } from './Svgs/date.svg';
 export { default as MapPin } from './Svgs/mappin.svg';
+export { default as SheetCoachAi } from './Svgs/white-coach.svg';
+export { default as SheetBlueCoachAi } from './Svgs/blue-coach.svg';
+export { default as Thunderbolt } from './Svgs/thunderbolt.svg';
+export { default as Fireballa } from './Svgs/fireball.svg';
