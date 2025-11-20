@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { createStyleSheet } from 'react-native-unistyles';
-import AntDesign from 'react-native-vector-icons/AntDesign';
+import { AntDesign } from '@react-native-vector-icons/ant-design';
 import { FontAwesome5 } from '@react-native-vector-icons/fontawesome5';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
@@ -23,10 +23,12 @@ export default function TaskCard({
   defaultExpanded = false,
   status,
   tasks,
+  userId,
 }: {
   defaultExpanded?: boolean;
   status: Status;
   tasks: Task[];
+  userId?: string;
 }) {
   const navigation = useNavigation<TaskListNavigationProp>();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
@@ -57,10 +59,13 @@ export default function TaskCard({
         <Pressable
           style={styles.addTaskButton}
           onPress={() =>
-            navigation.navigate('AddEditTask', { predefinedStatus: status._id })
+            navigation.navigate('AddEditTask', {
+              predefinedStatus: status._id,
+              userId,
+            })
           }
         >
-          <AntDesign name="plus" color="#838383" size={spacing(14)} />
+          <AntDesign name="plus" color="#838383" size={spacing(12)} />
           <Text style={styles.addTaskButtonText}>Add Task</Text>
         </Pressable>
       </View>
@@ -71,9 +76,22 @@ export default function TaskCard({
         style={{ paddingHorizontal: spacing(10), alignItems: 'center' }}
       >
         <View style={styles.taskList}>
-          {tasks.map(_task => (
-            <IndividualTask task={_task} key={_task._id} />
-          ))}
+          {tasks.length === 0 ? (
+            <Text
+              style={{
+                color: theme.colors.gray[500],
+                fontStyle: 'italic',
+                textAlign: 'center',
+                paddingVertical: spacing(10),
+              }}
+            >
+              No Tasks found...
+            </Text>
+          ) : (
+            tasks.map(_task => (
+              <IndividualTask task={_task} key={_task._id} userId={userId} />
+            ))
+          )}
         </View>
         {/* <View style={styles.addTaskRow}>
           <Pressable style={[styles.addTaskButton, { marginLeft: 0 }]}>

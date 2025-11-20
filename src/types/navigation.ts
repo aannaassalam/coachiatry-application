@@ -11,14 +11,16 @@ export type AppStackParamList = {
   DocumentEditor: {
     mode?: 'edit' | 'view' | 'add';
     documentId?: string;
+    userId?: string;
   };
   Profile: undefined;
   BottomTabs: undefined;
-  TaskDetails: { taskId: string };
+  TaskDetails: { taskId: string; userId?: string };
   AddEditTask: {
     taskId?: string;
     predefinedStatus?: string;
     predefinedDueDate?: string;
+    userId?: string;
   };
   EditProfile: undefined;
   ClientDetails: { userId: string };

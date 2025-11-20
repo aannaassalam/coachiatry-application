@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 import ActionSheet, {
   ScrollView,
+  SheetManager,
   SheetProps,
 } from 'react-native-actions-sheet';
 import { createStyleSheet } from 'react-native-unistyles';
@@ -34,7 +35,13 @@ export default function BottomSheet(props: SheetProps<'general-sheet'>) {
         {props.payload?.children}
       </ScrollView>
       <View style={styles.footerContainer}>
-        <AppButton text="Apply" style={{ paddingVertical: spacing(16) }} />
+        <AppButton
+          text="Apply"
+          style={{ paddingVertical: spacing(16) }}
+          onPress={() => {
+            SheetManager.hide('general-sheet');
+          }}
+        />
       </View>
     </ActionSheet>
   );

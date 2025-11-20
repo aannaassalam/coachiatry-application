@@ -36,7 +36,13 @@ type TaskScreenNavigationProp = NativeStackNavigationProp<
   'Tasks'
 >;
 
-export default function IndividualTask({ task }: { task: Task }) {
+export default function IndividualTask({
+  task,
+  userId,
+}: {
+  task: Task;
+  userId?: string;
+}) {
   const navigation = useNavigation<TaskScreenNavigationProp>();
   const width = Dimensions.get('screen').width;
 
@@ -72,7 +78,7 @@ export default function IndividualTask({ task }: { task: Task }) {
       <MenuTrigger
         triggerOnLongPress
         onAlternativeAction={() =>
-          navigation.navigate('TaskDetails', { taskId: task._id })
+          navigation.navigate('TaskDetails', { taskId: task._id, userId })
         }
         customStyles={{
           TriggerTouchableComponent: TouchableButton,
@@ -116,7 +122,7 @@ export default function IndividualTask({ task }: { task: Task }) {
         <MenuOption
           style={styles.option}
           onSelect={() =>
-            navigation.navigate('AddEditTask', { taskId: task._id })
+            navigation.navigate('AddEditTask', { taskId: task._id, userId })
           }
         >
           <Lucide
@@ -141,7 +147,6 @@ export default function IndividualTask({ task }: { task: Task }) {
                   onPress: () => mutate(task._id),
                 },
               ],
-              'default',
             )
           }
         >

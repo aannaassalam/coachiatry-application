@@ -40,6 +40,7 @@ import { PaginatedResponse } from '../../typescript/interface/common.interface';
 import { Document } from '../../typescript/interface/document.interface';
 import { fontSize, scale, spacing } from '../../utils';
 import Lucide from '@react-native-vector-icons/lucide';
+import { useAuth } from '../../hooks/useAuth';
 
 type DocumentScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -53,6 +54,7 @@ const RenderItem = ({
   item: Document;
   navigate: (mode: 'view' | 'edit' | 'add') => void;
 }) => {
+  const { profile } = useAuth();
   const width = Dimensions.get('screen').width;
 
   const { mutate } = useMutation({
@@ -87,11 +89,12 @@ const RenderItem = ({
         triggerOnLongPress
         onAlternativeAction={() => navigate('view')}
         customStyles={{
-          TriggerTouchableComponent: TouchableOpacity,
+          TriggerTouchableComponent: TouchableButton,
           triggerTouchable: {
             activeOpacity: 0.5,
           },
         }}
+        disabled={item.user !== profile?._id}
         style={styles.card}
       >
         <View style={styles.cardHeader}>

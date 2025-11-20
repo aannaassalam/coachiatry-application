@@ -150,7 +150,7 @@ const Subtasks = ({
 const TaskDetailsScreen = () => {
   const navigation = useNavigation<AddEditTaskNavigationProp>();
   const route = useRoute<RouteProp<AppStackParamList, 'TaskDetails'>>();
-  const { taskId } = route.params;
+  const { taskId, userId } = route.params;
   const width = Dimensions.get('screen').width;
 
   const { data, isLoading, isFetching, refetch } = useQuery({
@@ -224,7 +224,10 @@ const TaskDetailsScreen = () => {
               <MenuOption
                 style={styles.option}
                 onSelect={() =>
-                  navigation.navigate('AddEditTask', { taskId: data?._id })
+                  navigation.navigate('AddEditTask', {
+                    taskId: data?._id,
+                    userId,
+                  })
                 }
               >
                 <Lucide
@@ -249,7 +252,6 @@ const TaskDetailsScreen = () => {
                         onPress: () => mutate(data?._id ?? ''),
                       },
                     ],
-                    'default',
                   )
                 }
               >

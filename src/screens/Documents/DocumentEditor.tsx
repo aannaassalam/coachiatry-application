@@ -32,9 +32,13 @@ import {
   RichToolbar,
 } from 'react-native-pell-rich-editor';
 import * as yup from 'yup';
-import { getAllCategories } from '../../api/functions/category.api';
+import {
+  getAllCategories,
+  getAllCategoriesByCoach,
+} from '../../api/functions/category.api';
 import {
   createDocument,
+  createDocumentByCoach,
   editDocument,
   getDocument,
 } from '../../api/functions/document.api';
@@ -48,6 +52,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
 import { fontSize, scale, spacing } from '../../utils';
 import Lucide from '@react-native-vector-icons/lucide';
+import { queryClient } from '../../../App';
 
 const schema = yup.object().shape({
   title: yup.string().required(),
@@ -57,20 +62,37 @@ const schema = yup.object().shape({
 const DocumentCategorySheetBody = ({
   category,
   fieldChange,
+  forClient,
+  userId,
 }: {
   category: string;
   fieldChange: (id: string) => void;
+  forClient?: boolean;
+  userId?: string;
 }) => {
-  const { data = [] } = useQuery({
-    queryKey: ['categories'],
-    queryFn: getAllCategories,
+  const [{ data = [] }, { data: userCategories }] = useQueries({
+    queries: [
+      {
+        queryKey: ['categories'],
+        queryFn: getAllCategories,
+        enabled: !forClient,
+      },
+      {
+        queryKey: ['categories', userId],
+        queryFn: () => getAllCategoriesByCoach(userId as string),
+        enabled: forClient,
+      },
+    ],
   });
+
+  console.log(data);
+  console.log(userCategories);
 
   return (
     <View>
       <Text style={styles.heading}>Select Tag</Text>
       <FlatList
-        data={data}
+        data={forClient ? userCategories : data}
         // contentContainerStyle={styles.statuses}
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled
@@ -107,7 +129,7 @@ export default function DocumentEditor() {
   const [editorValue, setEditorValue] = useState('');
   const navigation = useNavigation();
   const route = useRoute<any>();
-  const { mode, documentId } = route.params || {};
+  const { mode, documentId, userId } = route.params || {};
   const [localMode, setLocalMode] = useState(mode);
 
   const { mutate, isPending } = useMutation({
@@ -118,9 +140,20 @@ export default function DocumentEditor() {
     },
   });
 
+  const { mutate: coachMutate, isPending: isCoachPending } = useMutation({
+    mutationFn: createDocumentByCoach,
+    onSuccess: navigation.goBack,
+    meta: {
+      invalidateQueries: ['documents'],
+    },
+  });
+
   const { mutate: edit, isPending: isEditing } = useMutation({
     mutationFn: editDocument,
-    onSuccess: () => setLocalMode('view'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      setLocalMode('view');
+    },
     meta: {
       invalidateQueries: ['documents', documentId],
     },
@@ -138,6 +171,7 @@ export default function DocumentEditor() {
   const [
     { data, isLoading },
     { data: categories, isLoading: isCategoriesLoading },
+    { data: userCategories, isLoading: isUserCategoriesLoading },
   ] = useQueries({
     queries: [
       {
@@ -148,6 +182,10 @@ export default function DocumentEditor() {
       {
         queryKey: ['categories'],
         queryFn: getAllCategories,
+      },
+      {
+        queryKey: ['categories', userId],
+        queryFn: () => getAllCategoriesByCoach(userId as string),
       },
     ],
   });
@@ -173,13 +211,15 @@ export default function DocumentEditor() {
 
   const onSubmit = (_data: yup.InferType<typeof schema>) => {
     if (!editorValue)
-      showMessage({
+      return showMessage({
         message: 'Failed',
         description: 'Please enter document content!',
         type: 'danger',
       });
     if (localMode === 'edit') {
       edit({ ..._data, content: editorValue, documentId });
+    } else if (profile?.role === 'coach' && userId) {
+      coachMutate({ ..._data, content: editorValue, user: userId });
     } else {
       mutate({ ..._data, content: editorValue });
     }
@@ -228,7 +268,7 @@ export default function DocumentEditor() {
           </View>
         </View>
 
-        {isLoading || isCategoriesLoading ? (
+        {isLoading || isCategoriesLoading || isUserCategoriesLoading ? (
           <View
             style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
           >
@@ -292,9 +332,18 @@ export default function DocumentEditor() {
                     name="tag"
                     control={form.control}
                     render={({ field }) => {
-                      const selectedTag = categories?.find(
-                        _cat => _cat._id === field.value,
-                      );
+                      // console.log(
+                      //   profile?.role === 'coach' && !!userId
+                      //     ? userCategories
+                      //     : categories?.find(_cat => _cat._id === field.value),
+                      // );
+                      const selectedTag =
+                        profile?.role === 'coach' && !!userId
+                          ? userCategories?.find(
+                              _cat => _cat._id === field.value,
+                            )
+                          : categories?.find(_cat => _cat._id === field.value);
+                      // console.log(selectedTag);
                       return (
                         <TouchableButton
                           style={styles.tagDropdown}
@@ -306,6 +355,10 @@ export default function DocumentEditor() {
                                   <DocumentCategorySheetBody
                                     category={field.value}
                                     fieldChange={field.onChange}
+                                    forClient={
+                                      profile?.role === 'coach' && !!userId
+                                    }
+                                    userId={userId}
                                   />
                                 ),
                               },
@@ -463,7 +516,7 @@ export default function DocumentEditor() {
                       />
                     }
                     onPress={form.handleSubmit(onSubmit, onError)}
-                    isLoading={isEditing || isPending}
+                    isLoading={isEditing || isPending || isCoachPending}
                   />
                 ) : (
                   <AppButton

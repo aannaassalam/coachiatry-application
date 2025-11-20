@@ -37,6 +37,7 @@ import { PaginatedResponse } from '../../typescript/interface/common.interface';
 import { Document } from '../../typescript/interface/document.interface';
 import { Task } from '../../typescript/interface/task.interface';
 import { fontSize, scale, spacing } from '../../utils';
+import Feather from '@react-native-vector-icons/feather';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -390,6 +391,7 @@ export default function ClientDetailsA1() {
                       tasks={tasks.filter(
                         _task => _task.status._id === item._id,
                       )}
+                      userId={userId}
                     />
                   )}
                   keyExtractor={item => item._id}
@@ -406,55 +408,81 @@ export default function ClientDetailsA1() {
                   }}
                 />
               ) : (
-                <FlatList
-                  data={documents}
-                  renderItem={({ item }) => (
-                    <RenderDocument
-                      item={item}
-                      navigate={mode =>
-                        navigation.navigate('DocumentEditor', {
-                          mode,
-                          documentId: item._id,
-                        })
-                      }
-                    />
-                  )}
-                  keyExtractor={i => i._id}
-                  scrollEnabled={false}
-                  contentContainerStyle={{
-                    padding: spacing(16),
-                    paddingBottom: spacing(40),
-                  }}
-                  showsVerticalScrollIndicator={false}
-                  onEndReached={() => {
-                    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-                  }}
-                  onEndReachedThreshold={0.3}
-                  ListFooterComponent={
-                    isFetchingNextPage ? (
-                      <View
-                        style={{
-                          paddingVertical: spacing(10),
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Text
+                <View>
+                  <AppButton
+                    text="Add document"
+                    leftIcon={
+                      <Feather
+                        name="plus"
+                        color={theme.colors.white}
+                        size={fontSize(14)}
+                      />
+                    }
+                    onPress={() =>
+                      navigation.navigate('DocumentEditor', {
+                        mode: 'add',
+                        userId,
+                      })
+                    }
+                    style={{
+                      alignSelf: 'flex-end',
+                      marginHorizontal: spacing(16),
+                      gap: spacing(5),
+                    }}
+                  />
+                  <FlatList
+                    data={documents}
+                    renderItem={({ item }) => (
+                      <RenderDocument
+                        item={item}
+                        navigate={mode =>
+                          navigation.navigate('DocumentEditor', {
+                            mode,
+                            documentId: item._id,
+                            userId,
+                          })
+                        }
+                      />
+                    )}
+                    keyExtractor={i => i._id}
+                    scrollEnabled={false}
+                    contentContainerStyle={{
+                      padding: spacing(16),
+                      paddingBottom: spacing(40),
+                    }}
+                    showsVerticalScrollIndicator={false}
+                    onEndReached={() => {
+                      if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+                    }}
+                    onEndReachedThreshold={0.3}
+                    ListFooterComponent={
+                      isFetchingNextPage ? (
+                        <View
                           style={{
-                            color: theme.colors.gray[500],
-                            fontSize: fontSize(14),
+                            paddingVertical: spacing(10),
+                            alignItems: 'center',
                           }}
                         >
-                          Loading...
+                          <Text
+                            style={{
+                              color: theme.colors.gray[500],
+                              fontSize: fontSize(14),
+                            }}
+                          >
+                            Loading...
+                          </Text>
+                        </View>
+                      ) : null
+                    }
+                    ListEmptyComponent={
+                      <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>
+                          No documents found.
                         </Text>
                       </View>
-                    ) : null
-                  }
-                  ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                      <Text style={styles.emptyText}>No documents found.</Text>
-                    </View>
-                  }
-                />
+                    }
+                  />
+                </View>
               )}
             </View>
           </>

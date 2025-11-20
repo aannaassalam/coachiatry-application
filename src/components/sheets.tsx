@@ -1,21 +1,11 @@
-import { createStyleSheet } from 'react-native-unistyles';
-import { fontSize, scale, spacing, verticalScale } from '../utils';
-import { theme } from '../theme';
-import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
-import DatePicker from 'react-native-date-picker';
 import moment from 'moment';
-import ActionSheet, { SheetManager } from 'react-native-actions-sheet';
-import TouchableButton from './TouchableButton';
-import { Lucide } from '@react-native-vector-icons/lucide';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { SheetManager } from 'react-native-actions-sheet';
+import DatePicker from 'react-native-date-picker';
+import { createStyleSheet } from 'react-native-unistyles';
+import { theme } from '../theme';
+import { fontSize, spacing, verticalScale } from '../utils';
 
 type Option = {
   label: string;

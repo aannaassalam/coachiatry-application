@@ -1,4 +1,12 @@
-import { useRef, useState } from 'react';
+/* Filter.tsx — uses local React context inside registered sheet */
+
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -8,10 +16,10 @@ import {
   View,
 } from 'react-native';
 import ActionSheet, {
-  ActionSheetRef,
+  Route,
   ScrollView,
-  SheetManager,
   SheetProps,
+  useSheetRouter,
 } from 'react-native-actions-sheet';
 import { createStyleSheet } from 'react-native-unistyles';
 import { Feather } from '@react-native-vector-icons/feather';
@@ -23,288 +31,95 @@ import { useQueries } from '@tanstack/react-query';
 import { getAllCategories } from '../../api/functions/category.api';
 import { getAllStatuses } from '../../api/functions/status.api';
 
+/* ---------- Types ---------- */
 type Filter = {
   selectedKey: string;
   selectedOperator: string;
   selectedValue: string;
 };
 
-type FilterOption = {
-  compareOperator: { label: string; value: string }[];
-  compareWith: { label: string; value: string }[];
-};
+type TempFilter = (Partial<Filter> & { editIndex?: number | null }) | null;
 
-export default function Filter({
-  filters,
-  setFilters,
-}: {
+type SheetPayload = {
   filters: Filter[];
   setFilters: React.Dispatch<React.SetStateAction<Filter[]>>;
-}) {
-  const sheetRef = useRef<ActionSheetRef>(null);
-  const [view, setView] = useState<'view' | 'add'>('view');
-  const [filterMode, setFilterMode] = useState<'key' | 'operator' | 'value'>(
-    'key',
-  );
-  const [activeFilter, setActiveFilter] = useState<Omit<
-    Filter,
-    'selectedValue'
-  > | null>(null);
+};
 
-  const present = async () => {
-    sheetRef.current?.show();
-  };
+/* ---------- Local Context for sheet state (NOT SheetProvider) ---------- */
+type InternalSheetState = {
+  localFilters: Filter[]; // local reactive copy so UI updates inside sheet
+  setLocalFilters: React.Dispatch<React.SetStateAction<Filter[]>>;
+  tempFilter: TempFilter;
+  setTempFilter: (f: TempFilter) => void;
+  commitFilter: (final: Filter, editIndex?: number | null) => void;
+};
 
-  const handleFilterProgress = (value: string) => {
-    if (filterMode === 'key') {
-      setActiveFilter({
-        selectedKey: value,
-        selectedOperator: '',
-      });
-      setFilterMode('operator');
-      return;
-    }
-    if (filterMode === 'operator') {
-      setActiveFilter(
-        prev =>
-          prev && {
-            ...prev,
-            selectedOperator: value,
-          },
-      );
-      setFilterMode('value');
-      return;
-    }
-    if (filterMode === 'value' && !!activeFilter) {
-      setFilters(prev => [...prev, { ...activeFilter, selectedValue: value }]);
-      setActiveFilter(null);
-      setView('view');
-      setFilterMode('key');
-      return;
-    }
-  };
+const TempFilterContext = createContext<InternalSheetState | null>(null);
+export const useTempFilter = () => {
+  const ctx = useContext(TempFilterContext);
+  if (!ctx) throw new Error('useTempFilter must be used inside FilterSheet');
+  return ctx;
+};
 
-  const removeFilter = (id: number) => {
-    setFilters(prev => prev.filter((_, idx) => idx !== id));
-  };
+/* ---------- ROUTE COMPONENTS (they will use useTempFilter + router) ---------- */
+
+const InitialFilterScreen = () => {
+  const router = useSheetRouter('filter-sheet');
+  const { localFilters, setTempFilter, setLocalFilters } = useTempFilter();
 
   const [
     { data: categories = [], isLoading: isCategoryLoading },
     { data: statuses = [], isLoading: isStatusLoading },
   ] = useQueries({
     queries: [
-      {
-        queryKey: ['categories'],
-        queryFn: getAllCategories,
-      },
-      {
-        queryKey: ['status'],
-        queryFn: getAllStatuses,
-      },
+      { queryKey: ['categories'], queryFn: getAllCategories },
+      { queryKey: ['status'], queryFn: getAllStatuses },
     ],
   });
 
-  const filterOptions: Record<string, FilterOption> = {
-    status: {
-      compareOperator: [
-        { label: 'is', value: 'is' },
-        { label: 'is not', value: 'is not' },
-      ],
-      compareWith: statuses.map(_status => ({
-        label: _status.title,
-        value: _status._id,
-      })),
-    },
-    dueDate: {
-      compareOperator: [
-        { label: 'is', value: 'is' },
-        { label: 'is not', value: 'is not' },
-      ],
-      compareWith: [
-        { label: 'Today', value: 'today' },
-        { label: 'Yesterday', value: 'yesterday' },
-        { label: 'Tomorrow', value: 'tomorrow' },
-        { label: 'This Week', value: 'thisWeek' },
-        { label: 'Next Week', value: 'nextWeek' },
-      ],
-    },
-    category: {
-      compareOperator: [
-        { label: 'is', value: 'is' },
-        { label: 'is not', value: 'is not' },
-      ],
-      compareWith: categories.map(_cat => ({
-        label: _cat.title,
-        value: _cat._id,
-      })),
-    },
-    priority: {
-      compareOperator: [
-        { label: 'is', value: 'is' },
-        { label: 'is not', value: 'is not' },
-      ],
-      compareWith: [
-        { label: 'High', value: 'high' },
-        { label: 'Medium', value: 'medium' },
-        { label: 'Low', value: 'low' },
-      ],
-    },
+  const removeFilter = (id: number) => {
+    setLocalFilters(prev => prev.filter((_, idx) => idx !== id));
+    // we don't call parent setFilters here — commit happens on selection,
+    // but you can also expose a commitNow() that calls payload.setFilters if needed
+  };
+
+  const editField = (
+    idx: number,
+    field: 'selectedKey' | 'selectedOperator' | 'selectedValue',
+  ) => {
+    const f = localFilters[idx];
+    setTempFilter({ ...f, editIndex: idx });
+    if (field === 'selectedKey') router?.navigate('select-type');
+    else if (field === 'selectedOperator') router?.navigate('select-operator');
+    else router?.navigate('select-values');
   };
 
   return (
     <View>
-      <Pressable style={styles.filterIcon} onPress={present}>
-        <Image source={assets.icons.filter} style={styles.sortIcon} />
-      </Pressable>
-      <ActionSheet
-        useBottomSafeAreaPadding
-        backgroundInteractionEnabled={false}
-        closeOnTouchBackdrop
-        indicatorStyle={{ display: 'none' }}
-        gestureEnabled
-        ref={sheetRef}
-        containerStyle={{
-          borderTopLeftRadius: 30,
-          borderTopRightRadius: 30,
-          backgroundColor: '#f9f9f9',
-        }}
-      >
-        <ScrollView contentContainerStyle={styles.contentContainer}>
-          <Text style={styles.heading}>
-            {view === 'view'
-              ? filters.length > 0
-                ? 'Active Filters'
-                : 'Filters'
-              : 'Add Filters'}
-          </Text>
-          {view === 'view' ? (
-            filters.length === 0 ? (
-              <View
-                style={{
-                  paddingTop: spacing(32),
-                  alignItems: 'center',
-                  marginBottom: spacing(72),
-                }}
-              >
-                <Image
-                  source={assets.images.EmptyFiler}
-                  style={styles.image}
-                  resizeMode="contain"
-                />
-                <Text style={styles.emptyTitle}>No Active filter</Text>
-                <Text style={styles.emptySubtitle}>Add New Filters here</Text>
-              </View>
-            ) : (
-              <View>
-                {filters.map((filter, idx) => {
-                  return (
-                    <View style={styles.whereContainer} key={idx}>
-                      <View style={styles.row}>
-                        <Text style={styles.whereText}>Where</Text>
-                        <Pressable onPress={() => removeFilter(idx)}>
-                          <Feather name="x" size={18} color="#212121" />
-                        </Pressable>
-                      </View>
-                      <View>
-                        <View style={styles.row}>
-                          <View style={styles.selectBox}>
-                            <Text
-                              style={styles.selectBoxText}
-                              numberOfLines={1}
-                            >
-                              {filter.selectedKey}
-                            </Text>
-                            <Feather
-                              name="chevron-down"
-                              size={16}
-                              color="#4F4D55"
-                            />
-                          </View>
-                          <View style={styles.selectBox}>
-                            <Text
-                              style={styles.selectBoxText}
-                              numberOfLines={1}
-                            >
-                              {filter.selectedOperator}
-                            </Text>
-                            <Feather
-                              name="chevron-down"
-                              size={16}
-                              color="#4F4D55"
-                            />
-                          </View>
-                        </View>
-                        <View style={styles.row}>
-                          <View style={styles.selectBox}>
-                            <Text
-                              style={styles.selectBoxText}
-                              numberOfLines={1}
-                            >
-                              {filter.selectedValue}
-                            </Text>
-                            <Feather
-                              name="chevron-down"
-                              size={16}
-                              color="#4F4D55"
-                            />
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            )
-          ) : filterMode === 'key' ? (
-            <View>
-              <Pressable
-                style={styles.box}
-                onPress={() => handleFilterProgress('status')}
-              >
-                <Text style={styles.boxText}>Status</Text>
-                {/* <Feather name="check" /> */}
-              </Pressable>
-              <Pressable
-                style={styles.box}
-                onPress={() => handleFilterProgress('dueDate')}
-              >
-                <Text style={styles.boxText}>Due Date</Text>
-                {/* <Feather name="check" /> */}
-              </Pressable>
-              <Pressable
-                style={styles.box}
-                onPress={() => handleFilterProgress('category')}
-              >
-                <Text style={styles.boxText}>Category</Text>
-                {/* <Feather name="check" /> */}
-              </Pressable>
-              <Pressable
-                style={styles.box}
-                onPress={() => handleFilterProgress('priority')}
-              >
-                <Text style={styles.boxText}>Priority</Text>
-                {/* <Feather name="check" /> */}
-              </Pressable>
-            </View>
-          ) : filterMode === 'operator' ? (
-            <View>
-              <Pressable
-                style={styles.box}
-                onPress={() => handleFilterProgress('is')}
-              >
-                <Text style={styles.boxText}>is</Text>
-                {/* <Feather name="check" /> */}
-              </Pressable>
-              <Pressable
-                style={styles.box}
-                onPress={() => handleFilterProgress('isNot')}
-              >
-                <Text style={styles.boxText}>is not</Text>
-                {/* <Feather name="check" /> */}
-              </Pressable>
-            </View>
-          ) : filterMode === 'value' ? (
-            isCategoryLoading || isStatusLoading ? (
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        <Text style={styles.heading}>
+          {localFilters.length > 0 ? 'Active Filters' : 'Filters'}
+        </Text>
+
+        {localFilters.length === 0 ? (
+          <View
+            style={{
+              paddingTop: spacing(32),
+              alignItems: 'center',
+              marginBottom: spacing(72),
+            }}
+          >
+            <Image
+              source={assets.images.EmptyFiler}
+              style={styles.image}
+              resizeMode="contain"
+            />
+            <Text style={styles.emptyTitle}>No Active filter</Text>
+            <Text style={styles.emptySubtitle}>Add New Filters here</Text>
+          </View>
+        ) : (
+          <View>
+            {isCategoryLoading || isStatusLoading ? (
               <View
                 style={{
                   height: verticalScale(150),
@@ -315,38 +130,424 @@ export default function Filter({
                 <ActivityIndicator size="small" />
               </View>
             ) : (
-              <View>
-                {filterOptions[
-                  activeFilter?.selectedKey ?? 'status'
-                ].compareWith.map(_item => {
-                  return (
-                    <Pressable
-                      style={styles.box}
-                      onPress={() => handleFilterProgress(_item.value)}
-                      key={_item.value}
-                    >
-                      <Text style={styles.boxText}>{_item.label}</Text>
-                      {/* <Feather name="check" /> */}
+              localFilters.map((filter, idx) => (
+                <View style={styles.whereContainer} key={idx}>
+                  <View style={styles.row}>
+                    <Text style={styles.whereText}>Where</Text>
+                    <Pressable onPress={() => removeFilter(idx)}>
+                      <Feather name="x" size={18} color="#212121" />
                     </Pressable>
-                  );
-                })}
-              </View>
-            )
-          ) : null}
-        </ScrollView>
-        <View style={styles.footerContainer}>
-          <AppButton
-            text="Add filter"
-            style={{ paddingVertical: spacing(16) }}
-            onPress={() => setView('add')}
-          />
+                  </View>
+
+                  <View>
+                    <View style={styles.row}>
+                      <Pressable
+                        style={[styles.selectBox, { marginRight: spacing(8) }]}
+                        onPress={() => editField(idx, 'selectedKey')}
+                      >
+                        <Text style={styles.selectBoxText} numberOfLines={1}>
+                          {filter.selectedKey || 'Type'}
+                        </Text>
+                        <Feather
+                          name="chevron-down"
+                          size={16}
+                          color="#4F4D55"
+                        />
+                      </Pressable>
+
+                      <Pressable
+                        style={styles.selectBox}
+                        onPress={() => editField(idx, 'selectedOperator')}
+                      >
+                        <Text style={styles.selectBoxText} numberOfLines={1}>
+                          {filter.selectedOperator === 'isNot'
+                            ? 'is not'
+                            : filter.selectedOperator}
+                        </Text>
+                        <Feather
+                          name="chevron-down"
+                          size={16}
+                          color="#4F4D55"
+                        />
+                      </Pressable>
+                    </View>
+
+                    <View style={styles.row}>
+                      <Pressable
+                        style={styles.selectBox}
+                        onPress={() => editField(idx, 'selectedValue')}
+                      >
+                        <Text style={styles.selectBoxText} numberOfLines={1}>
+                          {filter.selectedKey === 'status'
+                            ? statuses.find(
+                                _s => _s._id === filter.selectedValue,
+                              )?.title
+                            : filter.selectedKey === 'category'
+                              ? categories.find(
+                                  _c => _c._id === filter.selectedValue,
+                                )?.title
+                              : 'Value'}
+                        </Text>
+                        <Feather
+                          name="chevron-down"
+                          size={16}
+                          color="#4F4D55"
+                        />
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      <View style={styles.footerContainer}>
+        <AppButton
+          text="Add filter"
+          style={{ paddingVertical: spacing(16) }}
+          onPress={() => {
+            // start a new tempFilter (create new)
+            setTempFilter({
+              selectedKey: '',
+              selectedOperator: '',
+              selectedValue: '',
+              editIndex: null,
+            });
+            router?.navigate('select-type');
+          }}
+        />
+      </View>
+    </View>
+  );
+};
+
+const SelectTypeFilterScreen = () => {
+  const router = useSheetRouter('filter-sheet');
+  const { tempFilter, setTempFilter } = useTempFilter();
+
+  const pick = (key: string) => {
+    setTempFilter({ ...(tempFilter ?? {}), selectedKey: key });
+    router?.navigate('select-operator');
+  };
+
+  return (
+    <>
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        <Text style={styles.heading}>Select Type</Text>
+        <View>
+          <Pressable style={styles.box} onPress={() => pick('status')}>
+            <Text style={styles.boxText}>Status</Text>
+            {tempFilter?.selectedKey === 'status' && (
+              <Feather name="check" size={fontSize(12)} />
+            )}
+          </Pressable>
+          <Pressable style={styles.box} onPress={() => pick('dueDate')}>
+            <Text style={styles.boxText}>Due Date</Text>
+            {tempFilter?.selectedKey === 'dueDate' && (
+              <Feather name="check" size={fontSize(12)} />
+            )}
+          </Pressable>
+          <Pressable style={styles.box} onPress={() => pick('category')}>
+            <Text style={styles.boxText}>Category</Text>
+            {tempFilter?.selectedKey === 'category' && (
+              <Feather name="check" size={fontSize(12)} />
+            )}
+          </Pressable>
+          <Pressable style={styles.box} onPress={() => pick('priority')}>
+            <Text style={styles.boxText}>Priority</Text>
+            {tempFilter?.selectedKey === 'priority' && (
+              <Feather name="check" size={fontSize(12)} />
+            )}
+          </Pressable>
         </View>
-      </ActionSheet>
+      </ScrollView>
+
+      <View style={styles.footerContainer}>
+        <AppButton
+          text="Go Back"
+          style={{ paddingVertical: spacing(16) }}
+          onPress={() => router?.goBack()}
+        />
+      </View>
+    </>
+  );
+};
+
+const SelectOperatorFilterScreen = () => {
+  const router = useSheetRouter('filter-sheet');
+  const { tempFilter, setTempFilter } = useTempFilter();
+
+  const pick = (op: string) => {
+    setTempFilter({ ...(tempFilter ?? {}), selectedOperator: op });
+    router?.navigate('select-values');
+  };
+
+  return (
+    <>
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        <Text style={styles.heading}>Select Operator</Text>
+        <View>
+          <Pressable style={styles.box} onPress={() => pick('is')}>
+            <Text style={styles.boxText}>is</Text>
+            {tempFilter?.selectedOperator === 'is' && (
+              <Feather name="check" size={fontSize(12)} />
+            )}
+          </Pressable>
+          <Pressable style={styles.box} onPress={() => pick('isNot')}>
+            <Text style={styles.boxText}>is not</Text>
+            {tempFilter?.selectedOperator === 'isNot' && (
+              <Feather name="check" size={fontSize(12)} />
+            )}
+          </Pressable>
+        </View>
+      </ScrollView>
+
+      <View style={styles.footerContainer}>
+        <AppButton
+          text="Go Back"
+          style={{ paddingVertical: spacing(16) }}
+          onPress={() => router?.goBack()}
+        />
+      </View>
+    </>
+  );
+};
+
+const SelectValueFilterScreen = () => {
+  const router = useSheetRouter('filter-sheet');
+  const { tempFilter, setTempFilter, commitFilter } = useTempFilter();
+
+  const [
+    { data: categories = [], isLoading: isCategoryLoading },
+    { data: statuses = [], isLoading: isStatusLoading },
+  ] = useQueries({
+    queries: [
+      { queryKey: ['categories'], queryFn: getAllCategories },
+      { queryKey: ['status'], queryFn: getAllStatuses },
+    ],
+  });
+
+  const key = tempFilter?.selectedKey ?? 'status';
+
+  const onPickValue = (value: string) => {
+    const final: Filter = {
+      selectedKey: tempFilter?.selectedKey ?? key,
+      selectedOperator: tempFilter?.selectedOperator ?? 'is',
+      selectedValue: value,
+    };
+
+    // commit (this updates local and parent filters immediately)
+    commitFilter(final, tempFilter?.editIndex ?? null);
+
+    // clear temp and go back
+    setTempFilter(null);
+    setTimeout(() => {
+      router?.initialNavigation();
+    }, 10);
+  };
+
+  const renderOptions = () => {
+    if (key === 'status') {
+      if (isStatusLoading) return <ActivityIndicator />;
+      return statuses.map(s => (
+        <Pressable
+          key={s._id}
+          style={styles.box}
+          onPress={() => onPickValue(s._id)}
+        >
+          <Text style={styles.boxText}>{s.title}</Text>
+          {tempFilter?.selectedValue === s._id && (
+            <Feather name="check" size={fontSize(12)} />
+          )}
+        </Pressable>
+      ));
+    }
+
+    if (key === 'category') {
+      if (isCategoryLoading) return <ActivityIndicator />;
+      return categories.map(c => (
+        <Pressable
+          key={c._id}
+          style={styles.box}
+          onPress={() => onPickValue(c._id)}
+        >
+          <Text style={styles.boxText}>{c.title}</Text>
+          {tempFilter?.selectedValue === c._id && (
+            <Feather name="check" size={fontSize(12)} />
+          )}
+        </Pressable>
+      ));
+    }
+
+    if (key === 'priority') {
+      const priorities = ['low', 'medium', 'high'];
+      return priorities.map(p => (
+        <Pressable key={p} style={styles.box} onPress={() => onPickValue(p)}>
+          <Text style={styles.boxText}>{p}</Text>
+          {tempFilter?.selectedValue === p && (
+            <Feather name="check" size={fontSize(12)} />
+          )}
+        </Pressable>
+      ));
+    }
+
+    if (key === 'dueDate') {
+      const options = ['Today', 'This week', 'This month'];
+      return options.map(o => (
+        <Pressable key={o} style={styles.box} onPress={() => onPickValue(o)}>
+          <Text style={styles.boxText}>{o}</Text>
+          {tempFilter?.selectedValue === o && (
+            <Feather name="check" size={fontSize(12)} />
+          )}
+        </Pressable>
+      ));
+    }
+
+    return null;
+  };
+
+  return (
+    <>
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        <Text style={styles.heading}>Select Value</Text>
+        {isCategoryLoading || isStatusLoading ? (
+          <View
+            style={{
+              height: verticalScale(150),
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <ActivityIndicator size="small" />
+          </View>
+        ) : (
+          <View>{renderOptions()}</View>
+        )}
+      </ScrollView>
+
+      <View style={styles.footerContainer}>
+        <AppButton
+          text="Go Back"
+          style={{ paddingVertical: spacing(16) }}
+          onPress={() => router?.goBack()}
+        />
+      </View>
+    </>
+  );
+};
+
+/* ---------- Routes ---------- */
+export const filterRoutes: Route[] = [
+  { name: 'initial-screen', component: InitialFilterScreen },
+  { name: 'select-type', component: SelectTypeFilterScreen },
+  { name: 'select-operator', component: SelectOperatorFilterScreen },
+  { name: 'select-values', component: SelectValueFilterScreen },
+];
+
+/* ---------- The registered sheet component (wrapped in local context) ---------- */
+export const FilterSheet = (props: SheetProps<'filter-sheet'>) => {
+  // read incoming initial payload (passed from SheetManager.show)
+  const incoming = props.payload as SheetPayload | undefined;
+  const parentSetFilters = incoming?.setFilters;
+  const initialFilters = incoming?.filters ?? [];
+
+  // local reactive copy of filters to make UI reactive inside sheet
+  const [localFilters, setLocalFilters] = useState<Filter[]>(initialFilters);
+
+  // temp filter (single in-progress filter while user navigates)
+  const [tempFilter, setTempFilter] = useState<TempFilter>(null);
+
+  // commit helper: update local and call parent's setFilters immediately
+  const commitFilter = useCallback(
+    (final: Filter, editIndex?: number | null) => {
+      setLocalFilters(prev => {
+        const copy = [...prev];
+        if (typeof editIndex === 'number' && editIndex >= 0) {
+          copy[editIndex] = final;
+        } else {
+          copy.push(final);
+        }
+        // also commit to parent if available
+        if (parentSetFilters) parentSetFilters(copy);
+        return copy;
+      });
+    },
+    [parentSetFilters],
+  );
+
+  const ctx = useMemo<InternalSheetState>(
+    () => ({
+      localFilters,
+      setLocalFilters,
+      tempFilter,
+      setTempFilter,
+      commitFilter,
+    }),
+    [commitFilter, localFilters, tempFilter],
+  );
+
+  return (
+    <TempFilterContext.Provider value={ctx}>
+      <ActionSheet
+        id="filter-sheet"
+        useBottomSafeAreaPadding
+        backgroundInteractionEnabled={false}
+        closeOnTouchBackdrop
+        indicatorStyle={{ display: 'none' }}
+        gestureEnabled
+        routes={filterRoutes}
+        initialRoute="initial-screen"
+        containerStyle={{
+          borderTopLeftRadius: 30,
+          borderTopRightRadius: 30,
+          backgroundColor: '#f9f9f9',
+        }}
+        // keep props.payload untouched — it's for initial data & returning value
+      />
+    </TempFilterContext.Provider>
+  );
+};
+
+/* ---------- Exported small Filter button that calls SheetManager.show ---------- */
+import { SheetManager } from 'react-native-actions-sheet';
+
+export default function FilterButton({
+  filters,
+  setFilters,
+}: {
+  filters: Filter[];
+  setFilters: React.Dispatch<React.SetStateAction<Filter[]>>;
+}) {
+  const present = () => {
+    // pass only initial data (do NOT pass setters for temp state)
+    SheetManager.show('filter-sheet', {
+      payload: {
+        filters,
+        setFilters,
+      },
+    });
+  };
+
+  return (
+    <View>
+      <Pressable
+        style={[
+          styles.filterIcon,
+          filters.length > 0 && { backgroundColor: theme.colors.gray[200] },
+        ]}
+        onPress={present}
+      >
+        <Image source={assets.icons.filter} style={styles.sortIcon} />
+      </Pressable>
     </View>
   );
 }
 
+/* ---------- styles (same as your original) ---------- */
 const styles = createStyleSheet({
+  /* ...your styles here (omitted for brevity; reuse existing styles) */
   filterIcon: {
     padding: spacing(7),
     borderRadius: 100,
@@ -354,10 +555,7 @@ const styles = createStyleSheet({
     borderStyle: 'solid',
     borderColor: theme.colors.gray[200],
   },
-  sortIcon: {
-    width: 20,
-    height: 20,
-  },
+  sortIcon: { width: 20, height: 20 },
   contentContainer: {
     padding: spacing(20),
     paddingTop: spacing(28),
@@ -369,10 +567,7 @@ const styles = createStyleSheet({
     color: theme.colors.black,
     marginBottom: spacing(20),
   },
-  image: {
-    height: scale(104),
-    marginBottom: spacing(24),
-  },
+  image: { height: scale(104), marginBottom: spacing(24) },
   emptyTitle: {
     fontFamily: theme.fonts.archivo.semiBold,
     fontSize: fontSize(16),
@@ -434,10 +629,11 @@ const styles = createStyleSheet({
     fontFamily: theme.fonts.lato.regular,
     fontSize: fontSize(13),
     color: theme.colors.black,
-    textTransform: 'capitalize',
+    // textTransform: 'capitalize',
   },
   footerContainer: {
-    paddingBottom: Platform.OS === 'ios' ? spacing(45) : spacing(20),
+    // paddingBottom: Platform.OS === 'ios' ? spacing(45) : spacing(20),
+    paddingBottom: spacing(10),
     paddingInline: spacing(20),
     backgroundColor: '#f9f9f9',
   },

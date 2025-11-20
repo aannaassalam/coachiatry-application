@@ -91,8 +91,8 @@ function TaskList() {
             <Ionicons name="chevron-back" size={fontSize(16)} />
           </TouchableButton>
           <Text style={styles.monthText}>
-            {moment(dates.start).format('LL')} -{' '}
-            {moment(dates.end).format('LL')}
+            {moment(dates.start).format('ll')} -{' '}
+            {moment(dates.end).format('ll')}
           </Text>
           <TouchableButton style={styles.chevronBtn} onPress={goNextWeek}>
             <Ionicons name="chevron-forward" size={fontSize(16)} />

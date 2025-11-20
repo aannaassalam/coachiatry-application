@@ -45,7 +45,7 @@ const AppButton: React.FC<AppButtonProps> = ({
       ]}
       disabled={disabled || isLoading}
     >
-      {leftIcon && leftIcon}
+      {leftIcon && !isLoading && leftIcon}
       {isLoading && (
         <ActivityIndicator
           animating

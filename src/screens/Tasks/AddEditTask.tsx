@@ -39,10 +39,17 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Octicons } from '@react-native-vector-icons/octicons';
 import * as yup from 'yup';
 import { queryClient } from '../../../App';
-import { getAllCategories } from '../../api/functions/category.api';
-import { getAllStatuses } from '../../api/functions/status.api';
+import {
+  getAllCategories,
+  getAllCategoriesByCoach,
+} from '../../api/functions/category.api';
+import {
+  getAllStatuses,
+  getAllStatusesByCoach,
+} from '../../api/functions/status.api';
 import {
   addTask,
+  addTaskByCoach,
   deleteTask,
   editTask,
   getTask,
@@ -57,6 +64,7 @@ import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { Subtask } from '../../typescript/interface/task.interface';
 import { fontSize, scale, spacing, verticalScale } from '../../utils';
+import { useAuth } from '../../hooks/useAuth';
 
 const resetDuration = () => {
   return new Date(
@@ -188,7 +196,8 @@ const AddSubtasks = ({ disabled }: { disabled?: boolean }) => {
 export default function AddEditTask() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<AppStackParamList, 'AddEditTask'>>();
-  const { taskId, predefinedDueDate, predefinedStatus } = route.params;
+  const { profile } = useAuth();
+  const { taskId, predefinedDueDate, predefinedStatus, userId } = route.params;
 
   const [dateTimePicker, setDateTimePicker] = useState(false);
   const [durationPicker, setDurationPicker] = useState(false);
@@ -211,6 +220,8 @@ export default function AddEditTask() {
     { data, isLoading },
     { data: categories, isLoading: isCategoryLoading },
     { data: statuses, isLoading: isStatusLoading },
+    { data: userCategories, isLoading: isUserCategoryLoading },
+    { data: userStatuses, isLoading: isUserStatusLoading },
   ] = useQueries({
     queries: [
       {
@@ -221,16 +232,50 @@ export default function AddEditTask() {
       {
         queryKey: ['categories'],
         queryFn: getAllCategories,
+        enabled: !userId,
       },
       {
         queryKey: ['status'],
         queryFn: getAllStatuses,
+        enabled: !userId,
+      },
+      {
+        queryKey: ['categories', userId],
+        queryFn: () => getAllCategoriesByCoach(userId as string),
+        enabled: !!userId,
+      },
+      {
+        queryKey: ['status', userId],
+        queryFn: () => getAllStatusesByCoach(userId as string),
+        enabled: !!userId,
       },
     ],
   });
 
   const { mutate, isPending } = useMutation({
     mutationFn: addTask,
+    onSuccess: () => {
+      form.reset({
+        title: '',
+        description: '',
+        priority: 'low',
+        category: '',
+        dueDate: new Date(),
+        status: '',
+        frequency: '',
+        duration: resetDuration(),
+        remindBefore: '',
+        subtasks: [],
+      });
+      navigation.goBack();
+    },
+    meta: {
+      invalidateQueries: ['tasks'],
+    },
+  });
+
+  const { mutate: coachMutate, isPending: isCoachPending } = useMutation({
+    mutationFn: addTaskByCoach,
     onSuccess: () => {
       form.reset({
         title: '',
@@ -319,6 +364,8 @@ export default function AddEditTask() {
     };
     if (taskId) {
       editMutate({ task_id: taskId, data: finalData });
+    } else if (profile?.role === 'coach' && !!userId) {
+      coachMutate({ ...finalData, user: userId });
     } else {
       mutate(finalData);
     }
@@ -414,7 +461,6 @@ export default function AddEditTask() {
                           onPress: () => deleteItem(data?._id ?? ''),
                         },
                       ],
-                      'default',
                     )
                   }
                 >
@@ -537,10 +583,15 @@ export default function AddEditTask() {
                                 <GeneralPickerSheet
                                   heading="Category"
                                   options={
-                                    categories?.map(_cat => ({
-                                      label: _cat.title,
-                                      value: _cat._id,
-                                    })) ?? []
+                                    (profile?.role === 'coach' && !!userId
+                                      ? userCategories?.map(_cat => ({
+                                          label: _cat.title,
+                                          value: _cat._id,
+                                        }))
+                                      : categories?.map(_cat => ({
+                                          label: _cat.title,
+                                          value: _cat._id,
+                                        }))) ?? []
                                   }
                                   value={field.value}
                                   onChange={field.onChange}
@@ -552,8 +603,12 @@ export default function AddEditTask() {
                         }
                       >
                         <Text style={styles.inputText} numberOfLines={1}>
-                          {categories?.find(_cat => _cat._id === field.value)
-                            ?.title ?? 'Select'}
+                          {(profile?.role === 'coach' && !!userId
+                            ? userCategories?.find(
+                                _cat => _cat._id === field.value,
+                              )?.title
+                            : categories?.find(_cat => _cat._id === field.value)
+                                ?.title) ?? 'Select'}
                         </Text>
                         <Feather
                           name="chevron-down"
@@ -623,10 +678,15 @@ export default function AddEditTask() {
                                 <GeneralPickerSheet
                                   heading="Status"
                                   options={
-                                    statuses?.map(_status => ({
-                                      label: _status.title,
-                                      value: _status._id,
-                                    })) ?? []
+                                    (profile?.role === 'coach' && !!userId
+                                      ? userStatuses?.map(_status => ({
+                                          label: _status.title,
+                                          value: _status._id,
+                                        }))
+                                      : statuses?.map(_status => ({
+                                          label: _status.title,
+                                          value: _status._id,
+                                        }))) ?? []
                                   }
                                   value={field.value}
                                   onChange={field.onChange}
@@ -638,9 +698,13 @@ export default function AddEditTask() {
                         }
                       >
                         <Text style={styles.inputText} numberOfLines={1}>
-                          {statuses?.find(
-                            _status => _status._id === field.value,
-                          )?.title ?? 'Select'}
+                          {(profile?.role === 'coach' && !!userId
+                            ? userStatuses?.find(
+                                _status => _status._id === field.value,
+                              )?.title
+                            : statuses?.find(
+                                _status => _status._id === field.value,
+                              )?.title) ?? 'Select'}
                         </Text>
                         <Feather
                           name="chevron-down"
@@ -742,7 +806,7 @@ export default function AddEditTask() {
                             payload: {
                               children: (
                                 <GeneralPickerSheet
-                                  heading="Priority"
+                                  heading="Remind before"
                                   options={Array.from(
                                     { length: 60 },
                                     (_, i) => i + 1,
@@ -780,14 +844,14 @@ export default function AddEditTask() {
               style={{ backgroundColor: '#ECECED', flex: 1 }}
               textStyle={{ color: theme.colors.primary }}
               onPress={navigation.goBack}
-              disabled={isEditPending || isPending}
+              disabled={isEditPending || isPending || isCoachPending}
             />
             <AppButton
               variant="primary"
               text={`${taskId ? 'Edit' : 'Create'} Task`}
               style={{ flex: 1 }}
               onPress={form.handleSubmit(onSubmit, onError)}
-              isLoading={isEditPending || isPending}
+              isLoading={isEditPending || isPending || isCoachPending}
             />
           </View>
         </>
@@ -884,7 +948,7 @@ const styles = createStyleSheet({
     fontFamily: theme.fonts.lato.regular,
     fontSize: fontSize(14),
     color: theme.colors.gray[900],
-    textTransform: 'capitalize',
+    // textTransform: 'capitalize',
     flex: 1,
   },
   buttonContainer: {
