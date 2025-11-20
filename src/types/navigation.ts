@@ -24,4 +24,5 @@ export type AppStackParamList = {
   };
   EditProfile: undefined;
   ClientDetails: { userId: string };
+  ChatRoom: { roomId: string };
 };

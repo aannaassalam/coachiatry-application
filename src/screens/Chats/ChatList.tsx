@@ -4,7 +4,13 @@ import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import TouchableButton from '../../components/TouchableButton';
 import AppHeader from '../../components/ui/AppHeader';
 import { theme } from '../../theme';
-
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { AppStackParamList } from '../../types/navigation';
+import { useNavigation } from '@react-navigation/native';
+type ChatScreenNavigationProp = NativeStackNavigationProp<
+  AppStackParamList,
+  'ChatRoom'
+>;
 const items = [
   {
     img: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=facearea&facepad=2.5&w=256&h=256&q=80',
@@ -42,13 +48,14 @@ items.push(...items);
 
 export default function ChatList() {
   const [search, setSearch] = useState('');
+  const navigation = useNavigation<ChatScreenNavigationProp>();
   return (
     <View style={styles.container}>
       <AppHeader
         heading="Chats"
         showSearch
-        searchValue={search}
-        onSearchChange={setSearch}
+        // searchValue={search}
+        // onSearchChange={setSearch}
       />
 
       <ScrollView>
@@ -58,6 +65,7 @@ export default function ChatList() {
               <TouchableButton
                 onPress={() => {
                   // handle onPress
+                  navigation.navigate('ChatRoom', { roomId: '123' });
                 }}
                 style={styles.card}
               >
