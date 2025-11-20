@@ -10,6 +10,7 @@ import TaskDetailsScreen from '../screens/Tasks/TaskDetails';
 import { theme } from '../theme';
 import { AppStackParamList } from '../types/navigation';
 import BottomNavigator from './BottomNavigator';
+import ChatScreen from '../screens/Chats/ChatRoom';
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -34,6 +35,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Profile" component={Profile} />
         <Stack.Screen name="EditProfile" component={EditProfile} />
         <Stack.Screen name="ClientDetails" component={ClientDetails} />
+        <Stack.Screen name="ChatRoom" component={ChatScreen} />
       </Stack.Navigator>
     </View>
   );
