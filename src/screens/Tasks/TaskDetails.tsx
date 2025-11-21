@@ -1,3 +1,5 @@
+import Lucide from '@react-native-vector-icons/lucide';
+import { Octicons } from '@react-native-vector-icons/octicons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -24,7 +26,6 @@ import {
 } from 'react-native-popup-menu';
 import { createStyleSheet } from 'react-native-unistyles';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Octicons } from '@react-native-vector-icons/octicons';
 import { queryClient } from '../../../App';
 import {
   deleteTask,
@@ -42,7 +43,6 @@ import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { Subtask, Task } from '../../typescript/interface/task.interface';
 import { fontSize, scale, spacing, verticalScale } from '../../utils';
-import Lucide from '@react-native-vector-icons/lucide';
 
 type AddEditTaskNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -151,7 +151,6 @@ const TaskDetailsScreen = () => {
   const navigation = useNavigation<AddEditTaskNavigationProp>();
   const route = useRoute<RouteProp<AppStackParamList, 'TaskDetails'>>();
   const { taskId, userId } = route.params;
-  const width = Dimensions.get('screen').width;
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['task', taskId],

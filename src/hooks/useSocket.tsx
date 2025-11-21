@@ -1,4 +1,11 @@
-import { createContext, ReactNode, useContext, useEffect, useRef } from 'react';
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './useAuth';
 
@@ -6,15 +13,15 @@ const SocketContext = createContext<Socket | null>(null);
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const { profile } = useAuth();
-  const socketRef = useRef<Socket | null>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
     // ⚠️ Only connect if user is logged in
     if (!profile?._id) return;
 
     // Prevent duplicate sockets
-    if (!socketRef.current) {
-      const s = io('http://localhost:3001', {
+    if (!socket) {
+      const s = io('https://backend.coachiatry.com', {
         query: { userId: profile._id },
         transports: ['websocket'],
         reconnection: true,
@@ -22,7 +29,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
         reconnectionDelay: 1000,
       });
 
-      socketRef.current = s;
+      setSocket(s);
 
       s.on('connect', () => {
         console.log('✅ Connected:', s.id);
@@ -42,17 +49,15 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
     // Cleanup on unmount
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
       }
     };
-  }, [profile?._id]);
+  }, [profile?._id, socket]);
 
   return (
-    <SocketContext.Provider value={socketRef.current}>
-      {children}
-    </SocketContext.Provider>
+    <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>
   );
 };
 

@@ -8,8 +8,6 @@ export const mediaUrl = (url: string) => {
   return `${baseUrlMedia}/${url}`;
 };
 
-console.log(baseUrl);
-
 export const endpoints = {
   common: {
     search: '/search',

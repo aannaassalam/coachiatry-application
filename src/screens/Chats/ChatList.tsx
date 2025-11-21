@@ -72,6 +72,7 @@ export default function ChatList() {
       lastMessage: Message;
       updatedAt: string;
     }) => {
+      console.log('message');
       queryClient.setQueryData<PaginatedResponse<ChatConversation[]>>(
         ['conversations'],
         old => {
@@ -105,11 +106,16 @@ export default function ChatList() {
           ];
 
           // ✅ Sort newest → oldest
-          newList.sort(
-            (a, b) =>
-              moment(b.lastMessage?.createdAt).valueOf() -
-              moment(a.lastMessage?.createdAt).valueOf(),
-          );
+          newList.sort((a, b) => {
+            const aCreated = a.lastMessage?.createdAt;
+            const bCreated = b.lastMessage?.createdAt;
+
+            if (!aCreated && !bCreated) return 0;
+            if (!aCreated) return 1; // a goes to bottom
+            if (!bCreated) return -1; // b goes to bottom
+
+            return moment(bCreated).valueOf() - moment(aCreated).valueOf();
+          });
 
           return { ...old, data: newList };
         },
@@ -153,7 +159,7 @@ export default function ChatList() {
               <TouchableButton
                 onPress={() => {
                   // handle onPress
-                  navigation.navigate('ChatRoom', { roomId: '123' });
+                  navigation.navigate('ChatRoom', { roomId: item._id! });
                 }}
                 style={styles.card}
               >
