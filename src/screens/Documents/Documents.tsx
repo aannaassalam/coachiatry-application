@@ -176,6 +176,7 @@ const RenderContent = ({ activeTab }: { activeTab: string }) => {
     queryFn: ({ pageParam = 1 }) =>
       getAllDocuments({ tab: activeTab, page: pageParam as number }),
     getNextPageParam: lastPage => {
+      console.log('here');
       const { currentPage, totalPages } = lastPage.meta;
       return currentPage < totalPages ? currentPage + 1 : undefined;
     },

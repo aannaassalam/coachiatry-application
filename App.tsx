@@ -29,6 +29,7 @@ import { theme } from './src/theme';
 import './src/unistyles';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import { hapticOptions } from './src/helpers/utils';
+import { SocketProvider } from './src/hooks/useSocket';
 
 interface ErrorData {
   response: {
@@ -124,9 +125,11 @@ export default function App() {
             <SheetProvider>
               <MenuProvider>
                 <AuthProvider>
-                  <NavigationContainer>
-                    <AppContent />
-                  </NavigationContainer>
+                  <SocketProvider>
+                    <NavigationContainer>
+                      <AppContent />
+                    </NavigationContainer>
+                  </SocketProvider>
                 </AuthProvider>
               </MenuProvider>
             </SheetProvider>

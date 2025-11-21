@@ -70,7 +70,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   labelColor,
   tasks = [],
 }) => {
-  const navigation = useNavigation<TaskScreenNavigationProp>();
+  const navigation = useNavigation<ScreenNavigationProp>();
 
   return (
     <View>
@@ -343,8 +343,6 @@ const ChatSection = ({ chats }: { chats: ChatConversation[] }) => {
 };
 
 function Dashboard() {
-  const [search, setSearch] = useState('');
-
   const [
     { data: status = [], isLoading: isStatusLoading },
     { data: tasks = [], isLoading },
@@ -365,13 +363,18 @@ function Dashboard() {
           }),
       },
       {
-        queryKey: ['conversations'],
+        queryKey: ['conversations-dashboard'],
         queryFn: () => getAllConversations({ limit: 4, sort: '-updatedAt' }),
       },
       {
         queryKey: ['documents'],
         queryFn: () =>
-          getAllDocuments({ sort: '-updatedAt', tab: 'all', limit: 4 }),
+          getAllDocuments({
+            sort: '-updatedAt',
+            tab: 'all',
+            limit: 4,
+            page: 1,
+          }),
       },
     ],
   });
@@ -382,12 +385,7 @@ function Dashboard() {
 
   return (
     <View style={styles.container}>
-      <AppHeader
-        heading="Dashboard"
-        showSearch
-        searchValue={search}
-        onSearchChange={setSearch}
-      />
+      <AppHeader heading="Dashboard" showSearch />
       {isAllLoading ? (
         <View
           style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}

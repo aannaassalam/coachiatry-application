@@ -18,6 +18,7 @@ export const getAllDocuments = async ({
   const res = await axiosInstance.get(endpoints.document.getAll, {
     params: { sort, tab, select: '-shareId', populate: 'tag', limit, page },
   });
+  console.log(res.data);
   return res.data;
 };
 

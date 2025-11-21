@@ -1,67 +1,155 @@
-import { Feather } from '@react-native-vector-icons/feather';
-import { useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import moment from 'moment';
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import TouchableButton from '../../components/TouchableButton';
 import AppHeader from '../../components/ui/AppHeader';
+import { SmartAvatar } from '../../components/ui/SmartAvatar';
+import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../types/navigation';
-import { useNavigation } from '@react-navigation/native';
+import { ChatConversation } from '../../typescript/interface/chat.interface';
+import { PaginatedResponse } from '../../typescript/interface/common.interface';
+import { fontSize, scale, spacing } from '../../utils';
+import { getAllConversations } from '../../api/functions/chat.api';
+import { Message } from '../../typescript/interface/message.interface';
+import { useSocket } from '../../hooks/useSocket';
+import { useEffect } from 'react';
+import { queryClient } from '../../../App';
+
 type ChatScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
   'ChatRoom'
 >;
-const items = [
-  {
-    img: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=facearea&facepad=2.5&w=256&h=256&q=80',
-    name: 'Nick Miller',
-    message: 'Looking forward to our collaboration!',
-  },
-  {
-    img: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=987&q=80',
-    name: 'Ashley',
-    message: 'Amazing!! 🔥🔥🔥',
-  },
-  {
-    img: 'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2340&q=80',
-    name: 'Max',
-    message: 'Appreciate the opportunity to connect and share insights.',
-  },
-  {
-    img: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=988&q=80',
-    name: 'Schmidt',
-    message: "Let's bring creativity to the forefront of our discussions.",
-  },
-  {
-    img: 'https://images.unsplash.com/photo-1553240799-36bbf332a5c3?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2340&q=80',
-    name: 'Dwight',
-    message: 'Excited to explore opportunities for collaboration.',
-  },
-  {
-    img: 'https://images.unsplash.com/photo-1573497019236-17f8177b81e8?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2340&q=80',
-    name: 'Amy',
-    message: 'Eager to contribute and make a positive impact.',
-  },
-];
-
-items.push(...items);
 
 export default function ChatList() {
-  const [search, setSearch] = useState('');
   const navigation = useNavigation<ChatScreenNavigationProp>();
+  const { profile } = useAuth();
+  const socket = useSocket();
+
+  // const {
+  //   data,
+  //   isLoading,
+  //   isFetchingNextPage,
+  //   fetchNextPage,
+  //   hasNextPage,
+  //   refetch,
+  //   isRefetching,
+  // } = useInfiniteQuery<PaginatedResponse<ChatConversation[]>>({
+  //   queryKey: ['conversations'],
+  //   queryFn: ({ pageParam = 1 }) =>
+  //     getAllConversations({ page: pageParam as number, sort: '-updatedAt' }),
+  //   getNextPageParam: lastPage => {
+  //     if (!lastPage?.meta) return undefined;
+  //     const { currentPage, totalPages } = lastPage.meta;
+  //     return currentPage < totalPages ? currentPage + 1 : undefined;
+  //   },
+  //   initialPageParam: 1,
+  //   staleTime: 60 * 1000,
+  // });
+
+  const { data, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: () => getAllConversations({ limit: 50, sort: '-updatedAt' }),
+  });
+
+  // const chats = data?.pages.flatMap(page => page.data) ?? [];
+  // const isRefreshing =
+  //   !!data && isRefetching && !isFetchingNextPage && !isLoading;
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleConversationUpdated = (update: {
+      chatId: string;
+      lastMessage: Message;
+      updatedAt: string;
+    }) => {
+      queryClient.setQueryData<PaginatedResponse<ChatConversation[]>>(
+        ['conversations'],
+        old => {
+          if (!old) return old;
+
+          const existing = Array.isArray(old.data) ? [...old.data] : [];
+          const idx = existing.findIndex(c => c._id === update.chatId);
+
+          const isMyMessage = update.lastMessage?.sender?._id === profile?._id;
+
+          const current = existing[idx];
+          const updatedConv = {
+            ...current,
+            lastMessage: update.lastMessage,
+            updatedAt: update.updatedAt,
+            unreadCount: current.unreadCount || 0,
+          } as ChatConversation;
+
+          if (idx > -1) {
+            // ✅ Only increase unread count if:
+            // - this message is NOT mine
+            // - and I am NOT currently inside that chat
+            if (!isMyMessage) {
+              updatedConv.unreadCount = (current.unreadCount || 0) + 1;
+            }
+          }
+
+          const newList = [
+            updatedConv,
+            ...existing.filter((_, i) => i !== idx),
+          ];
+
+          // ✅ Sort newest → oldest
+          newList.sort(
+            (a, b) =>
+              moment(b.lastMessage?.createdAt).valueOf() -
+              moment(a.lastMessage?.createdAt).valueOf(),
+          );
+
+          return { ...old, data: newList };
+        },
+      );
+    };
+
+    socket.on('conversation_updated', handleConversationUpdated);
+    return () => {
+      socket.off('conversation_updated', handleConversationUpdated);
+    };
+  }, [socket, profile?._id]);
+
   return (
     <View style={styles.container}>
-      <AppHeader
-        heading="Chats"
-        showSearch
-        // searchValue={search}
-        // onSearchChange={setSearch}
-      />
+      <AppHeader heading="Chats" showSearch />
 
-      <ScrollView>
-        {items.map(({ name, message, img }, index) => {
-          return (
-            <View key={index} style={styles.cardWrapper}>
+      {isLoading ? (
+        <View
+          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <ActivityIndicator size="large" />
+        </View>
+      ) : (
+        <FlatList
+          data={data?.data}
+          renderItem={({ item }) => {
+            const chatUser = item.members.find(
+              _member => _member.user._id !== profile?._id,
+            );
+            const details: { photo?: string; name?: string } = {
+              photo: chatUser?.user.photo,
+              name: chatUser?.user.fullName,
+            };
+
+            if (item && item.type === 'group') {
+              details.photo = item.groupPhoto;
+              details.name = item.name;
+            }
+
+            return (
               <TouchableButton
                 onPress={() => {
                   // handle onPress
@@ -69,33 +157,94 @@ export default function ChatList() {
                 }}
                 style={styles.card}
               >
-                <Image
-                  alt=""
-                  resizeMode="cover"
-                  source={{ uri: img }}
-                  style={styles.cardImg}
+                <SmartAvatar
+                  src={details.photo}
+                  name={details.name}
+                  size={scale(40)}
+                  fontSize={fontSize(18)}
                 />
 
                 <View style={styles.cardBody}>
-                  <Text style={styles.cardTitle}>{name}</Text>
+                  <Text style={styles.cardTitle}>{details.name}</Text>
 
                   <Text
                     ellipsizeMode="tail"
                     numberOfLines={1}
-                    style={styles.cardContent}
+                    style={[
+                      styles.cardContent,
+                      item.unreadCount > 0 && {
+                        fontFamily: theme.fonts.archivo.semiBold,
+                        color: theme.colors.gray[600],
+                      },
+                    ]}
                   >
-                    {message}
+                    {item.lastMessage?.sender?._id === profile?._id &&
+                    item.isDeletable
+                      ? 'You: '
+                      : null}
+                    {item.lastMessage?.content ||
+                      (item.lastMessage?.type === 'image'
+                        ? '📷 Images'
+                        : item.lastMessage?.type === 'video'
+                          ? '🎥 Videos'
+                          : item.lastMessage?.type === 'file'
+                            ? '📁 Files'
+                            : undefined)}
                   </Text>
                 </View>
 
-                <View style={styles.cardIcon}>
-                  <Feather color="#ccc" name="chevron-right" size={20} />
+                <View style={styles.meta}>
+                  <Text
+                    style={[
+                      styles.time,
+                      item.unreadCount > 0 && {
+                        fontFamily: theme.fonts.archivo.semiBold,
+                      },
+                    ]}
+                  >
+                    {item.lastMessage?.createdAt
+                      ? moment(item.lastMessage?.createdAt).fromNow(true)
+                      : null}
+                  </Text>
+
+                  {item.unreadCount > 0 && (
+                    <View style={styles.unreadCount}>
+                      <Text style={styles.unreadCountText}>
+                        {item.unreadCount > 99 ? '99+' : item.unreadCount}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </TouchableButton>
-            </View>
-          );
-        })}
-      </ScrollView>
+            );
+          }}
+          keyExtractor={item => item._id ?? item.createdAt}
+          refreshing={isFetching}
+          onRefresh={refetch}
+          showsVerticalScrollIndicator={false}
+          // onEndReached={() => {
+          //   if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+          // }}
+          // onEndReachedThreshold={0.3}
+          // ListFooterComponent={
+          //   isFetchingNextPage ? (
+          //     <View
+          //       style={{ paddingVertical: spacing(10), alignItems: 'center' }}
+          //     >
+          //       <Text
+          //         style={{
+          //           color: theme.colors.gray[500],
+          //           fontSize: fontSize(14),
+          //         }}
+          //       >
+          //         Loading...
+          //       </Text>
+          //     </View>
+          //   ) : null
+          // }
+          contentContainerStyle={{ paddingHorizontal: spacing(10) }}
+        />
+      )}
     </View>
   );
 }
@@ -109,44 +258,56 @@ const styles = StyleSheet.create({
   },
   /** Card */
   card: {
-    height: 66,
-    paddingRight: 12,
+    // height: 66,
+    // paddingRight: 12,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  cardWrapper: {
-    borderBottomWidth: 1,
-    borderColor: '#DFDFE0',
-    marginLeft: 16,
+    alignItems: 'flex-start',
+    padding: spacing(10),
+    gap: spacing(12),
+    // justifyContent: 'flex-start',
   },
   cardImg: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: 9999,
-    marginRight: 12,
   },
   cardBody: {
-    maxWidth: '100%',
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 0,
+    // maxWidth: '100%',
+    flex: 1,
   },
   cardTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1d1d1d',
+    fontSize: fontSize(14),
+    fontFamily: theme.fonts.archivo.semiBold,
+    color: '#222',
+    lineHeight: 20,
   },
   cardContent: {
     fontSize: 15,
-    fontWeight: '500',
-    color: '#737987',
+    fontFamily: theme.fonts.archivo.medium,
+    color: '#808080',
     lineHeight: 20,
-    marginTop: 4,
+    marginTop: spacing(3),
   },
-  cardIcon: {
-    alignSelf: 'flex-start',
-    paddingVertical: 14,
-    paddingHorizontal: 4,
+  meta: {
+    flexDirection: 'column',
+    gap: spacing(8),
+    alignItems: 'flex-end',
+  },
+  time: {
+    color: theme.colors.gray[500],
+    fontSize: fontSize(12),
+    fontFamily: theme.fonts.archivo.medium,
+  },
+  unreadCount: {
+    paddingHorizontal: spacing(5),
+    paddingVertical: spacing(2),
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 100,
+  },
+  unreadCountText: {
+    color: theme.colors.white,
+    fontFamily: theme.fonts.archivo.medium,
   },
 });

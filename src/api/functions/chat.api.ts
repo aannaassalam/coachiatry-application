@@ -9,6 +9,7 @@ export const getAllConversations = async (
   const res = await axiosInstance.get(endpoints.chat.getConversations, {
     params: filters,
   });
+
   return res.data;
 };
 
