@@ -20,7 +20,7 @@ import {
 } from '../../assets';
 import EmojiReactor from '../../components/Chat/EmojiReactor';
 import { theme } from '../../theme';
-import { fontSize, scale, spacing } from '../../utils';
+import { fontSize, scale, spacing, verticalScale } from '../../utils';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../types/navigation';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
@@ -47,8 +47,11 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  withSequence,
   runOnJS,
+  LinearTransition,
+  FadeInRight,
+  FadeOutRight,
+  FadeInUp,
 } from 'react-native-reanimated';
 // import { , scheduleOnRN } from 'react-native-worklets';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
@@ -58,6 +61,7 @@ import TypingIndicator from '../../components/Chat/TypingIndicator';
 import { KeyboardAvoidingView } from 'react-native';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import TouchableButton from '../../components/TouchableButton';
 
 const MAX_SWIPE = 60; // how far message can move, just like WhatsApp
 const SWIPE_REPLY_THRESHOLD = 40;
@@ -139,56 +143,62 @@ const RenderMessage = ({
   });
 
   return (
-    <GestureDetector gesture={panGesture}>
-      <Animated.View
-        style={[
-          styles.messageRow,
-          { justifyContent: isMe ? 'flex-end' : 'flex-start' },
-          animatedStyle,
-        ]}
-      >
-        {!isMe && (
-          <Animated.View style={[styles.replyIconLeft, arrowStyle]}>
-            <Lucide name="reply" size={18} color="#666" />
-          </Animated.View>
-        )}
-
-        {isMe && (
-          <Animated.View style={[styles.replyIconRight, arrowStyle]}>
-            <Lucide name="reply" size={18} color="#666" />
-          </Animated.View>
-        )}
-        {!isMe && (
-          <SmartAvatar
-            src={
-              conversation?.isDeletable
-                ? item.sender?.photo
-                : 'https://coachiatry.s3.us-east-1.amazonaws.com/Logo+Mark+(1).png'
-            }
-            name={item.sender?.fullName}
-            size={scale(28)}
-            style={styles.avatar}
-          />
-        )}
-        <TouchableOpacity
-          activeOpacity={0.9}
-          // onLongPress={e => handleLongPress(e, item._id!)}
+    <Animated.View
+      entering={FadeInUp.springify().mass(0.5).damping(15).duration(120)} // <-- WhatsApp-like pop animation
+      layout={LinearTransition.springify()} // <-- keeps list smooth when items change
+      style={{ marginBottom: spacing(10) }}
+    >
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
           style={[
-            styles.messageBubble,
-            isMe ? styles.myMessage : styles.otherMessage,
+            styles.messageRow,
+            { justifyContent: isMe ? 'flex-end' : 'flex-start' },
+            animatedStyle,
           ]}
         >
-          <Text
+          {!isMe && (
+            <Animated.View style={[styles.replyIconLeft, arrowStyle]}>
+              <Lucide name="reply" size={18} color="#666" />
+            </Animated.View>
+          )}
+
+          {isMe && (
+            <Animated.View style={[styles.replyIconRight, arrowStyle]}>
+              <Lucide name="reply" size={18} color="#666" />
+            </Animated.View>
+          )}
+          {!isMe && (
+            <SmartAvatar
+              src={
+                conversation?.isDeletable
+                  ? item.sender?.photo
+                  : 'https://coachiatry.s3.us-east-1.amazonaws.com/Logo+Mark+(1).png'
+              }
+              name={item.sender?.fullName}
+              size={scale(28)}
+              style={styles.avatar}
+            />
+          )}
+          <TouchableOpacity
+            activeOpacity={0.9}
+            // onLongPress={e => handleLongPress(e, item._id!)}
             style={[
-              styles.messageText,
-              { color: isMe ? theme.colors.white : theme.colors.gray[900] },
+              styles.messageBubble,
+              isMe ? styles.myMessage : styles.otherMessage,
             ]}
           >
-            {item.content}
-          </Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </GestureDetector>
+            <Text
+              style={[
+                styles.messageText,
+                { color: isMe ? theme.colors.white : theme.colors.gray[900] },
+              ]}
+            >
+              {item.content}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </GestureDetector>
+    </Animated.View>
   );
 };
 
@@ -198,12 +208,15 @@ const ChatScreen = () => {
 
   const socket = useSocket();
   const { profile } = useAuth();
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activeRoomRef = useRef<string | null>(null);
   const navigation = useNavigation<ChatRoomTaskNavigationProp>();
   const route = useRoute<RouteProp<AppStackParamList, 'ChatRoom'>>();
   const { roomId: room } = route.params;
 
   const [reactorVisible, setReactorVisible] = useState(false);
   const [reactorPos, setReactorPos] = useState({ top: 0, left: 0 });
+  const [message, setMessage] = useState('');
   const [selectedMsg, setSelectedMsg] = useState<string | null>(null);
   const [friendStatus, setFriendStatus] = useState<'online' | 'offline'>(
     'offline',
@@ -211,6 +224,7 @@ const ChatScreen = () => {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
 
   const messageKeyMap = useRef<Map<string, string>>(new Map());
+  const isTyping = message.length > 0;
 
   const getStableKey = (msg: Message) => {
     // prefer a known unique identifier (tempId or _id)
@@ -277,6 +291,13 @@ const ChatScreen = () => {
   );
 
   useEffect(() => {
+    activeRoomRef.current = room; // current chat ID
+    return () => {
+      activeRoomRef.current = null; // user left chat
+    };
+  }, [room]);
+
+  useEffect(() => {
     console.log(socket);
     if (!socket) return;
     if (conversation?.type === 'group') return;
@@ -301,6 +322,13 @@ const ChatScreen = () => {
   }, [socket, friend?.user._id, conversation]);
 
   useEffect(() => {
+    if (!room || !profile?._id || !socket) return;
+    if (!messagesData?.pages?.[0]?.data?.length) return;
+
+    socket.emit('mark_seen', { chatId: room, userId: profile?._id });
+  }, [messagesData, profile?._id, room, socket]);
+
+  useEffect(() => {
     if (!socket) return;
     if (!room) return;
 
@@ -311,7 +339,7 @@ const ChatScreen = () => {
       isGroup: conversation?.type === 'group',
     });
 
-    socket.emit('mark_seen', { chatId: room, userId: profile?._id });
+    // socket.emit('mark_seen', { chatId: room, userId: profile?._id });
 
     // NEW MESSAGE (from server)
     socket.on('new_message', (msg: Message) => {
@@ -324,50 +352,65 @@ const ChatScreen = () => {
         }
       }
 
-      queryClient.setQueryData<InfiniteData<PaginatedResponse<Message[]>>>(
-        ['messages', room],
-        old => {
-          if (!old) return old;
+      queryClient.setQueryData<
+        InfiniteData<PaginatedResponse<Message[]>, number>
+      >(['messages', room], old => {
+        if (!old) return old;
 
-          const updatedPages = old.pages.map((page, idx) => {
-            if (idx !== 0) return page; // only update first (newest) page data
+        const firstPage = old.pages[0];
+        if (!firstPage) return old;
 
-            // find optimistic message by tempId (on newest page)
-            const tempIdx = page.data.findIndex(
-              m => m.tempId && m.tempId === msg.tempId,
-            );
+        const existingMessages = firstPage.data;
 
-            // prevent duplicates: check by _id or tempId
-            const alreadyExists = page.data.some(
-              m =>
-                (m._id && msg._id && m._id === msg._id) ||
-                (m.tempId && msg.tempId && m.tempId === msg.tempId),
-            );
+        // 1. Replace optimistic message using tempId
+        const tempIdx = existingMessages.findIndex(
+          m => m.tempId && msg.tempId && m.tempId === msg.tempId,
+        );
 
-            if (tempIdx > -1) {
-              // Replace optimistic message (keep position in page.data)
-              const newData = [...page.data];
-              newData[tempIdx] = {
-                ...msg,
-                status: 'sent' as MessageStatus,
-              };
-              return { ...page, data: newData };
-            }
+        if (tempIdx !== -1) {
+          const newMessages = [...existingMessages];
+          newMessages[tempIdx] = {
+            ...msg,
+            status: 'sent' as MessageStatus,
+          };
 
-            if (alreadyExists) {
-              return page;
-            }
+          const updatedFirstPage: PaginatedResponse<Message[]> = {
+            ...firstPage,
+            data: newMessages,
+          };
 
-            // **Append** to the end of page.data (newest at bottom after our flattening)
-            return {
-              ...page,
-              data: [{ ...msg, status: 'sent' as MessageStatus }, ...page.data],
-            };
-          });
+          return {
+            ...old,
+            pages: [updatedFirstPage, ...old.pages.slice(1)],
+            pageParams: old.pageParams, // required for strict types
+          };
+        }
 
-          return { ...old, pages: updatedPages };
-        },
-      );
+        // 2. Prevent duplicates by _id or tempId
+        const exists = existingMessages.some(
+          m =>
+            (m._id && msg._id && m._id === msg._id) ||
+            (m.tempId && msg.tempId && m.tempId === msg.tempId),
+        );
+
+        if (exists) return old;
+
+        // 3. Correct append for inverted list:
+        // Newest at START of page[0].data
+        const updatedFirstPage: PaginatedResponse<Message[]> = {
+          ...firstPage,
+          data: [
+            { ...msg, status: 'sent' as MessageStatus },
+            ...existingMessages,
+          ],
+        };
+
+        return {
+          ...old,
+          pages: [updatedFirstPage, ...old.pages.slice(1)],
+          pageParams: old.pageParams,
+        };
+      });
 
       // Update conversation preview list
       queryClient.setQueryData<PaginatedResponse<ChatConversation[]>>(
@@ -386,7 +429,15 @@ const ChatScreen = () => {
               updatedAt: msg.updatedAt ?? new Date().toISOString(),
             };
 
-            if (msg.sender?._id !== profile?._id && msg.chat !== room) {
+            if (
+              msg.sender?._id !== profile?._id &&
+              activeRoomRef.current !== msg.chat
+            ) {
+              console.log('INCREMENTING UNREAD:', {
+                msgChat: msg.chat,
+                activeRoom: activeRoomRef.current,
+                text: msg.content,
+              });
               updatedConv.unreadCount = (updatedConv.unreadCount || 0) + 1;
             }
 
@@ -416,25 +467,25 @@ const ChatScreen = () => {
     socket.on('message_seen_update_bulk', ({ chatId, userId }) => {
       if (chatId !== room) return;
 
-      // if (userId !== profile?._id) {
-      //   queryClient.setQueryData<InfiniteData<PaginatedResponse<Message[]>>>(
-      //     ["messages", chatId],
-      //     (old) => {
-      //       if (!old) return old;
+      if (userId !== profile?._id) {
+        queryClient.setQueryData<InfiniteData<PaginatedResponse<Message[]>>>(
+          ['messages', chatId],
+          old => {
+            if (!old) return old;
 
-      //       const updatedPages = old.pages.map((page) => ({
-      //         ...page,
-      //         data: page.data.map((m) =>
-      //           m.sender?._id === profile?._id
-      //             ? { ...m, status: "seen" as MessageStatus }
-      //             : m
-      //         )
-      //       }));
+            const updatedPages = old.pages.map(page => ({
+              ...page,
+              data: page.data.map(m =>
+                m.sender?._id === profile?._id
+                  ? { ...m, status: 'seen' as MessageStatus }
+                  : m,
+              ),
+            }));
 
-      //       return { ...old, pages: updatedPages };
-      //     }
-      //   );
-      // }
+            return { ...old, pages: updatedPages };
+          },
+        );
+      }
 
       // also update chat list preview
       if (userId === profile?._id) {
@@ -456,11 +507,16 @@ const ChatScreen = () => {
               ...existing.filter((_, i) => i !== idx),
             ];
 
-            newList.sort(
-              (a, b) =>
-                moment(b.lastMessage?.createdAt).valueOf() -
-                moment(a.lastMessage?.createdAt).valueOf(),
-            );
+            newList.sort((a, b) => {
+              const aCreated = a.lastMessage?.createdAt;
+              const bCreated = b.lastMessage?.createdAt;
+
+              if (!aCreated && !bCreated) return 0;
+              if (!aCreated) return 1; // a goes to bottom
+              if (!bCreated) return -1; // b goes to bottom
+
+              return moment(bCreated).valueOf() - moment(aCreated).valueOf();
+            });
 
             return { ...old, data: newList };
           },
@@ -504,6 +560,223 @@ const ChatScreen = () => {
     };
   }, [socket, room, profile?._id, friend?.user?._id, conversation?.type]);
 
+  const handleTyping = (value: string) => {
+    setMessage(value);
+
+    if (value.trim()) {
+      socket?.emit('typing', { chatId: room, userId: profile?._id });
+
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        socket?.emit('stop_typing', {
+          chatId: room,
+          userId: profile?._id,
+        });
+      }, 1500);
+    } else {
+      socket?.emit('stop_typing', { chatId: room, userId: profile?._id });
+    }
+  };
+
+  const handleSend = async (text: string, files: File[]) => {
+    if (!profile?._id || !socket) return;
+    if (!text && files.length === 0) return;
+
+    // setChatDragShow(false);
+
+    const tempId = Date.now().toString();
+    const now = new Date().toISOString();
+
+    const optimisticMessage: Omit<Message, 'replyTo' | 'repeat'> & {
+      replyTo?: string;
+    } = {
+      chat: room,
+      sender: profile,
+      type:
+        files.length > 0
+          ? files[0].type.startsWith('image')
+            ? 'image'
+            : files[0].type.startsWith('video')
+              ? 'video'
+              : 'file'
+          : ('text' as Message['type']),
+      content: text,
+      // replyTo: replyingTo?._id,
+      files: files.map(f => ({
+        url: URL.createObjectURL(f),
+        type: f.type.startsWith('video')
+          ? 'video'
+          : f.type.startsWith('image')
+            ? 'image'
+            : 'file',
+        size: f.size,
+        thumbnailUrl: null,
+        duration: null,
+        uploading: true,
+        progress: 0,
+        filename: f.name,
+      })),
+      tempId,
+      status: 'pending',
+      createdAt: now,
+      overallProgress: 0,
+    };
+    setMessage('');
+
+    // Optimistic update
+    queryClient.setQueryData(['messages', room], (old: any) => {
+      if (!old) {
+        return {
+          pageParams: [1],
+          pages: [
+            {
+              data: [optimisticMessage],
+              meta: {
+                currentPage: 1,
+                totalPages: 1,
+                totalCount: 1,
+                results: 1,
+                limit: 20,
+              },
+            },
+          ],
+        };
+      }
+
+      // produce copy of pages with new message prepended to newest page (pages[0] is newest in your backend)
+      const newPages = old.pages.map((page: any, idx: number) =>
+        idx === 0 ? { ...page, data: [optimisticMessage, ...page.data] } : page,
+      );
+
+      return { ...old, pages: newPages };
+    });
+
+    // if (files.length > 0) {
+    //   const totalSize = files.reduce((a, f) => a + f.size, 0);
+    //   const progressPerFile = Array(files.length).fill(0);
+
+    //   const uploadedFiles = await Promise.all(
+    //     files.map(async (file, i) => {
+    //       const controller = new AbortController();
+    //       uploadManager.add(tempId, controller); // ✅ register it
+
+    //       try {
+    //         const url = await uploadMutation.mutateAsync({
+    //           file,
+    //           chatId: room,
+    //           signal: controller.signal,
+    //           onProgress: pct => {
+    //             progressPerFile[i] = pct;
+    //             const uploadedBytes = files.reduce(
+    //               (sum, f, idx) =>
+    //                 sum + (progressPerFile[idx] / 100) * f.size,
+    //               0,
+    //             );
+    //             const overallPct = (uploadedBytes / totalSize) * 100;
+
+    //             queryClient.setQueryData(['messages', room], (old: any) => {
+    //               if (!old) return old;
+
+    //               return {
+    //                 ...old,
+    //                 pages: old.pages.map((page: any, pageIndex: number) => {
+    //                   // Only update the newest page (index 0)
+    //                   if (pageIndex !== 0) return page;
+
+    //                   return {
+    //                     ...page,
+    //                     data: page.data.map((m: any) =>
+    //                       m.tempId === tempId
+    //                         ? {
+    //                             ...m,
+    //                             overallProgress:
+    //                               overallPct < 100 ? overallPct : 0, // update progress immutably
+    //                             files: m.files?.map((f: any, fi: number) =>
+    //                               i === fi ? { ...f, progress: pct } : f,
+    //                             ),
+    //                           }
+    //                         : m,
+    //                     ),
+    //                   };
+    //                 }),
+    //               };
+    //             });
+    //           },
+    //         });
+
+    //         return {
+    //           url,
+    //           type: file.type.startsWith('video')
+    //             ? 'video'
+    //             : file.type.startsWith('image')
+    //               ? 'image'
+    //               : 'file',
+    //           size: file.size,
+    //         };
+    //       } catch {
+    //         if (controller.signal.aborted) {
+    //           console.log('Upload cancelled:', file.name);
+    //           return null;
+    //         }
+    //         return null;
+    //       }
+    //     }),
+    //   );
+
+    //   uploadManager.clear(tempId); // ✅ cleanup after done
+
+    //   // Final update (success or fail)
+    //   const validFiles = uploadedFiles.filter(Boolean);
+    //   queryClient.setQueryData(['messages', room], (old: any) => {
+    //     if (!old) return old;
+
+    //     return {
+    //       ...old,
+    //       pages: old.pages.map((page: any, pageIndex: number) => {
+    //         if (pageIndex !== 0) return page; // update only the newest page
+
+    //         return {
+    //           ...page,
+    //           data: page.data.map((m: any) =>
+    //             m.tempId === tempId
+    //               ? {
+    //                   ...m,
+    //                   files: validFiles,
+    //                   status: validFiles.length > 0 ? 'sent' : 'failed',
+    //                   overallProgress: 100,
+    //                   // Optional: mark each file as "uploading: false"
+    //                   ...(validFiles?.length
+    //                     ? {
+    //                         files: validFiles.map((f: any) => ({
+    //                           ...f,
+    //                           uploading: false,
+    //                           progress: 100,
+    //                         })),
+    //                       }
+    //                     : {}),
+    //                 }
+    //               : m,
+    //           ),
+    //         };
+    //       }),
+    //     };
+    //   });
+
+    //   if (validFiles.length > 0) {
+    //     socket.emit('send_message', {
+    //       ...optimisticMessage,
+    //       files: validFiles,
+    //       status: 'sent',
+    //     });
+    //   }
+    // } else {
+    socket.emit('send_message', optimisticMessage);
+    // }
+    // setTimeout(() => {
+    //   bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // }, 50);
+  };
+
   const handleLongPress = (event: GestureResponderEvent, id: string) => {
     const { pageX, pageY } = event.nativeEvent;
     setSelectedMsg(id);
@@ -526,10 +799,12 @@ const ChatScreen = () => {
   const openEmojiKeyboard = () => {
     inputRef.current?.focus();
   };
+
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { paddingBottom: insets.bottom }]}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing(70) : spacing(0)}
+      style={[styles.container]}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -583,7 +858,7 @@ const ChatScreen = () => {
         }
         contentContainerStyle={{
           padding: spacing(16),
-          gap: spacing(10),
+          // gap: spacing(10),
           flexGrow: 1,
         }}
         inverted
@@ -592,33 +867,68 @@ const ChatScreen = () => {
       {/* Message Input */}
       <View style={styles.inputBar}>
         <View style={styles.inputWrapper}>
-          <TouchableOpacity onPress={openEmojiKeyboard} activeOpacity={0.7}>
+          <TouchableButton onPress={openEmojiKeyboard} activeOpacity={0.7}>
             <Ionicons
               name="happy-outline"
               size={20}
               color={theme.colors.gray[500]}
             />
-          </TouchableOpacity>
+          </TouchableButton>
           <TextInput
             ref={inputRef}
             placeholder="Write your message..."
             placeholderTextColor={theme.colors.gray[400]}
             style={styles.input}
+            value={message}
+            onChangeText={handleTyping}
             keyboardType="default"
             textContentType="none"
           />
-          <TouchableOpacity>
+          <TouchableButton>
             <ChatAttachment />
-          </TouchableOpacity>
+          </TouchableButton>
         </View>
 
-        <TouchableOpacity style={styles.circleButton}>
-          <ChatClock />
-        </TouchableOpacity>
+        {!isTyping && (
+          <Animated.View
+            entering={FadeInRight.duration(150)}
+            exiting={FadeOutRight.duration(150)}
+            style={{ flexDirection: 'row', marginLeft: 10 }}
+          >
+            <TouchableButton style={styles.circleButton}>
+              <ChatClock />
+            </TouchableButton>
 
-        <TouchableOpacity style={[styles.circleButton]}>
-          <ChatCoach />
-        </TouchableOpacity>
+            <TouchableButton style={styles.circleButton}>
+              <ChatCoach />
+            </TouchableButton>
+          </Animated.View>
+        )}
+
+        {isTyping && (
+          <Animated.View
+            entering={FadeInRight.duration(150)}
+            exiting={FadeOutRight.duration(150)}
+            style={{ marginLeft: 10 }}
+          >
+            <TouchableButton
+              style={{
+                padding: spacing(10),
+                paddingLeft: spacing(11),
+                paddingRight: spacing(9),
+                backgroundColor: theme.colors.primary,
+                borderRadius: 10,
+              }}
+              onPress={() => handleSend(message, [])}
+            >
+              <Ionicons
+                name="send"
+                size={fontSize(18)}
+                color={theme.colors.white}
+              />
+            </TouchableButton>
+          </Animated.View>
+        )}
       </View>
       {/* Emoji Reactor
       {reactorVisible && (
@@ -694,6 +1004,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.colors.white,
     padding: spacing(20),
+    paddingTop: spacing(10),
     paddingBottom: spacing(5),
     borderTopWidth: 1,
     borderTopColor: theme.colors.gray[200],
@@ -707,8 +1018,8 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.gray[200],
     borderRadius: fontSize(8),
     paddingHorizontal: spacing(14),
-    paddingVertical: spacing(6),
-    height: fontSize(40),
+    paddingVertical: Platform.OS === 'ios' ? spacing(6) : spacing(2),
+    height: Platform.OS === 'ios' ? verticalScale(40) : verticalScale(50),
     shadowColor: theme.colors.gray[400],
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 1 },
@@ -716,6 +1027,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: fontSize(14),
+    lineHeight: 20,
     color: theme.colors.gray[900],
     paddingHorizontal: spacing(8),
     fontFamily: theme.fonts.lato.regular,
