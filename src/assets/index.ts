@@ -36,3 +36,6 @@ export { default as RawLogo } from './Svgs/raw-logo.svg';
 export { default as User } from './Svgs/user.svg';
 export { default as Date } from './Svgs/date.svg';
 export { default as MapPin } from './Svgs/mappin.svg';
+export { default as ChatClock } from './Svgs/chat-clock.svg';
+export { default as ChatCoach } from './Svgs/chat-coach.svg';
+export { default as ChatAttachment } from './Svgs/chat-attachment.svg';
