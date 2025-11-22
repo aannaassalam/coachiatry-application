@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     // height: 66,
     // paddingRight: 12,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     padding: spacing(10),
     gap: spacing(12),
     // justifyContent: 'flex-start',

@@ -11,7 +11,13 @@ import {
   View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { assets, ChevronLeft } from '../../assets';
+import {
+  assets,
+  ChatAttachment,
+  ChatClock,
+  ChatCoach,
+  ChevronLeft,
+} from '../../assets';
 import EmojiReactor from '../../components/Chat/EmojiReactor';
 import { theme } from '../../theme';
 import { fontSize, scale, spacing } from '../../utils';
@@ -49,6 +55,9 @@ import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import { hapticOptions } from '../../helpers/utils';
 import Lucide from '@react-native-vector-icons/lucide';
 import TypingIndicator from '../../components/Chat/TypingIndicator';
+import { KeyboardAvoidingView } from 'react-native';
+import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const MAX_SWIPE = 60; // how far message can move, just like WhatsApp
 const SWIPE_REPLY_THRESHOLD = 40;
@@ -184,6 +193,9 @@ const RenderMessage = ({
 };
 
 const ChatScreen = () => {
+  const inputRef = useRef<TextInput>(null);
+  const insets = useSafeAreaInsets();
+
   const socket = useSocket();
   const { profile } = useAuth();
   const navigation = useNavigation<ChatRoomTaskNavigationProp>();
@@ -511,11 +523,17 @@ const ChatScreen = () => {
       </View>
     );
 
+  const openEmojiKeyboard = () => {
+    inputRef.current?.focus();
+  };
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[styles.container, { paddingBottom: insets.bottom }]}
+    >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <ChevronLeft />
         </TouchableOpacity>
         <View style={styles.userInfo}>
@@ -573,44 +591,44 @@ const ChatScreen = () => {
 
       {/* Message Input */}
       <View style={styles.inputBar}>
-        <View style={styles.inputContainer}>
-          <Ionicons
-            name="happy-outline"
-            size={18}
-            color={theme.colors.gray[500]}
-          />
+        <View style={styles.inputWrapper}>
+          <TouchableOpacity onPress={openEmojiKeyboard} activeOpacity={0.7}>
+            <Ionicons
+              name="happy-outline"
+              size={20}
+              color={theme.colors.gray[500]}
+            />
+          </TouchableOpacity>
           <TextInput
+            ref={inputRef}
             placeholder="Write your message..."
             placeholderTextColor={theme.colors.gray[400]}
             style={styles.input}
+            keyboardType="default"
+            textContentType="none"
           />
-          <Ionicons
-            name="attach-outline"
-            size={18}
-            color={theme.colors.gray[500]}
-          />
-          <Ionicons
-            name="time-outline"
-            size={18}
-            color={theme.colors.gray[500]}
-          />
-          <Ionicons
-            name="sparkles-outline"
-            size={18}
-            color={theme.colors.gray[500]}
-          />
+          <TouchableOpacity>
+            <ChatAttachment />
+          </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Emoji Reactor */}
+        <TouchableOpacity style={styles.circleButton}>
+          <ChatClock />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.circleButton]}>
+          <ChatCoach />
+        </TouchableOpacity>
+      </View>
+      {/* Emoji Reactor
       {reactorVisible && (
         <EmojiReactor
           position={reactorPos}
           onSelect={handleEmojiSelect}
           onDismiss={() => setReactorVisible(false)}
         />
-      )}
-    </View>
+      )} */}
+    </KeyboardAvoidingView>
   );
 };
 
@@ -672,24 +690,40 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.lato.regular,
   },
   inputBar: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.gray[200],
-    padding: spacing(8),
-    backgroundColor: theme.colors.white,
-  },
-  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.gray[50],
-    borderRadius: fontSize(20),
-    paddingHorizontal: spacing(12),
-    gap: spacing(8),
+    backgroundColor: theme.colors.white,
+    padding: spacing(20),
+    paddingBottom: spacing(5),
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.gray[200],
+  },
+  inputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.white,
+    borderWidth: 1,
+    borderColor: theme.colors.gray[200],
+    borderRadius: fontSize(8),
+    paddingHorizontal: spacing(14),
+    paddingVertical: spacing(6),
+    height: fontSize(40),
+    shadowColor: theme.colors.gray[400],
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
   },
   input: {
     flex: 1,
     fontSize: fontSize(14),
-    fontFamily: theme.fonts.lato.regular,
     color: theme.colors.gray[900],
+    paddingHorizontal: spacing(8),
+    fontFamily: theme.fonts.lato.regular,
+  },
+  circleButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: spacing(10),
   },
   replyIconLeft: {
     position: 'absolute',
