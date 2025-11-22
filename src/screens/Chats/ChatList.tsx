@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   View,
+  ViewToken,
 } from 'react-native';
 import TouchableButton from '../../components/TouchableButton';
 import AppHeader from '../../components/ui/AppHeader';
@@ -18,11 +19,15 @@ import { AppStackParamList } from '../../types/navigation';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
 import { PaginatedResponse } from '../../typescript/interface/common.interface';
 import { fontSize, scale, spacing } from '../../utils';
-import { getAllConversations } from '../../api/functions/chat.api';
+import {
+  getAllConversations,
+  getConversation,
+} from '../../api/functions/chat.api';
 import { Message } from '../../typescript/interface/message.interface';
 import { useSocket } from '../../hooks/useSocket';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { queryClient } from '../../../App';
+import { getMessages } from '../../api/functions/message.api';
 
 type ChatScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -33,6 +38,26 @@ export default function ChatList() {
   const navigation = useNavigation<ChatScreenNavigationProp>();
   const { profile } = useAuth();
   const socket = useSocket();
+
+  const viewableItemsChanged = useRef(
+    ({
+      viewableItems,
+    }: {
+      viewableItems: Array<ViewToken & { item: ChatConversation }>;
+    }) => {
+      viewableItems.forEach(({ item }) => {
+        queryClient.prefetchQuery({
+          queryKey: ['conversations', item._id],
+          queryFn: () => getConversation(item._id),
+        });
+        queryClient.prefetchInfiniteQuery({
+          queryKey: ['messages', item._id],
+          queryFn: getMessages,
+          initialPageParam: 1,
+        });
+      });
+    },
+  ).current;
 
   // const {
   //   data,
@@ -228,6 +253,10 @@ export default function ChatList() {
           refreshing={isFetching}
           onRefresh={refetch}
           showsVerticalScrollIndicator={false}
+          onViewableItemsChanged={viewableItemsChanged}
+          viewabilityConfig={{
+            itemVisiblePercentThreshold: 60, // triggers when 60% visible
+          }}
           // onEndReached={() => {
           //   if (hasNextPage && !isFetchingNextPage) fetchNextPage();
           // }}
