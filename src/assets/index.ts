@@ -6,6 +6,7 @@ export const assets = {
     Avatar3: require('./Images/avatar3.png'),
     EmptyFiler: require('./Images/empty-filter.png'),
     logo: require('./Images/logo.png'),
+    CoachAiBackground: require('./Images/coach-ai-background.png'),
   },
   icons: {
     googleIcon: require('./Icons/google.png'),
@@ -39,3 +40,7 @@ export { default as MapPin } from './Svgs/mappin.svg';
 export { default as ChatClock } from './Svgs/chat-clock.svg';
 export { default as ChatCoach } from './Svgs/chat-coach.svg';
 export { default as ChatAttachment } from './Svgs/chat-attachment.svg';
+export { default as SheetCoachAi } from './Svgs/white-coach.svg';
+export { default as SheetBlueCoachAi } from './Svgs/blue-coach.svg';
+export { default as Thunderbolt } from './Svgs/thunderbolt.svg';
+export { default as Fireballa } from './Svgs/fireball.svg';
