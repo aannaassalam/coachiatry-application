@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { pick, types } from '@react-native-documents/picker';
 
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {
@@ -912,16 +913,48 @@ const ChatScreen = () => {
     setAttachments(prev => [...prev, ...mapped]);
   };
 
-  const handlePickDocument = async () => {};
+  const handlePickDocument = async () => {
+    try {
+      const files = await pick({
+        type: [
+          types.pdf,
+          types.doc,
+          types.docx,
+          types.plainText,
+          types.ppt,
+          types.pptx,
+        ],
+        allowMultiSelection: true,
+        allowVirtualFiles: true,
+        mode: 'open',
+        presentationStyle: 'fullScreen',
+        transitionStyle: 'crossDissolve',
+        requestLongTermAccess: true,
+      });
+
+      if (!files || files.length === 0) return;
+
+      const mapped = files.map(file => {
+        const uri = (file as any).fileCopyUri ?? file.uri;
+        return {
+          uri,
+          type: 'document' as const,
+          name: file.name ?? 'Document',
+        };
+      });
+
+      setAttachments(prev => [...prev, ...mapped]);
+    } catch (error: any) {
+      if (error?.code === 'DOCUMENT_PICKER_CANCELED') return;
+      console.log('Document Picker Error:', error);
+    }
+  };
   const handleAttachmentSelect = (type: 'image' | 'video' | 'document') => {
     setShowAttachmentMenu(false);
 
     if (type === 'image') handlePickImage();
     if (type === 'video') handlePickVideo();
     if (type === 'document') handlePickDocument();
-  };
-  const handleOpenReactor = (messageId: string) => {
-    setReactorVisibleFor({ id: messageId });
   };
 
   const handleSelectReaction = (emoji: string) => {

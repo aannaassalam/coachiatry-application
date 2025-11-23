@@ -3,6 +3,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@lodev09/react-native-true-sheet": "^2.0.6",
     "@react-native-clipboard/clipboard": "^1.16.3",
+    "@react-native-documents/picker": "^11.0.0",
     "@react-native-vector-icons/ant-design": "^12.4.0",
     "@react-native-vector-icons/common": "^12.4.0",
     "@react-native-vector-icons/entypo": "^12.4.0",
