@@ -75,7 +75,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TouchableButton from '../../components/TouchableButton';
 import EmojiKeyboard from '../../components/Chat/EmojiKeyboard';
 import AttachmentMenu from '../../components/Chat/AttachmentMenu';
-import AttachmentPreview from '../../components/Chat/AttachmentPreview';
 import AttachmentFullPreview from '../../components/Chat/AttachmentPreview';
 
 const MAX_SWIPE = 60; // how far message can move, just like WhatsApp
