@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  findNodeHandle,
   FlatList,
   GestureResponderEvent,
   Image,
+  Keyboard,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  UIManager,
   View,
 } from 'react-native';
+import { launchImageLibrary } from 'react-native-image-picker';
+
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {
   assets,
@@ -20,7 +25,13 @@ import {
 } from '../../assets';
 import EmojiReactor from '../../components/Chat/EmojiReactor';
 import { theme } from '../../theme';
-import { fontSize, scale, spacing, verticalScale } from '../../utils';
+import {
+  fontSize,
+  isAndroid,
+  scale,
+  spacing,
+  verticalScale,
+} from '../../utils';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../types/navigation';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
@@ -62,6 +73,10 @@ import { KeyboardAvoidingView } from 'react-native';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TouchableButton from '../../components/TouchableButton';
+import EmojiKeyboard from '../../components/Chat/EmojiKeyboard';
+import AttachmentMenu from '../../components/Chat/AttachmentMenu';
+import AttachmentPreview from '../../components/Chat/AttachmentPreview';
+import AttachmentFullPreview from '../../components/Chat/AttachmentPreview';
 
 const MAX_SWIPE = 60; // how far message can move, just like WhatsApp
 const SWIPE_REPLY_THRESHOLD = 40;
@@ -75,10 +90,17 @@ type ChatRoomTaskNavigationProp = NativeStackNavigationProp<
 const RenderMessage = ({
   item,
   conversation,
+  onReply,
+  onOpenReactor,
+  reactions = [],
 }: {
   item: Message;
   conversation: ChatConversation | undefined;
+  onReply: () => void;
+  onOpenReactor: (msg: Message, pos: { x: number; y: number }) => void;
+  reactions?: string[];
 }) => {
+  const bubbleRef = useRef<any>(null);
   const { profile } = useAuth();
   const isMe = conversation?.isDeletable
     ? item.sender?._id === profile?._id
@@ -87,7 +109,15 @@ const RenderMessage = ({
   const triggerHaptics = () => {
     ReactNativeHapticFeedback.trigger('rigid', hapticOptions);
   };
+  const measureAndOpen = () => {
+    const handle = findNodeHandle(bubbleRef.current);
+    if (!handle) return;
 
+    UIManager.measure(handle, (_fx, _fy, _w, _h, px, py) => {
+      // px, py = absolute coordinates on screen
+      onOpenReactor(item, { x: px, y: py });
+    });
+  };
   const translateX = useSharedValue(0);
   const hasTriggered = useSharedValue(false);
 
@@ -95,7 +125,6 @@ const RenderMessage = ({
     .activeOffsetX(isMe ? [-ACTIVE_SWIPE_START, 0] : [0, ACTIVE_SWIPE_START])
     .failOffsetY([-10, 10])
     .onUpdate(e => {
-      // Limit movement
       if (!isMe) {
         translateX.value = Math.min(MAX_SWIPE, Math.max(0, e.translationX));
       } else {
@@ -109,16 +138,11 @@ const RenderMessage = ({
       if (crossedThreshold && !hasTriggered.value) {
         hasTriggered.value = true;
         runOnJS(triggerHaptics)();
+        runOnJS(onReply)();
       }
     })
     .onFinalize(() => {
-      // Reset for next swipe
       hasTriggered.value = false;
-
-      // const shouldTrigger =
-      //   (!isMe && translateX.value > SWIPE_REPLY_THRESHOLD) ||
-      //   (isMe && translateX.value < -SWIPE_REPLY_THRESHOLD);
-
       translateX.value = withTiming(0, { duration: 150 });
     });
 
@@ -127,10 +151,7 @@ const RenderMessage = ({
   }));
 
   const arrowStyle = useAnimatedStyle(() => {
-    const progress = Math.min(
-      1,
-      Math.abs(translateX.value) / 40, // fade + slide in early
-    );
+    const progress = Math.min(1, Math.abs(translateX.value) / 40);
 
     return {
       opacity: progress,
@@ -144,8 +165,8 @@ const RenderMessage = ({
 
   return (
     <Animated.View
-      entering={FadeInUp.springify().mass(0.5).damping(15).duration(120)} // <-- WhatsApp-like pop animation
-      layout={LinearTransition.springify()} // <-- keeps list smooth when items change
+      entering={FadeInUp.springify().mass(0.5).damping(15).duration(120)}
+      layout={LinearTransition.springify()}
       style={{ marginBottom: spacing(10) }}
     >
       <GestureDetector gesture={panGesture}>
@@ -167,6 +188,7 @@ const RenderMessage = ({
               <Lucide name="reply" size={18} color="#666" />
             </Animated.View>
           )}
+
           {!isMe && (
             <SmartAvatar
               src={
@@ -179,9 +201,14 @@ const RenderMessage = ({
               style={styles.avatar}
             />
           )}
+
           <TouchableOpacity
+            ref={bubbleRef}
             activeOpacity={0.9}
-            // onLongPress={e => handleLongPress(e, item._id!)}
+            onLongPress={() => {
+              triggerHaptics();
+              measureAndOpen();
+            }}
             style={[
               styles.messageBubble,
               isMe ? styles.myMessage : styles.otherMessage,
@@ -198,14 +225,75 @@ const RenderMessage = ({
           </TouchableOpacity>
         </Animated.View>
       </GestureDetector>
+
+      {/* Reaction Row */}
+      {reactions.length > 0 && (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignSelf: isMe ? 'flex-end' : 'flex-start',
+            backgroundColor: '#fff',
+            paddingHorizontal: 2,
+            paddingVertical: 2,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: '#eee',
+            gap: 4,
+            position: 'relative',
+            top: spacing(-6),
+            left: isMe ? 'auto' : spacing(40),
+          }}
+        >
+          {reactions.map((r, i) => (
+            <Text key={i} style={{ fontSize: 12 }}>
+              {r}
+            </Text>
+          ))}
+        </View>
+      )}
     </Animated.View>
   );
 };
 
-const ChatScreen = () => {
-  const inputRef = useRef<TextInput>(null);
-  const insets = useSafeAreaInsets();
+const ReplyPreview = ({
+  message,
+  onClose,
+}: {
+  message: Message;
+  onClose: () => void;
+}) => {
+  return (
+    <View style={styles.replyContainer}>
+      <View style={styles.replyLine} />
+      <View style={styles.replyContent}>
+        <Text style={styles.replyName}>
+          {message.sender?.fullName ?? 'Unknown'}
+        </Text>
 
+        <Text style={styles.replyText} numberOfLines={1}>
+          {message.content}
+        </Text>
+      </View>
+
+      <TouchableOpacity onPress={onClose} style={styles.replyCloseBtn}>
+        <Lucide name="x" size={18} color="#6B7280" />
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const ChatScreen = () => {
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [attachments, setAttachments] = useState<
+    { uri: string; type: 'image' | 'video' | 'document' }[]
+  >([]);
+  const [reactorVisibleFor, setReactorVisibleFor] = useState<{
+    id: string;
+  } | null>(null);
+  const [reactions, setReactions] = useState<Record<string, string[]>>({}); // messageId -> emoji array
+  const insets = useSafeAreaInsets();
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const socket = useSocket();
   const { profile } = useAuth();
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -775,36 +863,82 @@ const ChatScreen = () => {
     // setTimeout(() => {
     //   bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     // }, 50);
+    setReplyingTo(null);
   };
-
-  const handleLongPress = (event: GestureResponderEvent, id: string) => {
-    const { pageX, pageY } = event.nativeEvent;
-    setSelectedMsg(id);
-    setReactorPos({ top: pageY - 80, left: pageX });
-    setReactorVisible(true);
+  const toggleEmojiKeyboard = () => {
+    Keyboard.dismiss();
+    setShowEmojiPicker(prev => !prev);
   };
-
-  const handleEmojiSelect = (emoji: string) => {
-    console.log(`Reacted to ${selectedMsg} with emoji: ${emoji}`);
-    setReactorVisible(false);
-  };
-
   if (isLoading || isConversationLoading)
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" />
       </View>
     );
+  const handlePickImage = async () => {
+    const res = await launchImageLibrary({
+      mediaType: 'photo',
+      selectionLimit: 0, // 0 = unlimited
+      includeBase64: false,
+      presentationStyle: 'fullScreen', // iOS fix
+    });
 
-  const openEmojiKeyboard = () => {
-    inputRef.current?.focus();
+    if (res.didCancel || !res.assets) return;
+
+    const mapped: { uri: string; type: 'image' | 'video' | 'document' }[] =
+      res.assets.map(asset => ({
+        uri: asset.uri!,
+        type: 'image',
+      }));
+
+    setAttachments(prev => [...prev, ...mapped]);
   };
 
+  const handlePickVideo = async () => {
+    const res = await launchImageLibrary({
+      mediaType: 'video',
+      selectionLimit: 0, // multi videos
+      includeBase64: false,
+      presentationStyle: 'fullScreen', // iOS fix
+    });
+
+    if (res.didCancel || !res.assets) return;
+
+    const mapped: { uri: string; type: 'image' | 'video' | 'document' }[] =
+      res.assets.map(asset => ({
+        uri: asset.uri!,
+        type: 'video',
+      }));
+
+    setAttachments(prev => [...prev, ...mapped]);
+  };
+
+  const handlePickDocument = async () => {};
+  const handleAttachmentSelect = (type: 'image' | 'video' | 'document') => {
+    setShowAttachmentMenu(false);
+
+    if (type === 'image') handlePickImage();
+    if (type === 'video') handlePickVideo();
+    if (type === 'document') handlePickDocument();
+  };
+  const handleOpenReactor = (messageId: string) => {
+    setReactorVisibleFor({ id: messageId });
+  };
+
+  const handleSelectReaction = (emoji: string) => {
+    if (!reactorVisibleFor) return;
+    const id = reactorVisibleFor.id;
+    setReactions(prev => ({
+      ...prev,
+      [id]: [...(prev[id] ?? []), emoji],
+    }));
+    setReactorVisibleFor(null);
+  };
   return (
     <KeyboardAvoidingView
       behavior="padding"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing(70) : spacing(0)}
-      style={[styles.container]}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing(70) : spacing(25)}
+      style={[styles.container, { paddingBottom: insets.bottom }]}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -826,67 +960,70 @@ const ChatScreen = () => {
       </View>
 
       {/* Messages */}
-      <FlatList
-        data={allMessages}
-        renderItem={({ item }) => (
-          <RenderMessage item={item} conversation={conversation} />
-        )}
-        keyExtractor={item => item._id ?? item.chat}
-        showsVerticalScrollIndicator={false}
-        onEndReached={() => {
-          if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-        }}
-        onEndReachedThreshold={0.3}
-        ListHeaderComponent={
-          typingUsers.length > 0 ? <TypingIndicator /> : null
-        }
-        ListFooterComponent={
-          isFetchingNextPage ? (
-            <View
-              style={{ paddingVertical: spacing(10), alignItems: 'center' }}
-            >
-              <Text
-                style={{
-                  color: theme.colors.gray[500],
-                  fontSize: fontSize(14),
+      <View style={{ flex: 1 }}>
+        {attachments.length > 0 ? (
+          <AttachmentFullPreview
+            files={attachments}
+            onRemove={i =>
+              setAttachments(prev => prev.filter((_, idx) => idx !== i))
+            }
+            onClose={() => setAttachments([])}
+          />
+        ) : (
+          <FlatList
+            data={allMessages}
+            renderItem={({ item }) => (
+              <RenderMessage
+                item={item}
+                conversation={conversation}
+                onReply={() => setReplyingTo(item)}
+                onOpenReactor={(msg, pos) => {
+                  setReactorVisibleFor({ id: msg._id! });
+                  setReactorPos({ top: pos.y, left: pos.x }); // store coordinates
                 }}
-              >
-                Loading messages...
-              </Text>
-            </View>
-          ) : null
-        }
-        contentContainerStyle={{
-          padding: spacing(16),
-          // gap: spacing(10),
-          flexGrow: 1,
-        }}
-        inverted
-      />
-
+                reactions={reactions[item._id ?? ''] ?? []}
+              />
+            )}
+            keyExtractor={item => item._id ?? item.chat}
+            inverted
+            contentContainerStyle={{
+              padding: spacing(16),
+              flexGrow: 1,
+            }}
+          />
+        )}
+      </View>
       {/* Message Input */}
-      <View style={styles.inputBar}>
-        <View style={styles.inputWrapper}>
-          <TouchableButton onPress={openEmojiKeyboard} activeOpacity={0.7}>
+      {replyingTo && (
+        <ReplyPreview
+          message={replyingTo}
+          onClose={() => setReplyingTo(null)}
+        />
+      )}
+      <View style={{ ...styles.inputBar, borderTopWidth: replyingTo ? 0 : 1 }}>
+        <View style={[styles.inputWrapper]}>
+          <TouchableOpacity onPress={toggleEmojiKeyboard}>
             <Ionicons
               name="happy-outline"
               size={20}
               color={theme.colors.gray[500]}
             />
-          </TouchableButton>
+          </TouchableOpacity>
+
           <TextInput
-            ref={inputRef}
+            onFocus={() => setShowEmojiPicker(false)}
             placeholder="Write your message..."
             placeholderTextColor={theme.colors.gray[400]}
             style={styles.input}
             value={message}
             onChangeText={handleTyping}
-            keyboardType="default"
-            textContentType="none"
           />
-          <TouchableButton>
+          <TouchableOpacity
+            onPress={() => setShowAttachmentMenu(true)}
+            style={{ padding: spacing(5) }}
+          >
             <ChatAttachment />
-          </TouchableButton>
+          </TouchableOpacity>
         </View>
 
         {!isTyping && (
@@ -895,9 +1032,9 @@ const ChatScreen = () => {
             exiting={FadeOutRight.duration(150)}
             style={{ flexDirection: 'row', marginLeft: 10 }}
           >
-            <TouchableButton style={styles.circleButton}>
+            {/* <TouchableButton style={styles.circleButton}>
               <ChatClock />
-            </TouchableButton>
+            </TouchableButton> */}
 
             <TouchableButton style={styles.circleButton}>
               <ChatCoach />
@@ -930,14 +1067,24 @@ const ChatScreen = () => {
           </Animated.View>
         )}
       </View>
-      {/* Emoji Reactor
-      {reactorVisible && (
-        <EmojiReactor
-          position={reactorPos}
-          onSelect={handleEmojiSelect}
-          onDismiss={() => setReactorVisible(false)}
-        />
-      )} */}
+      <EmojiKeyboard
+        visible={showEmojiPicker}
+        onSelect={(emoji: any) => {
+          setMessage(prev => prev + emoji);
+        }}
+      />
+      <AttachmentMenu
+        visible={showAttachmentMenu}
+        onClose={() => setShowAttachmentMenu(false)}
+        onSelect={handleAttachmentSelect}
+      />
+      <EmojiReactor
+        visible={!!reactorVisibleFor}
+        anchorX={reactorPos.left}
+        anchorY={reactorPos.top}
+        onSelect={handleSelectReaction}
+        onDismiss={() => setReactorVisibleFor(null)}
+      />
     </KeyboardAvoidingView>
   );
 };
@@ -1005,7 +1152,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
     padding: spacing(20),
     paddingTop: spacing(10),
-    paddingBottom: spacing(5),
+    paddingBottom: isAndroid ? spacing(20) : spacing(5),
     borderTopWidth: 1,
     borderTopColor: theme.colors.gray[200],
   },
@@ -1019,7 +1166,7 @@ const styles = StyleSheet.create({
     borderRadius: fontSize(8),
     paddingHorizontal: spacing(14),
     paddingVertical: Platform.OS === 'ios' ? spacing(6) : spacing(2),
-    height: Platform.OS === 'ios' ? verticalScale(40) : verticalScale(50),
+    height: Platform.OS === 'ios' ? verticalScale(40) : 'auto',
     shadowColor: theme.colors.gray[400],
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 1 },
@@ -1048,5 +1195,54 @@ const styles = StyleSheet.create({
     top: 10,
     right: -35,
     zIndex: 50,
+  },
+  replyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.gray[100],
+
+    // borderLeftWidth: 4,
+    // borderLeftColor: '#1C2B68', // same navy bar as screenshot
+    paddingVertical: spacing(10),
+    paddingHorizontal: spacing(12),
+    marginHorizontal: spacing(16),
+    marginBottom: spacing(4),
+    borderRadius: 12,
+    position: 'relative',
+    top: spacing(12),
+    zIndex: 999,
+    // borderWidth: 1,
+    // borderColor: theme.colors.gray[200],
+  },
+
+  replyLine: {
+    width: 3,
+    height: '100%',
+    backgroundColor: theme.colors.primary,
+
+    borderRadius: 20,
+  },
+
+  replyContent: {
+    flex: 1,
+    paddingLeft: spacing(10),
+    borderRadius: fontSize(8),
+  },
+
+  replyName: {
+    fontSize: fontSize(14),
+    fontFamily: theme.fonts.archivo.medium,
+    color: '#111827',
+    marginBottom: 2,
+  },
+
+  replyText: {
+    fontSize: fontSize(14),
+    color: '#374151',
+    fontFamily: theme.fonts.lato.regular,
+  },
+
+  replyCloseBtn: {
+    padding: 6,
   },
 });
