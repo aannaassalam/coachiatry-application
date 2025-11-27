@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "715036103584",
+    "project_id": "coachiatry-2bc9f",
+    "storage_bucket": "coachiatry-2bc9f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:715036103584:android:18a4432aa88e6182b5cac5",
+        "android_client_info": {
+          "package_name": "com.coachiatryapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA01MB-WzxJz-KFf30ukeS4JAdFbj1GBP0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

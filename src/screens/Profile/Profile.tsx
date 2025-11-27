@@ -35,11 +35,14 @@ import {
 import { ChevronLeft } from '../../assets';
 import TouchableButton from '../../components/TouchableButton';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
-import { removeToken } from '../../helpers/token-storage';
+import { getToken, removeToken } from '../../helpers/token-storage';
 import { useAuth } from '../../hooks/useAuth';
 import { useDebounce } from '../../hooks/useDebounce';
 import { AppStackParamList } from '../../types/navigation';
 import { User } from '../../typescript/interface/user.interface';
+import { removeFCMToken } from '../../api/functions/auth.api';
+import messaging from '@react-native-firebase/messaging';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -143,9 +146,17 @@ export default function Profile() {
   });
 
   const signOut = async () => {
-    queryClient.removeQueries();
-    setAuthData({ token: '', user: null });
-    await removeToken();
+    try {
+      queryClient.removeQueries();
+      const token = await getToken();
+      await removeFCMToken(token as string);
+      await GoogleSignin.signOut();
+      setAuthData({ token: '', user: null });
+      await removeToken();
+      await messaging().deleteToken();
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   const handleCopyShareLink = async () => {

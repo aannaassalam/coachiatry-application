@@ -111,5 +111,19 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>com.googleusercontent.apps.149359341698-e52por6ce4cdktcfsjm8026e7fpuuldm</string>
+    </array>
+  </dict>
+</array>
+<key>LSApplicationQueriesSchemes</key>
+<array>
+  <string>google</string>
+  <string>com.googleusercontent.apps.149359341698-e52por6ce4cdktcfsjm8026e7fpuuldm</string>
+</array>
 </dict>
 </plist>

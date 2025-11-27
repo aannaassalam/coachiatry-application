@@ -12,6 +12,9 @@ export type AppStackParamList = {
     mode?: 'edit' | 'view' | 'add';
     documentId?: string;
     userId?: string;
+    title?: string;
+    tag?: string;
+    content?: string;
   };
   Profile: undefined;
   BottomTabs: undefined;

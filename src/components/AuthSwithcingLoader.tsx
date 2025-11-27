@@ -1,114 +1,171 @@
-// LoaderAnimation.tsx
-import { useEffect } from 'react';
-import { Dimensions, StyleSheet } from 'react-native';
-import Animated, {
-  Easing,
-  interpolate,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withTiming,
-} from 'react-native-reanimated';
-import { assets, RawLogo } from '../assets';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Dimensions,
+  Image,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+} from 'react-native';
+import { assets } from '../assets';
 import { useAuth } from '../hooks/useAuth';
+import { theme } from '../theme';
+import { fontSize, spacing, verticalScale } from '../utils';
 
-const { width } = Dimensions.get('window');
-const DARK_BLUE = '#0E1734';
-
-const AnimatedLogo = Animated.createAnimatedComponent(RawLogo);
-
-interface LoaderAnimationProps {
-  onFinish?: () => void;
-}
-
-export default function AuthSwitchingLoader({
-  onFinish,
-}: LoaderAnimationProps) {
+function AuthSwitchingLoader({ onFinish }: { onFinish: () => void }) {
   const { isProfileLoading } = useAuth();
-  const bgScale = useSharedValue(0);
-  const size = useSharedValue(60);
-  const opacity = useSharedValue(1);
+  const [state, setState] = useState('');
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim2 = useRef(new Animated.Value(0)).current;
+  const containerOpacity = useRef(new Animated.Value(1)).current;
+  const allOpacity = useRef(new Animated.Value(1)).current;
+  const logo_position = useRef(new Animated.Value(spacing(100))).current;
+  const logo_text_position = useRef(new Animated.Value(spacing(-150))).current;
+  const overlay = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (isProfileLoading) return;
-
-    requestAnimationFrame(() => {
-      bgScale.value = withTiming(1, {
-        duration: 1800,
-        easing: Easing.out(Easing.ease),
-      });
-
-      size.value = withDelay(
-        300,
-        withTiming(1200, {
-          duration: 1200,
-          easing: Easing.inOut(Easing.quad),
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start(() => {
+      Animated.parallel([
+        Animated.timing(logo_position, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
         }),
-      );
-
-      opacity.value = withDelay(
-        650,
-        withTiming(
-          0,
-          {
-            duration: 600,
-            easing: Easing.out(Easing.ease),
-          },
-          finished => {
-            if (finished && onFinish) {
-              runOnJS(onFinish)();
-            }
-          },
-        ),
-      );
+        Animated.timing(logo_text_position, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(overlay, {
+          toValue: spacing(-350),
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim2, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setState('ANIMATION_COMPLETE');
+      });
     });
-  }, [isProfileLoading, bgScale, size, opacity, onFinish]);
+  }, [fadeAnim, fadeAnim2, logo_position, logo_text_position, overlay]);
 
-  // Animated styles
-  const bgStyle = useAnimatedStyle(() => {
-    const scale = interpolate(bgScale.value, [0, 1], [1, 40]);
-    return { transform: [{ scale }] };
-  });
+  useEffect(() => {
+    const isReadyToFade = state === 'ANIMATION_COMPLETE' && !isProfileLoading;
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    width: size.value,
-    height: size.value,
-  }));
-
-  const fadeStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
+    if (isReadyToFade) {
+      Animated.parallel([
+        Animated.timing(allOpacity, {
+          toValue: 0,
+          duration: 700, // Fade out duration
+          delay: 200, // Minimum time the logo will stay visible
+          useNativeDriver: true,
+        }),
+        Animated.timing(containerOpacity, {
+          toValue: 0,
+          duration: 1000, // Fade out duration
+          delay: 500, // Minimum time the logo will stay visible
+          useNativeDriver: true,
+        }),
+      ]).start(({ finished }) => {
+        if (finished) onFinish();
+      });
+    }
+  }, [allOpacity, containerOpacity, isProfileLoading, onFinish, state]);
+  // if (state === 'hidden') return null;
 
   return (
-    <Animated.View style={[styles.container, fadeStyle]}>
-      <Animated.View style={[styles.bgCircle, bgStyle]} />
-      {/* <AnimatedLogo animatedProps={[styles.logoText, animatedStyle]} /> */}
-      <Animated.View style={animatedStyle}>
-        <RawLogo width="100%" height="100%" />
+    <Animated.View style={[styles.container, { opacity: containerOpacity }]}>
+      <StatusBar barStyle="light-content" />
+
+      <Animated.View
+        collapsable={false}
+        style={{
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          width: '100%',
+          justifyContent: 'center',
+          paddingHorizontal: spacing(20),
+          opacity: allOpacity,
+        }}
+      >
+        <Animated.View
+          style={{
+            ...styles.overlay,
+            transform: [{ translateX: overlay }],
+            opacity: allOpacity,
+          }}
+        ></Animated.View>
+        <Animated.View
+          style={{
+            ...styles.logo_container,
+            opacity: fadeAnim,
+            transform: [{ translateX: logo_position }],
+          }}
+        >
+          <Animated.View style={{ opacity: allOpacity }}>
+            <Image source={assets.images.splashLogo} style={styles.logo} />
+          </Animated.View>
+        </Animated.View>
+        <Animated.View
+          style={{
+            ...styles.logo_container_text,
+            opacity: fadeAnim2,
+            transform: [{ translateX: logo_text_position }],
+          }}
+        >
+          <Text style={styles.logo_text}>Coachiatry</Text>
+        </Animated.View>
       </Animated.View>
-      {/* <Animated.Image
-        source={assets.images.logo}
-        style={[styles.logoText, animatedStyle]}
-      /> */}
     </Animated.View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
-    overflow: 'hidden',
+    justifyContent: 'center',
   },
-  bgCircle: {
+  overlay: {
     position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: width * 0.3,
-    backgroundColor: DARK_BLUE,
+    height: verticalScale(250),
+    backgroundColor: theme.colors.primary,
+    zIndex: 0,
+    width: Dimensions.get('window').width,
   },
-  logoText: {},
+  logo_container: {
+    aspectRatio: 1,
+    flex: 0.22,
+    position: 'relative',
+    zIndex: 1,
+  },
+
+  logo_container_text: {
+    flex: 0.58,
+    aspectRatio: 16 / 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+    zIndex: -1,
+  },
+  logo: {
+    height: '100%',
+    width: '100%',
+    resizeMode: 'contain',
+  },
+  logo_text: {
+    fontFamily: theme.fonts.archivo.bold,
+    fontSize: Platform.OS === 'ios' ? fontSize(40) : fontSize(30),
+    color: theme.colors.white,
+  },
 });
+export default AuthSwitchingLoader;

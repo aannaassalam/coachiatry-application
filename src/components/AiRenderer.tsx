@@ -6,6 +6,7 @@ import {
   FlatList,
   StyleSheet,
 } from 'react-native';
+import { theme } from '../theme';
 
 // -------------
 // TYPES
@@ -42,6 +43,7 @@ interface AIButton {
 interface AIList {
   type: 'list';
   items: AIComponent[];
+  style?: any;
 }
 
 interface AITask {
@@ -72,7 +74,7 @@ export function AiRenderer({
   switch (node.type) {
     case 'view':
       return (
-        <View style={[styles.view, node.style]}>
+        <View style={[defaultStyles.view, node.style]}>
           {node.children?.map((child, i) => (
             <AiRenderer key={i} node={child} onEvent={onEvent} />
           ))}
@@ -80,21 +82,21 @@ export function AiRenderer({
       );
 
     case 'text':
-      return <Text style={[styles.text, node.style]}>{node.text}</Text>;
+      return <Text style={[defaultStyles.text, node.style]}>{node.text}</Text>;
 
     case 'button':
       return (
         <TouchableOpacity
-          style={[styles.button, node.style]}
+          style={[node.style, defaultStyles.button]}
           onPress={() => onEvent?.(node)}
         >
-          <Text style={styles.buttonText}>{node.label}</Text>
+          <Text style={defaultStyles.buttonText}>{node.label}</Text>
         </TouchableOpacity>
       );
 
     case 'list':
       return (
-        <View style={styles.list}>
+        <View style={[defaultStyles.list, node.style]}>
           {node.items.map((item, index) => (
             <AiRenderer key={index} node={item} onEvent={onEvent} />
           ))}
@@ -104,11 +106,11 @@ export function AiRenderer({
     case 'task':
       return (
         <TouchableOpacity
-          style={styles.task}
+          style={defaultStyles.task}
           onPress={() => onEvent?.({ action: 'open-task', taskId: node.id })}
         >
-          <Text style={styles.taskTitle}>{node.title}</Text>
-          <Text style={styles.taskMeta}>
+          <Text style={defaultStyles.taskTitle}>{node.title}</Text>
+          <Text style={defaultStyles.taskMeta}>
             {node.status} • {node.priority}
           </Text>
         </TouchableOpacity>
@@ -117,12 +119,12 @@ export function AiRenderer({
     case 'document':
       return (
         <TouchableOpacity
-          style={styles.document}
+          style={defaultStyles.document}
           onPress={() =>
             onEvent?.({ action: 'open-document', documentId: node.id })
           }
         >
-          <Text style={styles.docTitle}>{node.title}</Text>
+          <Text style={defaultStyles.docTitle}>{node.title}</Text>
         </TouchableOpacity>
       );
 
@@ -135,25 +137,28 @@ export function AiRenderer({
 // STYLES
 // -------------
 
-const styles = StyleSheet.create({
+const defaultStyles = StyleSheet.create({
   view: {
     flexDirection: 'column',
-    padding: 8,
+    paddingVertical: 8,
     gap: 8,
   },
   text: {
-    fontSize: 16,
-    color: '#222',
+    fontSize: 15,
+    fontFamily: theme.fonts.lato.regular,
+    color: theme.colors.gray[700],
   },
   button: {
-    backgroundColor: '#3B82F6',
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: 'center',
   },
   buttonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: theme.colors.white,
+    fontFamily: theme.fonts.lato.bold,
+    fontSize: 15,
   },
   list: {
     flexDirection: 'column',
@@ -161,26 +166,28 @@ const styles = StyleSheet.create({
   },
   task: {
     padding: 12,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
+    backgroundColor: theme.colors.gray[100],
+    borderRadius: 10,
   },
   taskTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: theme.fonts.archivo.semiBold,
+    color: theme.colors.primary,
   },
   taskMeta: {
-    fontSize: 14,
-    color: '#555',
     marginTop: 4,
+    color: theme.colors.gray[600],
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: 14,
   },
   document: {
     padding: 12,
-    backgroundColor: '#EDE9FE',
-    borderRadius: 8,
+    backgroundColor: theme.colors.secondary,
+    borderRadius: 10,
   },
   docTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#4C1D95',
+    fontFamily: theme.fonts.archivo.bold,
+    color: theme.colors.primary,
   },
 });

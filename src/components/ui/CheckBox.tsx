@@ -9,9 +9,11 @@ import TouchableButton from '../TouchableButton';
 export default function CheckBox({
   checked,
   onPress,
+  disabled,
 }: {
   checked?: boolean;
   onPress?: (toggle: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <TouchableButton
@@ -23,6 +25,7 @@ export default function CheckBox({
           borderColor: theme.colors.primary,
         },
       ]}
+      disabled={disabled}
     >
       {checked && (
         <FontAwesome6

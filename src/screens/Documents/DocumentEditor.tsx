@@ -123,13 +123,20 @@ const DocumentCategorySheetBody = ({
 
 export default function DocumentEditor() {
   const { profile } = useAuth();
+  const navigation = useNavigation();
+  const route = useRoute<any>();
+  const {
+    mode,
+    documentId,
+    userId,
+    title = '',
+    tag = '',
+    content = '',
+  } = route.params || {};
   const editor = useRef<RichEditor | null>(null);
   const scrollRef = useRef<KeyboardAwareScrollView>(null);
   const headerHeight = useHeaderHeight();
-  const [editorValue, setEditorValue] = useState('');
-  const navigation = useNavigation();
-  const route = useRoute<any>();
-  const { mode, documentId, userId } = route.params || {};
+  const [editorValue, setEditorValue] = useState(content);
   const [localMode, setLocalMode] = useState(mode);
 
   const { mutate, isPending } = useMutation({
@@ -162,8 +169,8 @@ export default function DocumentEditor() {
   const form = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
-      title: '',
-      tag: '',
+      title,
+      tag,
     },
     disabled: isPending || isEditing,
   });

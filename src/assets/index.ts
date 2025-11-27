@@ -6,6 +6,7 @@ export const assets = {
     Avatar3: require('./Images/avatar3.png'),
     EmptyFiler: require('./Images/empty-filter.png'),
     logo: require('./Images/logo.png'),
+    splashLogo: require('./Images/splash-logo.png'),
     CoachAiBackground: require('./Images/coach-ai-background.png'),
   },
   icons: {

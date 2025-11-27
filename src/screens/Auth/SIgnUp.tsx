@@ -20,16 +20,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import * as yup from 'yup';
-import { signup } from '../../api/functions/auth.api';
+import {
+  googleAuth,
+  signup,
+  updateFCMToken,
+} from '../../api/functions/auth.api';
 import { assets } from '../../assets';
 import TouchableButton from '../../components/TouchableButton';
 import AppButton from '../../components/ui/AppButton';
 import AppInput from '../../components/ui/AppInput';
-import { onError } from '../../helpers/utils';
+import { getToken, onError } from '../../helpers/utils';
 import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
 import { AuthStackParamList } from '../../types/navigation';
 import { fontSize, SCREEN_WIDTH, spacing } from '../../utils';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<
   AuthStackParamList,
@@ -54,8 +59,20 @@ export default function SignUp() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: signup,
-    onSuccess: _data => {
+    onSuccess: async _data => {
       setAuthData(_data.data);
+      // const fcmToken = await getToken();
+      // await updateFCMToken(fcmToken as string);
+    },
+  });
+
+  const { mutate: google, isPending: isGooglePending } = useMutation({
+    mutationFn: googleAuth,
+    onSuccess: async data => {
+      setAuthData(data.data);
+      // const fcmToken = await getToken();
+      // console.log(fcmToken);
+      // await updateFCMToken(fcmToken as string);
     },
   });
 
@@ -66,11 +83,28 @@ export default function SignUp() {
       email: '',
       password: '',
     },
-    disabled: isPending,
+    disabled: isPending || isGooglePending,
   });
 
   const onSubmit = (data: yup.InferType<typeof schema>) => {
     mutate(data);
+  };
+
+  const GoogleLogin = async () => {
+    try {
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+      const userInfo = await GoogleSignin.signIn();
+      if (userInfo.type === 'success' && userInfo.data?.idToken) {
+        google(userInfo.data?.idToken);
+      } else {
+        await GoogleSignin.signOut();
+      }
+      console.log('User Info:', userInfo);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
@@ -150,6 +184,7 @@ export default function SignUp() {
               style={{ marginBottom: spacing(14) }}
               onPress={form.handleSubmit(onSubmit, onError)}
               isLoading={isPending}
+              disabled={isGooglePending}
             />
 
             {/* Google Sign-up */}
@@ -157,7 +192,9 @@ export default function SignUp() {
               text="Sign up with Google"
               variant="outline"
               leftIcon={<Image source={assets.icons.googleIcon} />}
+              onPress={GoogleLogin}
               disabled={isPending}
+              isLoading={isGooglePending}
             />
             {/* Divider */}
             <View style={styles.dividerContainer}>
@@ -171,7 +208,7 @@ export default function SignUp() {
               <Text style={styles.signupText}>Already have an account? </Text>
               <TouchableButton
                 onPress={() => navigation.navigate('Login')}
-                disabled={isPending}
+                disabled={isPending || isGooglePending}
               >
                 <Text style={styles.signupLink}>Sign In</Text>
               </TouchableButton>

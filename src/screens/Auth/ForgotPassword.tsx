@@ -10,6 +10,7 @@ import {
   ImageBackground,
   TouchableWithoutFeedback,
   Keyboard,
+  Platform,
 } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { theme } from '../../theme';

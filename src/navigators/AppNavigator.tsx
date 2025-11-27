@@ -1,6 +1,9 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { storage } from '../helpers/utils';
+import ChatScreen from '../screens/Chats/ChatRoom';
 import ClientDetails from '../screens/Clients/ClientDetails';
 import DocumentEditor from '../screens/Documents/DocumentEditor';
 import EditProfile from '../screens/Profile/EditProfile';
@@ -10,12 +13,61 @@ import TaskDetailsScreen from '../screens/Tasks/TaskDetails';
 import { theme } from '../theme';
 import { AppStackParamList } from '../types/navigation';
 import BottomNavigator from './BottomNavigator';
-import ChatScreen from '../screens/Chats/ChatRoom';
+import { navigate, navigationRef } from './navigationService';
+import notifee, { EventType } from '@notifee/react-native';
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
 const AppNavigator = () => {
   const insets = useSafeAreaInsets();
+
+  // useEffect(() => {
+  //   const unsubscribe = messaging().onMessage(async remoteMessage => {
+  //     console.log('FG FCM Message:', remoteMessage);
+
+  //     await notifee.displayNotification({
+  //       title: remoteMessage.notification?.title,
+  //       body: remoteMessage.notification?.body,
+  //       data: remoteMessage.data,
+  //       android: {
+  //         channelId: 'chat-messages',
+  //         pressAction: {
+  //           id: 'open-chat', // required to detect the click
+  //         },
+  //         style: {
+  //           type: AndroidStyle.MESSAGING,
+  //           person: {
+  //             name: remoteMessage?.data?.senderName.toString() || '',
+  //             icon: remoteMessage?.data?.senderImage as string,
+  //           },
+  //           messages: [
+  //             {
+  //               text: remoteMessage.notification?.body || '',
+  //               timestamp: Date.now(), // Now
+  //             },
+  //           ],
+  //         },
+  //       },
+  //     });
+  //   });
+
+  //   return unsubscribe;
+  // }, []);
+  useEffect(() => {
+    const unsubscribe = notifee.onForegroundEvent(({ type, detail }) => {
+      const { pressAction, notification } = detail;
+
+      if (type === EventType.PRESS && pressAction?.id === 'open-chat') {
+        const data = notification?.data;
+
+        if (data?.chatId) {
+          navigate('ChatRoom', { roomId: data.chatId as string });
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, []);
 
   return (
     <View

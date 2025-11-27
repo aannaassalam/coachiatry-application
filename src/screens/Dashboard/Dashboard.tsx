@@ -2,10 +2,11 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQueries } from '@tanstack/react-query';
 import moment from 'moment';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,12 +26,13 @@ import AppHeader from '../../components/ui/AppHeader';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
 import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
-import { AppStackParamList } from '../../types/navigation';
+import { AppStackParamList, AuthStackParamList } from '../../types/navigation';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
 import { Document } from '../../typescript/interface/document.interface';
 import { Status } from '../../typescript/interface/status.interface';
 import { Task } from '../../typescript/interface/task.interface';
 import { fontSize, scale, spacing } from '../../utils';
+import { storage } from '../../helpers/utils';
 
 moment.updateLocale('en', {
   relativeTime: {

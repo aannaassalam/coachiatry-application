@@ -214,9 +214,9 @@ export const getAllSharedTasks = async ({
 };
 
 type ImportBulkTasks = Pick<
-  Omit<TaskBody, 'dueDate'>,
+  TaskBody,
   'title' | 'description' | 'category' | 'priority' | 'frequency'
-> & { dueDate: string };
+>;
 
 export const importBulkTasks = async ({
   tasks,

@@ -5,6 +5,7 @@ require_relative '../node_modules/react-native/scripts/react_native_pods'
 prepare_react_native_project!
 
 use_frameworks! :linkage => :static # static linking avoids further conflicts
+$RNFirebaseAsStaticFramework = true
 
 target 'CoachiatryApp' do
   config = use_native_modules!
