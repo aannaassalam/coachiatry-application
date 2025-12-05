@@ -269,10 +269,12 @@ const RenderMessage = ({
                   {item.content}
                 </Text>
               ) : item.type === 'image' ? (
-                <ImageMessage
-                  message={item}
-                  setSelected={index => setAttachmentIndex(index)}
-                />
+                <View style={{ paddingHorizontal: 0 }}>
+                  <ImageMessage
+                    message={item}
+                    setSelected={index => setAttachmentIndex(index)}
+                  />
+                </View>
               ) : item.type === 'video' ? (
                 <VideoMessage
                   message={item}
