@@ -1,12 +1,12 @@
-import { User } from "./user.interface";
+import { User } from './user.interface';
 
 export interface MessageFile {
   url: string;
   _id?: string;
   type: string;
-  size: Number;
+  size: number;
   thumbnailUrl: string | null;
-  duration: Number | null;
+  duration: number | null;
   uploading?: boolean;
   progress?: number;
 }
@@ -19,23 +19,23 @@ export interface MessageReaction {
 }
 
 export type MessageStatus =
-  | "pending"
-  | "sent"
-  | "delivered"
-  | "seen"
-  | "failed";
+  | 'pending'
+  | 'sent'
+  | 'delivered'
+  | 'seen'
+  | 'failed';
 
 export interface Message {
   _id?: string;
   chat: string;
   sender?: User | undefined;
-  type: "text" | "image" | "video" | "file";
+  type: 'text' | 'image' | 'video' | 'file';
   content: string;
   files?: MessageFile[];
   reactions?: MessageReaction[];
   replyTo?: Message | null;
   scheduledAt?: Date;
-  repeat: "none" | "daily" | "weekly" | "monthly" | "yearly";
+  repeat: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
   createdAt?: string;
   updatedAt?: string;
   status: MessageStatus;

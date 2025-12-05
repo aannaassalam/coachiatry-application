@@ -276,6 +276,9 @@ const ChatSection = ({ chats }: { chats: ChatConversation[] }) => {
       <TouchableButton
         activeOpacity={0.8}
         style={[styles.chatCard, isLast && { borderBottomWidth: 0 }]}
+        onPress={() =>
+          navigation.navigate('ChatRoom', { roomId: item._id as string })
+        }
       >
         <View style={styles.leftRow}>
           <SmartAvatar

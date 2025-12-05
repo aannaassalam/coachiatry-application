@@ -1,9 +1,9 @@
-import { showMessage } from 'react-native-flash-message';
-import { Filter } from '../typescript/interface/common.interface';
-import messaging from '@react-native-firebase/messaging';
-import RNFS from 'react-native-fs';
 import ImageResizer from '@bam.tech/react-native-image-resizer';
+import messaging from '@react-native-firebase/messaging';
+import { showMessage } from 'react-native-flash-message';
+import RNFS from 'react-native-fs';
 import { createMMKV } from 'react-native-mmkv';
+import { Filter } from '../typescript/interface/common.interface';
 
 export const storage = createMMKV();
 
@@ -70,7 +70,6 @@ export async function getLocalProfileImage(remoteUrl: string) {
       0,
       RNFS.CachesDirectoryPath,
     );
-    console.log(resized.uri, 'uri');
 
     return resized.uri.replace('file://', '');
   } catch (e) {

@@ -59,35 +59,10 @@ export default function ChatList() {
     },
   ).current;
 
-  // const {
-  //   data,
-  //   isLoading,
-  //   isFetchingNextPage,
-  //   fetchNextPage,
-  //   hasNextPage,
-  //   refetch,
-  //   isRefetching,
-  // } = useInfiniteQuery<PaginatedResponse<ChatConversation[]>>({
-  //   queryKey: ['conversations'],
-  //   queryFn: ({ pageParam = 1 }) =>
-  //     getAllConversations({ page: pageParam as number, sort: '-updatedAt' }),
-  //   getNextPageParam: lastPage => {
-  //     if (!lastPage?.meta) return undefined;
-  //     const { currentPage, totalPages } = lastPage.meta;
-  //     return currentPage < totalPages ? currentPage + 1 : undefined;
-  //   },
-  //   initialPageParam: 1,
-  //   staleTime: 60 * 1000,
-  // });
-
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['conversations'],
     queryFn: () => getAllConversations({ limit: 50, sort: '-updatedAt' }),
   });
-
-  // const chats = data?.pages.flatMap(page => page.data) ?? [];
-  // const isRefreshing =
-  //   !!data && isRefetching && !isFetchingNextPage && !isLoading;
 
   useEffect(() => {
     if (!socket) return;
@@ -97,7 +72,6 @@ export default function ChatList() {
       lastMessage: Message;
       updatedAt: string;
     }) => {
-      console.log('message');
       queryClient.setQueryData<PaginatedResponse<ChatConversation[]>>(
         ['conversations'],
         old => {

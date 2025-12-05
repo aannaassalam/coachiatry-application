@@ -23,7 +23,7 @@ import {
 import { createStyleSheet } from 'react-native-unistyles';
 import { Feather } from '@react-native-vector-icons/feather';
 import { FontAwesome5 } from '@react-native-vector-icons/fontawesome5';
-import { Octicons } from '@react-native-vector-icons/octicons';
+import Octicons from 'react-native-vector-icons/Octicons';
 import { deleteTask } from '../../api/functions/task.api';
 import { Calendar } from '../../assets';
 import { hapticOptions } from '../../helpers/utils';

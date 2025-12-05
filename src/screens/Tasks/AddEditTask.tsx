@@ -36,7 +36,7 @@ import {
 import { createStyleSheet } from 'react-native-unistyles';
 import { Feather } from '@react-native-vector-icons/feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Octicons } from '@react-native-vector-icons/octicons';
+import Octicons from 'react-native-vector-icons/Octicons';
 import * as yup from 'yup';
 import { queryClient } from '../../../App';
 import {

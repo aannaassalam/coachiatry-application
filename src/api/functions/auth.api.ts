@@ -13,7 +13,10 @@ export type LoginBody = Omit<SignupBody, 'fullName'>;
 export const signup = async (
   body: SignupBody,
 ): Promise<{ data: { token: string; user: User } }> => {
-  const res = await axiosInstance.post(endpoints.auth.signup, body);
+  const res = await axiosInstance.post(endpoints.auth.signup, {
+    ...body,
+    platform: 'app',
+  });
   return res;
 };
 
@@ -22,7 +25,10 @@ export const login = async (
 ): Promise<{
   data: { token: string; user: User };
 }> => {
-  const res = await axiosInstance.post(endpoints.auth.login, body);
+  const res = await axiosInstance.post(endpoints.auth.login, {
+    ...body,
+    platform: 'app',
+  });
   return res;
 };
 
@@ -31,6 +37,7 @@ export const googleAuth = async (
 ): Promise<{ data: { token: string; user: User } }> => {
   const res = await axiosInstance.post(endpoints.auth.googleAuth, {
     id_token: tokenId,
+    platform: 'app',
   });
   return res;
 };
@@ -56,11 +63,15 @@ export const updatePassword = async (body: { password: string }) => {
 };
 
 export const updateFCMToken = async (fcmToken: string) => {
-  const res = await axiosInstance.patch(endpoints.auth.updateFCMToken, { fcmToken });
+  const res = await axiosInstance.patch(endpoints.auth.updateFCMToken, {
+    fcmToken,
+  });
   return res.data;
-}
+};
 
 export const removeFCMToken = async (fcmToken: string) => {
-  const res = await axiosInstance.delete(endpoints.auth.deleteFCMToken, {data: {fcmToken} });
+  const res = await axiosInstance.delete(endpoints.auth.deleteFCMToken, {
+    data: { fcmToken },
+  });
   return res.data;
-}
+};

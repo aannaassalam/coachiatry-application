@@ -340,9 +340,11 @@ const SystemMessage = ({
 function CoachAiSheet({
   id,
   page,
+  children,
 }: {
   id?: string;
   page: 'general' | 'document' | 'chat';
+  children: React.ReactNode;
 }) {
   const [session] = useState(moment.now().toString());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -463,7 +465,7 @@ function CoachAiSheet({
   return (
     <View>
       <TouchableButton activeOpacity={0.8} onPress={present}>
-        <CoachAi />
+        {children}
       </TouchableButton>
       <Modal
         style={{ backgroundColor: theme.colors.white }}

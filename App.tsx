@@ -174,7 +174,6 @@ export const queryClient = new QueryClient({
       }
     },
     onError: res => {
-      console.log(res);
       const result = res as unknown as ErrorData;
       ReactNativeHapticFeedback.trigger('notificationError', hapticOptions);
       if (result?.response?.data?.message) {

@@ -23,7 +23,7 @@ import {
   renderers,
 } from 'react-native-popup-menu';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Octicons } from '@react-native-vector-icons/octicons';
+import Octicons from 'react-native-vector-icons/Octicons';
 import {
   deleteDocument,
   getAllDocuments,
@@ -148,7 +148,6 @@ const RenderItem = ({
                   onPress: () => mutate(item._id),
                 },
               ],
-              'default',
             )
           }
         >

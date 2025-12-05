@@ -81,7 +81,9 @@ export default function Search() {
         <HeaderSearchIcon />
         <Text style={styles.searchInput}>Search</Text>
       </TouchableButton>
-      <CoachAiSheet />
+      <CoachAiSheet page="general">
+        <CoachAi />
+      </CoachAiSheet>
       {/* <TouchableButton activeOpacity={0.8}>
         <CoachAi />
       </TouchableButton> */}

@@ -21,7 +21,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
     // Prevent duplicate sockets
     if (!socket) {
-      const s = io('https://backend.coachiatry.com', {
+      const s = io('http://192.168.1.10:3001', {
         query: { userId: profile._id },
         transports: ['websocket'],
         reconnection: true,

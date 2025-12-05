@@ -1,67 +1,84 @@
+import { pick, types } from '@react-native-documents/picker';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  findNodeHandle,
   FlatList,
-  GestureResponderEvent,
-  Image,
+  Keyboard,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  UIManager,
   View,
 } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import {
-  assets,
-  ChatAttachment,
-  ChatClock,
-  ChatCoach,
-  ChevronLeft,
-} from '../../assets';
-import EmojiReactor from '../../components/Chat/EmojiReactor';
-import { theme } from '../../theme';
-import { fontSize, scale, spacing, verticalScale } from '../../utils';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AppStackParamList } from '../../types/navigation';
+import { launchImageLibrary } from 'react-native-image-picker';
+
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   InfiniteData,
   useInfiniteQuery,
   useQuery,
 } from '@tanstack/react-query';
-import { getConversation } from '../../api/functions/chat.api';
-import { getMessages } from '../../api/functions/message.api';
-import { useAuth } from '../../hooks/useAuth';
-import { SmartAvatar } from '../../components/ui/SmartAvatar';
-import {
-  Message,
-  MessageStatus,
-} from '../../typescript/interface/message.interface';
-import { useSocket } from '../../hooks/useSocket';
-import { queryClient } from '../../../App';
-import { PaginatedResponse } from '../../typescript/interface/common.interface';
-import { ChatConversation } from '../../typescript/interface/chat.interface';
 import moment from 'moment';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  runOnJS,
-  LinearTransition,
   FadeInRight,
-  FadeOutRight,
   FadeInUp,
+  FadeOutRight,
+  LinearTransition,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { queryClient } from '../../../App';
+import { getConversation } from '../../api/functions/chat.api';
+import { getMessages } from '../../api/functions/message.api';
+import { ChatAttachment, ChatCoach, ChevronLeft } from '../../assets';
+import EmojiReactor from '../../components/Chat/EmojiReactor';
+import { SmartAvatar } from '../../components/ui/SmartAvatar';
+import { useAuth } from '../../hooks/useAuth';
+import { useSocket } from '../../hooks/useSocket';
+import { theme } from '../../theme';
+import { AppStackParamList } from '../../types/navigation';
+import { ChatConversation } from '../../typescript/interface/chat.interface';
+import { PaginatedResponse } from '../../typescript/interface/common.interface';
+import {
+  Message,
+  MessageReaction,
+  MessageStatus,
+} from '../../typescript/interface/message.interface';
+import {
+  fontSize,
+  isAndroid,
+  scale,
+  spacing,
+  verticalScale,
+} from '../../utils';
 // import { , scheduleOnRN } from 'react-native-worklets';
-import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
-import { hapticOptions } from '../../helpers/utils';
 import Lucide from '@react-native-vector-icons/lucide';
-import TypingIndicator from '../../components/Chat/TypingIndicator';
-import { KeyboardAvoidingView } from 'react-native';
-import { Platform } from 'react-native';
+import { KeyboardAvoidingView, Platform } from 'react-native';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { randomUUID } from 'react-native-quick-crypto';
+import AttachmentMenu from '../../components/Chat/AttachmentMenu';
+import AttachmentFullPreview from '../../components/Chat/AttachmentPreview';
+import EmojiKeyboard from '../../components/Chat/EmojiKeyboard';
+import { ImageMessage } from '../../components/Chat/ImageMessage';
+import CoachAiSheet from '../../components/CoachAi';
 import TouchableButton from '../../components/TouchableButton';
+import { uploadManager } from '../../helpers/uploadManager';
+import {
+  generateAndDisplayThumbnail,
+  hapticOptions,
+} from '../../helpers/utils';
+import { useChatUpload } from '../../hooks/useChatHook';
+import AttachmentViewer from '../../components/Chat/AttachementViewer';
+import { VideoMessage } from '../../components/Chat/VideoMessage';
+import { FileMessage } from '../../components/Chat/FileMessage';
 
 const MAX_SWIPE = 60; // how far message can move, just like WhatsApp
 const SWIPE_REPLY_THRESHOLD = 40;
@@ -75,17 +92,36 @@ type ChatRoomTaskNavigationProp = NativeStackNavigationProp<
 const RenderMessage = ({
   item,
   conversation,
+  onReply,
+  onOpenReactor,
+  getStableKey,
 }: {
   item: Message;
   conversation: ChatConversation | undefined;
+  onReply: () => void;
+  onOpenReactor: (msg: Message, pos: { x: number; y: number }) => void;
+  getStableKey: (msg: Message) => string;
 }) => {
+  const bubbleRef = useRef<any>(null);
   const { profile } = useAuth();
   const isMe = conversation?.isDeletable
     ? item.sender?._id === profile?._id
     : false;
 
+  const [attachmentIndex, setAttachmentIndex] = useState<number | null>(null);
+
   const triggerHaptics = () => {
     ReactNativeHapticFeedback.trigger('rigid', hapticOptions);
+  };
+
+  const measureAndOpen = () => {
+    const handle = findNodeHandle(bubbleRef.current);
+    if (!handle) return;
+
+    UIManager.measure(handle, (_fx, _fy, _w, _h, px, py) => {
+      // px, py = absolute coordinates on screen
+      onOpenReactor(item, { x: _w, y: py });
+    });
   };
 
   const translateX = useSharedValue(0);
@@ -95,7 +131,6 @@ const RenderMessage = ({
     .activeOffsetX(isMe ? [-ACTIVE_SWIPE_START, 0] : [0, ACTIVE_SWIPE_START])
     .failOffsetY([-10, 10])
     .onUpdate(e => {
-      // Limit movement
       if (!isMe) {
         translateX.value = Math.min(MAX_SWIPE, Math.max(0, e.translationX));
       } else {
@@ -109,16 +144,11 @@ const RenderMessage = ({
       if (crossedThreshold && !hasTriggered.value) {
         hasTriggered.value = true;
         runOnJS(triggerHaptics)();
+        runOnJS(onReply)();
       }
     })
     .onFinalize(() => {
-      // Reset for next swipe
       hasTriggered.value = false;
-
-      // const shouldTrigger =
-      //   (!isMe && translateX.value > SWIPE_REPLY_THRESHOLD) ||
-      //   (isMe && translateX.value < -SWIPE_REPLY_THRESHOLD);
-
       translateX.value = withTiming(0, { duration: 150 });
     });
 
@@ -127,10 +157,7 @@ const RenderMessage = ({
   }));
 
   const arrowStyle = useAnimatedStyle(() => {
-    const progress = Math.min(
-      1,
-      Math.abs(translateX.value) / 40, // fade + slide in early
-    );
+    const progress = Math.min(1, Math.abs(translateX.value) / 40);
 
     return {
       opacity: progress,
@@ -143,88 +170,229 @@ const RenderMessage = ({
   });
 
   return (
-    <Animated.View
-      entering={FadeInUp.springify().mass(0.5).damping(15).duration(120)} // <-- WhatsApp-like pop animation
-      layout={LinearTransition.springify()} // <-- keeps list smooth when items change
-      style={{ marginBottom: spacing(10) }}
-    >
-      <GestureDetector gesture={panGesture}>
-        <Animated.View
-          style={[
-            styles.messageRow,
-            { justifyContent: isMe ? 'flex-end' : 'flex-start' },
-            animatedStyle,
-          ]}
-        >
-          {!isMe && (
-            <Animated.View style={[styles.replyIconLeft, arrowStyle]}>
-              <Lucide name="reply" size={18} color="#666" />
-            </Animated.View>
-          )}
-
-          {isMe && (
-            <Animated.View style={[styles.replyIconRight, arrowStyle]}>
-              <Lucide name="reply" size={18} color="#666" />
-            </Animated.View>
-          )}
-          {!isMe && (
-            <SmartAvatar
-              src={
-                conversation?.isDeletable
-                  ? item.sender?.photo
-                  : 'https://coachiatry.s3.us-east-1.amazonaws.com/Logo+Mark+(1).png'
-              }
-              name={item.sender?.fullName}
-              size={scale(28)}
-              style={styles.avatar}
-            />
-          )}
-          <TouchableOpacity
-            activeOpacity={0.9}
-            // onLongPress={e => handleLongPress(e, item._id!)}
+    <>
+      <Animated.View
+        entering={FadeInUp.springify().mass(0.5).damping(15).duration(120)}
+        layout={LinearTransition.springify()}
+        style={{ marginBottom: spacing(10) }}
+      >
+        <GestureDetector gesture={panGesture}>
+          <Animated.View
             style={[
-              styles.messageBubble,
-              isMe ? styles.myMessage : styles.otherMessage,
+              styles.messageRow,
+              { justifyContent: isMe ? 'flex-end' : 'flex-start' },
+              animatedStyle,
             ]}
           >
-            <Text
+            {!isMe && (
+              <Animated.View style={[styles.replyIconLeft, arrowStyle]}>
+                <Lucide name="reply" size={18} color="#666" />
+              </Animated.View>
+            )}
+
+            {isMe && (
+              <Animated.View style={[styles.replyIconRight, arrowStyle]}>
+                <Lucide name="reply" size={18} color="#666" />
+              </Animated.View>
+            )}
+
+            {!isMe && (
+              <SmartAvatar
+                src={
+                  conversation?.isDeletable
+                    ? item.sender?.photo
+                    : 'https://coachiatry.s3.us-east-1.amazonaws.com/Logo+Mark+(1).png'
+                }
+                name={item.sender?.fullName}
+                size={scale(28)}
+                style={styles.avatar}
+              />
+            )}
+
+            <TouchableOpacity
+              ref={bubbleRef}
+              activeOpacity={0.9}
+              onLongPress={() => {
+                triggerHaptics();
+                measureAndOpen();
+              }}
               style={[
-                styles.messageText,
-                { color: isMe ? theme.colors.white : theme.colors.gray[900] },
+                styles.messageBubble,
+                isMe ? styles.myMessage : styles.otherMessage,
               ]}
             >
-              {item.content}
-            </Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </GestureDetector>
-    </Animated.View>
+              {item.replyTo?._id && (
+                <View
+                  style={[
+                    styles.replyContainer,
+                    {
+                      position: 'static',
+                      marginHorizontal: 0,
+                      borderRadius: 8,
+                      paddingLeft: spacing(4),
+                      paddingVertical: spacing(6),
+                    },
+                    !isMe && {
+                      paddingHorizontal: spacing(2),
+                      paddingVertical: spacing(4),
+                    },
+                  ]}
+                >
+                  <View style={styles.replyLine} />
+                  <View style={[styles.replyContent, { flex: 0 }]}>
+                    <Text style={styles.replyName}>
+                      {item.replyTo.sender?._id === profile?._id
+                        ? 'You'
+                        : item.replyTo.sender?.fullName}
+                    </Text>
+
+                    <Text style={styles.replyText} numberOfLines={1}>
+                      {item.replyTo?.content ||
+                        (item.replyTo?.type === 'image'
+                          ? `📷 ${item.replyTo?.files?.length} images`
+                          : item.replyTo?.type === 'video'
+                            ? `🎥 ${item.replyTo?.files?.length} videos`
+                            : `📁 ${item.replyTo?.files?.length} files`)}
+                    </Text>
+                  </View>
+                </View>
+              )}
+              {item.type === 'text' ? (
+                <Text
+                  style={[
+                    styles.messageText,
+                    {
+                      color: isMe ? theme.colors.white : theme.colors.gray[900],
+                    },
+                  ]}
+                >
+                  {item.content}
+                </Text>
+              ) : item.type === 'image' ? (
+                <ImageMessage
+                  message={item}
+                  setSelected={index => setAttachmentIndex(index)}
+                />
+              ) : item.type === 'video' ? (
+                <VideoMessage
+                  message={item}
+                  setSelected={index => setAttachmentIndex(index)}
+                />
+              ) : (
+                <FileMessage message={item} />
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+        </GestureDetector>
+
+        {/* Reaction Row */}
+        {item.reactions && item.reactions.length > 0 && (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignSelf: isMe ? 'flex-end' : 'flex-start',
+              backgroundColor: '#fff',
+              paddingHorizontal: 2,
+              paddingVertical: 2,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: '#eee',
+              gap: 4,
+              position: 'relative',
+              top: spacing(-6),
+              left: isMe ? 'auto' : spacing(40),
+            }}
+          >
+            {item.reactions.map((r, i) => (
+              <Text key={i} style={{ fontSize: 12 }}>
+                {r.emoji}
+              </Text>
+            ))}
+          </View>
+        )}
+      </Animated.View>
+      <AttachmentViewer
+        files={item.files}
+        onClose={() => setAttachmentIndex(null)}
+        open={attachmentIndex === 0 ? true : Boolean(attachmentIndex)}
+        pressedIndex={attachmentIndex ?? 0}
+      />
+    </>
+  );
+};
+
+const ReplyPreview = ({
+  message,
+  onClose,
+}: {
+  message: Message;
+  onClose: () => void;
+}) => {
+  const { profile } = useAuth();
+
+  return (
+    <View style={styles.replyContainer}>
+      <View style={styles.replyLine} />
+      <View style={styles.replyContent}>
+        <Text style={styles.replyName}>
+          {message.sender?._id === profile?._id
+            ? 'You'
+            : message.sender?.fullName}
+        </Text>
+
+        <Text style={styles.replyText} numberOfLines={1}>
+          {message?.content ||
+            (message?.type === 'image'
+              ? `📷 ${message.files?.length} images`
+              : message?.type === 'video'
+                ? `🎥 ${message.files?.length} videos`
+                : `📁 ${message?.files?.length} files`)}
+        </Text>
+      </View>
+
+      <TouchableOpacity onPress={onClose} style={styles.replyCloseBtn}>
+        <Lucide name="x" size={18} color="#6B7280" />
+      </TouchableOpacity>
+    </View>
   );
 };
 
 const ChatScreen = () => {
-  const inputRef = useRef<TextInput>(null);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [attachments, setAttachments] = useState<
+    {
+      uri: string;
+      type: 'image' | 'video' | 'file';
+      name: string;
+      size: number;
+      mimeType: string;
+    }[]
+  >([]);
+  const [reactorVisibleFor, setReactorVisibleFor] = useState<{
+    id: string;
+  } | null>(null);
   const insets = useSafeAreaInsets();
-
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const socket = useSocket();
   const { profile } = useAuth();
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRoomRef = useRef<string | null>(null);
   const navigation = useNavigation<ChatRoomTaskNavigationProp>();
   const route = useRoute<RouteProp<AppStackParamList, 'ChatRoom'>>();
   const { roomId: room } = route.params;
 
-  const [reactorVisible, setReactorVisible] = useState(false);
   const [reactorPos, setReactorPos] = useState({ top: 0, left: 0 });
   const [message, setMessage] = useState('');
-  const [selectedMsg, setSelectedMsg] = useState<string | null>(null);
   const [friendStatus, setFriendStatus] = useState<'online' | 'offline'>(
     'offline',
   );
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
 
+  const uploadMutation = useChatUpload();
+
   const messageKeyMap = useRef<Map<string, string>>(new Map());
-  const isTyping = message.length > 0;
+  const isTyping = message.length > 0 || attachments.length > 0;
 
   const getStableKey = (msg: Message) => {
     // prefer a known unique identifier (tempId or _id)
@@ -241,7 +409,7 @@ const ChatScreen = () => {
     }
 
     // otherwise create one and store it
-    const stableKey = crypto.randomUUID();
+    const stableKey = randomUUID();
     messageKeyMap.current.set(id, stableKey);
     return stableKey;
   };
@@ -298,7 +466,6 @@ const ChatScreen = () => {
   }, [room]);
 
   useEffect(() => {
-    console.log(socket);
     if (!socket) return;
     if (conversation?.type === 'group') return;
 
@@ -433,11 +600,6 @@ const ChatScreen = () => {
               msg.sender?._id !== profile?._id &&
               activeRoomRef.current !== msg.chat
             ) {
-              console.log('INCREMENTING UNREAD:', {
-                msgChat: msg.chat,
-                activeRoom: activeRoomRef.current,
-                text: msg.content,
-              });
               updatedConv.unreadCount = (updatedConv.unreadCount || 0) + 1;
             }
 
@@ -578,7 +740,7 @@ const ChatScreen = () => {
     }
   };
 
-  const handleSend = async (text: string, files: File[]) => {
+  const handleSend = async (text: string, files: typeof attachments) => {
     if (!profile?._id || !socket) return;
     if (!text && files.length === 0) return;
 
@@ -601,14 +763,10 @@ const ChatScreen = () => {
               : 'file'
           : ('text' as Message['type']),
       content: text,
-      // replyTo: replyingTo?._id,
-      files: files.map(f => ({
-        url: URL.createObjectURL(f),
-        type: f.type.startsWith('video')
-          ? 'video'
-          : f.type.startsWith('image')
-            ? 'image'
-            : 'file',
+      replyTo: replyingTo?._id,
+      files: files.map((f, i) => ({
+        url: f.uri,
+        type: f.mimeType,
         size: f.size,
         thumbnailUrl: null,
         duration: null,
@@ -622,6 +780,7 @@ const ChatScreen = () => {
       overallProgress: 0,
     };
     setMessage('');
+    setAttachments([]);
 
     // Optimistic update
     queryClient.setQueryData(['messages', room], (old: any) => {
@@ -651,142 +810,130 @@ const ChatScreen = () => {
       return { ...old, pages: newPages };
     });
 
-    // if (files.length > 0) {
-    //   const totalSize = files.reduce((a, f) => a + f.size, 0);
-    //   const progressPerFile = Array(files.length).fill(0);
+    if (files.length > 0) {
+      const totalSize = files.reduce((a, f) => a + f.size, 0);
+      const progressPerFile = Array(files.length).fill(0);
 
-    //   const uploadedFiles = await Promise.all(
-    //     files.map(async (file, i) => {
-    //       const controller = new AbortController();
-    //       uploadManager.add(tempId, controller); // ✅ register it
+      const uploadedFiles = [];
+      for await (const [i, file] of files.entries()) {
+        const controller = new AbortController();
+        uploadManager.add(tempId, controller); // ✅ register it
 
-    //       try {
-    //         const url = await uploadMutation.mutateAsync({
-    //           file,
-    //           chatId: room,
-    //           signal: controller.signal,
-    //           onProgress: pct => {
-    //             progressPerFile[i] = pct;
-    //             const uploadedBytes = files.reduce(
-    //               (sum, f, idx) =>
-    //                 sum + (progressPerFile[idx] / 100) * f.size,
-    //               0,
-    //             );
-    //             const overallPct = (uploadedBytes / totalSize) * 100;
+        try {
+          const url = await uploadMutation.mutateAsync({
+            file,
+            chatId: room,
+            signal: controller.signal,
+            onProgress: pct => {
+              progressPerFile[i] = pct;
+              const uploadedBytes = files.reduce(
+                (sum, f, idx) => sum + (progressPerFile[idx] / 100) * f.size,
+                0,
+              );
+              const overallPct = (uploadedBytes / totalSize) * 100;
 
-    //             queryClient.setQueryData(['messages', room], (old: any) => {
-    //               if (!old) return old;
+              queryClient.setQueryData(['messages', room], (old: any) => {
+                if (!old) return old;
 
-    //               return {
-    //                 ...old,
-    //                 pages: old.pages.map((page: any, pageIndex: number) => {
-    //                   // Only update the newest page (index 0)
-    //                   if (pageIndex !== 0) return page;
+                return {
+                  ...old,
+                  pages: old.pages.map((page: any, pageIndex: number) => {
+                    // Only update the newest page (index 0)
+                    if (pageIndex !== 0) return page;
 
-    //                   return {
-    //                     ...page,
-    //                     data: page.data.map((m: any) =>
-    //                       m.tempId === tempId
-    //                         ? {
-    //                             ...m,
-    //                             overallProgress:
-    //                               overallPct < 100 ? overallPct : 0, // update progress immutably
-    //                             files: m.files?.map((f: any, fi: number) =>
-    //                               i === fi ? { ...f, progress: pct } : f,
-    //                             ),
-    //                           }
-    //                         : m,
-    //                     ),
-    //                   };
-    //                 }),
-    //               };
-    //             });
-    //           },
-    //         });
+                    return {
+                      ...page,
+                      data: page.data.map((m: any) =>
+                        m.tempId === tempId
+                          ? {
+                              ...m,
+                              overallProgress:
+                                overallPct < 100 ? overallPct : 0, // update progress immutably
+                              files: m.files?.map((f: any, fi: number) =>
+                                i === fi ? { ...f, progress: pct } : f,
+                              ),
+                            }
+                          : m,
+                      ),
+                    };
+                  }),
+                };
+              });
+            },
+          });
 
-    //         return {
-    //           url,
-    //           type: file.type.startsWith('video')
-    //             ? 'video'
-    //             : file.type.startsWith('image')
-    //               ? 'image'
-    //               : 'file',
-    //           size: file.size,
-    //         };
-    //       } catch {
-    //         if (controller.signal.aborted) {
-    //           console.log('Upload cancelled:', file.name);
-    //           return null;
-    //         }
-    //         return null;
-    //       }
-    //     }),
-    //   );
+          uploadedFiles.push({
+            url,
+            type: file.mimeType,
+            size: file.size,
+          });
+        } catch {
+          if (controller.signal.aborted) {
+            console.log('Upload cancelled:', file.name);
+            return null;
+          }
+          return null;
+        }
+      }
 
-    //   uploadManager.clear(tempId); // ✅ cleanup after done
+      uploadManager.clear(tempId); // ✅ cleanup after done
 
-    //   // Final update (success or fail)
-    //   const validFiles = uploadedFiles.filter(Boolean);
-    //   queryClient.setQueryData(['messages', room], (old: any) => {
-    //     if (!old) return old;
+      // Final update (success or fail)
+      const validFiles = uploadedFiles.filter(Boolean);
+      queryClient.setQueryData(['messages', room], (old: any) => {
+        if (!old) return old;
 
-    //     return {
-    //       ...old,
-    //       pages: old.pages.map((page: any, pageIndex: number) => {
-    //         if (pageIndex !== 0) return page; // update only the newest page
+        return {
+          ...old,
+          pages: old.pages.map((page: any, pageIndex: number) => {
+            if (pageIndex !== 0) return page; // update only the newest page
 
-    //         return {
-    //           ...page,
-    //           data: page.data.map((m: any) =>
-    //             m.tempId === tempId
-    //               ? {
-    //                   ...m,
-    //                   files: validFiles,
-    //                   status: validFiles.length > 0 ? 'sent' : 'failed',
-    //                   overallProgress: 100,
-    //                   // Optional: mark each file as "uploading: false"
-    //                   ...(validFiles?.length
-    //                     ? {
-    //                         files: validFiles.map((f: any) => ({
-    //                           ...f,
-    //                           uploading: false,
-    //                           progress: 100,
-    //                         })),
-    //                       }
-    //                     : {}),
-    //                 }
-    //               : m,
-    //           ),
-    //         };
-    //       }),
-    //     };
-    //   });
+            return {
+              ...page,
+              data: page.data.map((m: any) =>
+                m.tempId === tempId
+                  ? {
+                      ...m,
+                      files: validFiles,
+                      status: validFiles.length > 0 ? 'sent' : 'failed',
+                      overallProgress: 100,
+                      // Optional: mark each file as "uploading: false"
+                      ...(validFiles?.length
+                        ? {
+                            files: validFiles.map((f: any) => ({
+                              ...f,
+                              uploading: false,
+                              progress: 100,
+                            })),
+                          }
+                        : {}),
+                    }
+                  : m,
+              ),
+            };
+          }),
+        };
+      });
 
-    //   if (validFiles.length > 0) {
-    //     socket.emit('send_message', {
-    //       ...optimisticMessage,
-    //       files: validFiles,
-    //       status: 'sent',
-    //     });
-    //   }
-    // } else {
-    socket.emit('send_message', optimisticMessage);
-    // }
+      if (validFiles.length > 0) {
+        socket.emit('send_message', {
+          ...optimisticMessage,
+          files: validFiles,
+          status: 'sent',
+        });
+      }
+    } else {
+      socket.emit('send_message', optimisticMessage);
+    }
     // setTimeout(() => {
     //   bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     // }, 50);
+    setReplyingTo(null);
   };
 
-  const handleLongPress = (event: GestureResponderEvent, id: string) => {
-    const { pageX, pageY } = event.nativeEvent;
-    setSelectedMsg(id);
-    setReactorPos({ top: pageY - 80, left: pageX });
-    setReactorVisible(true);
-  };
-
-  const handleEmojiSelect = (emoji: string) => {
-    console.log(`Reacted to ${selectedMsg} with emoji: ${emoji}`);
-    setReactorVisible(false);
+  const toggleEmojiKeyboard = () => {
+    Keyboard.dismiss();
+    setShowEmojiPicker(prev => !prev);
   };
 
   if (isLoading || isConversationLoading)
@@ -796,15 +943,174 @@ const ChatScreen = () => {
       </View>
     );
 
-  const openEmojiKeyboard = () => {
-    inputRef.current?.focus();
+  const handlePickImage = async () => {
+    const res = await launchImageLibrary({
+      mediaType: 'photo',
+      selectionLimit: 10, // 0 = unlimited
+      includeBase64: false,
+      presentationStyle: 'fullScreen', // iOS fix
+      quality: 0.6,
+    });
+
+    if (res.didCancel || !res.assets) return;
+
+    const mapped: {
+      uri: string;
+      type: 'image' | 'video' | 'file';
+      name: string;
+      size: number;
+      mimeType: string;
+    }[] = res.assets.map(asset => ({
+      uri: asset.uri!,
+      type: 'image',
+      name: asset.fileName || 'Image',
+      size: asset.fileSize || 0,
+      mimeType: asset.type || '',
+    }));
+
+    setAttachments(prev => [...prev, ...mapped]);
+  };
+
+  const handlePickVideo = async () => {
+    const res = await launchImageLibrary({
+      mediaType: 'video',
+      selectionLimit: 0, // multi videos
+      includeBase64: false,
+      presentationStyle: 'fullScreen', // iOS fix
+      videoQuality: 'medium',
+      quality: 0.6,
+    });
+
+    if (res.didCancel || !res.assets) return;
+
+    const mapped: {
+      uri: string;
+      type: 'image' | 'video' | 'file';
+      name: string;
+      size: number;
+      mimeType: string;
+    }[] = res.assets.map(asset => ({
+      uri: asset.uri!,
+      type: 'video',
+      name: asset.fileName || 'Video',
+      size: asset.fileSize || 0,
+      mimeType: asset.type || '',
+    }));
+
+    setAttachments(prev => [...prev, ...mapped]);
+  };
+
+  const handlePickDocument = async () => {
+    try {
+      const files = await pick({
+        type: [
+          types.pdf,
+          types.doc,
+          types.docx,
+          types.plainText,
+          types.ppt,
+          types.pptx,
+        ],
+        allowMultiSelection: true,
+        allowVirtualFiles: true,
+        mode: 'open',
+        presentationStyle: 'fullScreen',
+        transitionStyle: 'crossDissolve',
+        requestLongTermAccess: true,
+      });
+
+      if (!files || files.length === 0) return;
+
+      const mapped = files.map(file => {
+        const uri = (file as any).fileCopyUri ?? file.uri;
+        return {
+          uri,
+          type: 'file' as const,
+          name: file.name ?? 'Document',
+          size: file.size ?? 0,
+          mimeType: file.type || '',
+        };
+      });
+
+      setAttachments(prev => [...prev, ...mapped]);
+    } catch (error: any) {
+      if (error?.code === 'DOCUMENT_PICKER_CANCELED') return;
+      console.log('Document Picker Error:', error);
+    }
+  };
+
+  const handleAttachmentSelect = (type: 'image' | 'video' | 'file') => {
+    setShowAttachmentMenu(false);
+
+    if (type === 'image') handlePickImage();
+    if (type === 'video') handlePickVideo();
+    if (type === 'file') handlePickDocument();
+  };
+
+  const handleSelectReaction = (emoji: string) => {
+    if (!reactorVisibleFor) return;
+    const id = reactorVisibleFor.id;
+    socket?.emit('add_reaction', {
+      messageId: id,
+      userId: profile?._id,
+      emoji,
+    });
+
+    // ✅ Optimistic update for infinite query
+    queryClient.setQueryData<InfiniteData<PaginatedResponse<Message[]>>>(
+      ['messages', room],
+      old => {
+        if (!old) return old;
+
+        const updatedPages = old.pages.map(page => {
+          return {
+            ...page,
+            data: page.data.map(m => {
+              if (m._id !== id) return m;
+
+              const hasSame = m.reactions?.some(
+                (r: MessageReaction) =>
+                  r.user === profile?._id && r.emoji === emoji,
+              );
+
+              let newReactions: MessageReaction[];
+
+              if (hasSame) {
+                // toggle off
+                newReactions =
+                  m.reactions?.filter(
+                    (r: MessageReaction) =>
+                      !(r.user === profile?._id && r.emoji === emoji),
+                  ) ?? [];
+              } else {
+                // replace old reaction if exists
+                newReactions =
+                  m.reactions?.filter(
+                    (r: MessageReaction) => r.user !== profile?._id,
+                  ) ?? [];
+                newReactions.push({
+                  user: profile?._id,
+                  emoji,
+                  reactedAt: new Date().toISOString(),
+                });
+              }
+
+              return { ...m, reactions: newReactions };
+            }),
+          };
+        });
+
+        return { ...old, pages: updatedPages };
+      },
+    );
+    setReactorVisibleFor(null);
   };
 
   return (
     <KeyboardAvoidingView
       behavior="padding"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing(70) : spacing(0)}
-      style={[styles.container]}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing(70) : spacing(25)}
+      style={[styles.container, { paddingBottom: insets.bottom }]}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -826,67 +1132,91 @@ const ChatScreen = () => {
       </View>
 
       {/* Messages */}
-      <FlatList
-        data={allMessages}
-        renderItem={({ item }) => (
-          <RenderMessage item={item} conversation={conversation} />
-        )}
-        keyExtractor={item => item._id ?? item.chat}
-        showsVerticalScrollIndicator={false}
-        onEndReached={() => {
-          if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-        }}
-        onEndReachedThreshold={0.3}
-        ListHeaderComponent={
-          typingUsers.length > 0 ? <TypingIndicator /> : null
-        }
-        ListFooterComponent={
-          isFetchingNextPage ? (
-            <View
-              style={{ paddingVertical: spacing(10), alignItems: 'center' }}
-            >
-              <Text
-                style={{
-                  color: theme.colors.gray[500],
-                  fontSize: fontSize(14),
+      <View style={{ flex: 1 }}>
+        {attachments.length > 0 ? (
+          <AttachmentFullPreview
+            files={attachments}
+            onRemove={i =>
+              setAttachments(prev => prev.filter((_, idx) => idx !== i))
+            }
+            onClose={() => setAttachments([])}
+          />
+        ) : (
+          <FlatList
+            data={allMessages}
+            renderItem={({ item }) => (
+              <RenderMessage
+                item={item}
+                conversation={conversation}
+                onReply={() => setReplyingTo(item)}
+                onOpenReactor={(msg, pos) => {
+                  setReactorVisibleFor({ id: msg._id! });
+                  setReactorPos({ top: pos.y, left: pos.x }); // store coordinates
                 }}
-              >
-                Loading messages...
-              </Text>
-            </View>
-          ) : null
-        }
-        contentContainerStyle={{
-          padding: spacing(16),
-          // gap: spacing(10),
-          flexGrow: 1,
-        }}
-        inverted
-      />
-
+                getStableKey={getStableKey}
+              />
+            )}
+            keyExtractor={item => getStableKey(item)}
+            inverted
+            showsVerticalScrollIndicator={false}
+            onEndReached={() => {
+              if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+            }}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <View
+                  style={{ paddingVertical: spacing(10), alignItems: 'center' }}
+                >
+                  <Text
+                    style={{
+                      color: theme.colors.gray[500],
+                      fontSize: fontSize(14),
+                    }}
+                  >
+                    Loading messages...
+                  </Text>
+                </View>
+              ) : null
+            }
+            contentContainerStyle={{
+              padding: spacing(16),
+              flexGrow: 1,
+            }}
+          />
+        )}
+      </View>
       {/* Message Input */}
-      <View style={styles.inputBar}>
-        <View style={styles.inputWrapper}>
-          <TouchableButton onPress={openEmojiKeyboard} activeOpacity={0.7}>
+      {replyingTo && (
+        <ReplyPreview
+          message={replyingTo}
+          onClose={() => setReplyingTo(null)}
+        />
+      )}
+      <View style={{ ...styles.inputBar, borderTopWidth: replyingTo ? 0 : 1 }}>
+        <View style={[styles.inputWrapper]}>
+          <TouchableOpacity onPress={toggleEmojiKeyboard}>
             <Ionicons
               name="happy-outline"
               size={20}
               color={theme.colors.gray[500]}
             />
-          </TouchableButton>
+          </TouchableOpacity>
+
           <TextInput
-            ref={inputRef}
+            onFocus={() => setShowEmojiPicker(false)}
             placeholder="Write your message..."
             placeholderTextColor={theme.colors.gray[400]}
             style={styles.input}
             value={message}
             onChangeText={handleTyping}
-            keyboardType="default"
-            textContentType="none"
           />
-          <TouchableButton>
+          <TouchableOpacity
+            onPress={() => setShowAttachmentMenu(true)}
+            style={{ padding: spacing(5) }}
+          >
             <ChatAttachment />
-          </TouchableButton>
+          </TouchableOpacity>
         </View>
 
         {!isTyping && (
@@ -895,13 +1225,15 @@ const ChatScreen = () => {
             exiting={FadeOutRight.duration(150)}
             style={{ flexDirection: 'row', marginLeft: 10 }}
           >
-            <TouchableButton style={styles.circleButton}>
+            {/* <TouchableButton style={styles.circleButton}>
               <ChatClock />
-            </TouchableButton>
+            </TouchableButton> */}
 
-            <TouchableButton style={styles.circleButton}>
-              <ChatCoach />
-            </TouchableButton>
+            <CoachAiSheet page="chat" id={room}>
+              <View pointerEvents="none" style={styles.circleButton}>
+                <ChatCoach />
+              </View>
+            </CoachAiSheet>
           </Animated.View>
         )}
 
@@ -919,7 +1251,7 @@ const ChatScreen = () => {
                 backgroundColor: theme.colors.primary,
                 borderRadius: 10,
               }}
-              onPress={() => handleSend(message, [])}
+              onPress={() => handleSend(message, attachments)}
             >
               <Ionicons
                 name="send"
@@ -930,14 +1262,25 @@ const ChatScreen = () => {
           </Animated.View>
         )}
       </View>
-      {/* Emoji Reactor
-      {reactorVisible && (
-        <EmojiReactor
-          position={reactorPos}
-          onSelect={handleEmojiSelect}
-          onDismiss={() => setReactorVisible(false)}
-        />
-      )} */}
+
+      <EmojiKeyboard
+        visible={showEmojiPicker}
+        onSelect={(emoji: any) => {
+          setMessage(prev => prev + emoji);
+        }}
+      />
+      <AttachmentMenu
+        visible={showAttachmentMenu}
+        onClose={() => setShowAttachmentMenu(false)}
+        onSelect={handleAttachmentSelect}
+      />
+      <EmojiReactor
+        visible={!!reactorVisibleFor}
+        anchorX={reactorPos.left}
+        anchorY={reactorPos.top}
+        onSelect={handleSelectReaction}
+        onDismiss={() => setReactorVisibleFor(null)}
+      />
     </KeyboardAvoidingView>
   );
 };
@@ -1005,7 +1348,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
     padding: spacing(20),
     paddingTop: spacing(10),
-    paddingBottom: spacing(5),
+    paddingBottom: isAndroid ? spacing(20) : spacing(5),
     borderTopWidth: 1,
     borderTopColor: theme.colors.gray[200],
   },
@@ -1019,7 +1362,7 @@ const styles = StyleSheet.create({
     borderRadius: fontSize(8),
     paddingHorizontal: spacing(14),
     paddingVertical: Platform.OS === 'ios' ? spacing(6) : spacing(2),
-    height: Platform.OS === 'ios' ? verticalScale(40) : verticalScale(50),
+    height: Platform.OS === 'ios' ? verticalScale(40) : 'auto',
     shadowColor: theme.colors.gray[400],
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 1 },
@@ -1048,5 +1391,54 @@ const styles = StyleSheet.create({
     top: 10,
     right: -35,
     zIndex: 50,
+  },
+  replyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.gray[100],
+
+    // borderLeftWidth: 4,
+    // borderLeftColor: '#1C2B68', // same navy bar as screenshot
+    paddingVertical: spacing(10),
+    paddingHorizontal: spacing(12),
+    marginHorizontal: spacing(16),
+    marginBottom: spacing(4),
+    borderRadius: 12,
+    position: 'relative',
+    top: spacing(12),
+    zIndex: 999,
+    // borderWidth: 1,
+    // borderColor: theme.colors.gray[200],
+  },
+
+  replyLine: {
+    width: 3,
+    height: '100%',
+    backgroundColor: theme.colors.primary,
+
+    borderRadius: 20,
+  },
+
+  replyContent: {
+    flex: 1,
+    paddingLeft: spacing(10),
+    borderRadius: fontSize(8),
+  },
+
+  replyName: {
+    fontSize: fontSize(14),
+    fontFamily: theme.fonts.archivo.medium,
+    color: '#111827',
+    marginBottom: 2,
+  },
+
+  replyText: {
+    fontSize: fontSize(14),
+    color: '#374151',
+    fontFamily: theme.fonts.lato.regular,
+  },
+
+  replyCloseBtn: {
+    padding: 6,
   },
 });

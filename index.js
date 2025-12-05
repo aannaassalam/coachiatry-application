@@ -6,6 +6,8 @@ import { AppRegistry } from 'react-native';
 import App from './App';
 import { name as appName } from './app.json';
 import messaging from '@react-native-firebase/messaging';
+import 'react-native-get-random-values'; // adds crypto.getRandomValues
+import 'react-native-quick-base64';
 import notifee, {
   AndroidImportance,
   AndroidStyle,

@@ -1,5 +1,5 @@
 import Lucide from '@react-native-vector-icons/lucide';
-import { Octicons } from '@react-native-vector-icons/octicons';
+import Octicons from 'react-native-vector-icons/Octicons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMutation, useQuery } from '@tanstack/react-query';

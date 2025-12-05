@@ -15,12 +15,13 @@ import { Feather } from '@react-native-vector-icons/feather';
 import { Fontisto } from '@react-native-vector-icons/fontisto';
 import { Foundation } from '@react-native-vector-icons/foundation';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Octicons } from '@react-native-vector-icons/octicons';
+import Octicons from 'react-native-vector-icons/Octicons';
 
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMutation, useQueries, useQuery } from '@tanstack/react-query';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import moment from 'moment';
 import { Controller, useForm } from 'react-hook-form';
 import { SheetManager } from 'react-native-actions-sheet';
@@ -39,6 +40,7 @@ import {
 import {
   createDocument,
   createDocumentByCoach,
+  deleteDocument,
   editDocument,
   getDocument,
 } from '../../api/functions/document.api';
@@ -47,12 +49,20 @@ import TouchableButton from '../../components/TouchableButton';
 import AppBadge from '../../components/ui/AppBadge';
 import AppButton from '../../components/ui/AppButton';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
-import { onError } from '../../helpers/utils';
+import { hapticOptions, onError } from '../../helpers/utils';
 import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
 import { fontSize, scale, spacing } from '../../utils';
 import Lucide from '@react-native-vector-icons/lucide';
 import { queryClient } from '../../../App';
+import CoachAiSheet from '../../components/CoachAi';
+import {
+  Menu,
+  MenuOption,
+  MenuOptions,
+  MenuTrigger,
+  renderers,
+} from 'react-native-popup-menu';
 
 const schema = yup.object().shape({
   title: yup.string().required(),
@@ -166,6 +176,21 @@ export default function DocumentEditor() {
     },
   });
 
+  const { mutate: deleteDoc } = useMutation({
+    mutationFn: deleteDocument,
+    onMutate: () => {
+      showMessage({
+        type: 'info',
+        message: 'Deleting...',
+        description: 'Deleting document, Please wait...',
+      });
+    },
+    onSuccess: navigation.goBack,
+    meta: {
+      invalidateQueries: ['documents'],
+    },
+  });
+
   const form = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -232,6 +257,8 @@ export default function DocumentEditor() {
     }
   };
 
+  console.log(data?.user._id, profile?._id);
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -264,14 +291,88 @@ export default function DocumentEditor() {
                 />
               </TouchableButton>
             )}
-            <TouchableButton style={styles.iconButton}>
-              <Ionicons
-                name="ellipsis-horizontal"
-                size={fontSize(22)}
-                color={theme.colors.gray[600]}
-              />
-              {/* <Ionicons name="add-circle" size={30} color="#4F8EF7" /> */}
-            </TouchableButton>
+            {data?.user._id === profile?._id || profile?.role === 'coach' ? (
+              <Menu
+                renderer={renderers.Popover}
+                onOpen={() =>
+                  ReactNativeHapticFeedback.trigger(
+                    'impactMedium',
+                    hapticOptions,
+                  )
+                }
+                rendererProps={{
+                  placement: 'bottom',
+                  // anchorStyle: {
+                  //   marginLeft: width * 0.85,
+                  //   marginTop: -30,
+                  // },
+                }}
+              >
+                <MenuTrigger
+                  customStyles={{
+                    TriggerTouchableComponent: TouchableButton,
+                    triggerTouchable: {
+                      activeOpacity: 0.5,
+                    },
+                  }}
+                  style={styles.iconButton}
+                >
+                  <Ionicons
+                    name="ellipsis-horizontal"
+                    size={fontSize(22)}
+                    color={theme.colors.gray[600]}
+                  />
+                </MenuTrigger>
+                <MenuOptions
+                  customStyles={{
+                    optionsContainer: {
+                      width: scale(100),
+                      borderRadius: 10,
+                      paddingVertical: scale(5),
+                    },
+                  }}
+                >
+                  <MenuOption
+                    style={styles.option}
+                    onSelect={() => setLocalMode('edit')}
+                  >
+                    <Lucide
+                      name="pencil"
+                      color={theme.colors.gray[900]}
+                      size={fontSize(16)}
+                    />
+                    <Text style={styles.optionText}>Edit</Text>
+                  </MenuOption>
+                  <MenuOption
+                    value={1}
+                    style={styles.option}
+                    onSelect={() =>
+                      Alert.alert(
+                        'Delete Document',
+                        'Are you sure you want to delete this document?',
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Delete',
+                            style: 'destructive',
+                            onPress: () => deleteDoc(data?._id as string),
+                          },
+                        ],
+                      )
+                    }
+                  >
+                    <Octicons
+                      name="trash"
+                      color="#ef4444"
+                      size={fontSize(16)}
+                    />
+                    <Text style={[styles.optionText, { color: '#ef4444' }]}>
+                      Delete
+                    </Text>
+                  </MenuOption>
+                </MenuOptions>
+              </Menu>
+            ) : null}
           </View>
         </View>
 
@@ -507,11 +608,18 @@ export default function DocumentEditor() {
                     disabled={isEditing}
                   />
                 )}
-                <AppButton
-                  text="Coach AI"
-                  leftIcon={<WhiteCoachAi />}
-                  style={{ backgroundColor: '#37405d' }}
-                />
+                {localMode !== 'add' && (
+                  <CoachAiSheet page="document" id={documentId}>
+                    <View pointerEvents="none">
+                      <AppButton
+                        text="Coach AI"
+                        leftIcon={<WhiteCoachAi />}
+                        style={{ backgroundColor: '#37405d' }}
+                        // disabled
+                      />
+                    </View>
+                  </CoachAiSheet>
+                )}
                 {localMode !== 'view' ? (
                   <AppButton
                     text="Save Changes"
@@ -782,5 +890,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  option: {
+    flexDirection: 'row',
+    gap: spacing(10),
+    paddingVertical: scale(5),
+    paddingHorizontal: scale(10),
+  },
+  optionText: {
+    fontSize: fontSize(16),
   },
 });
