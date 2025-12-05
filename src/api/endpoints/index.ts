@@ -1,6 +1,6 @@
 export const baseUrl = process.env.NEXT_APP_BASE_URL;
-// export const baseUrlApi = `https://backend.coachiatry.com/api/v1`;
-export const baseUrlApi = `http://192.168.1.10:3001/api/v1`;
+export const baseUrlApi = `https://backend.coachiatry.com/api/v1`;
+// export const baseUrlApi = `http://192.168.1.10:3001/api/v1`;
 export const baseUrlMedia = process.env.NEXT_APP_BASE_URL;
 
 // api doc => https://militarymoves-admin.dedicateddevelopers.us/apidoc
