@@ -7,6 +7,7 @@ import { UploadProgressOverlay } from './UploadOverlay';
 import { FontAwesome5 } from '@react-native-vector-icons/fontawesome5';
 import { fontSize, spacing } from '../../utils';
 import { theme } from '../../theme';
+import { TouchableOpacity } from 'react-native';
 
 const VideoLoaderWrapper = ({
   file,
@@ -28,7 +29,7 @@ const VideoLoaderWrapper = ({
   const [isLoading, setIsLoading] = useState(true); // 👈 Local state for loading
 
   return (
-    <TouchableButton
+    <TouchableOpacity
       key={file._id || index}
       style={[
         styles.imageWrapper,
@@ -93,7 +94,7 @@ const VideoLoaderWrapper = ({
           />
         </View>
       ) : null}
-    </TouchableButton>
+    </TouchableOpacity>
   );
 };
 
@@ -175,8 +176,8 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 4,
-    maxWidth: 300,
+    justifyContent: 'space-between',
+    width: '100%',
   },
   single: {
     minWidth: 200,
@@ -185,13 +186,21 @@ const styles = StyleSheet.create({
   imageWrapper: {
     width: '48%',
     aspectRatio: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: spacing(8),
+  },
+  imageContainer: {
+    width: '100%',
+    height: '100%',
     borderRadius: 10,
     overflow: 'hidden',
-    marginBottom: 4,
   },
+
   image: {
     width: '100%',
     height: '100%',
+    resizeMode: 'cover',
   },
   moreOverlay: {
     ...StyleSheet.absoluteFillObject,

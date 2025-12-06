@@ -32,7 +32,7 @@ const ImageLoaderWrapper = ({
   const [isLoading, setIsLoading] = useState(true); // 👈 Local state for loading
 
   return (
-    <TouchableButton
+    <TouchableOpacity
       key={file._id || index}
       style={[
         styles.imageWrapper,
@@ -85,7 +85,7 @@ const ImageLoaderWrapper = ({
           }
         />
       )}
-    </TouchableButton>
+    </TouchableOpacity>
   );
 };
 
@@ -164,36 +164,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 5, // Make sure it's above the image, but below the UploadOverlay (zIndex 10)
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing(4),
-    maxWidth: scale(300),
-  },
+
   single: {
     minWidth: scale(200),
     maxWidth: scale(300),
   },
+
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
   imageWrapper: {
     width: '48%',
     aspectRatio: 1,
-    flex: 0,
-    borderRadius: 10,
+    borderRadius: 12,
     overflow: 'hidden',
-    marginBottom: spacing(4),
+    marginBottom: spacing(8),
   },
   imageContainer: {
     width: '100%',
-    aspectRatio: 1,
     height: '100%',
     borderRadius: 10,
     overflow: 'hidden',
   },
+
   image: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
+
   moreOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.6)',
