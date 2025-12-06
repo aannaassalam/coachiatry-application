@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Allow access to internal storage in app-specific directory -->
+    <files-path name="files" path="." />
+
+    <!-- Allow access to external storage: /storage/emulated/0/Android/data/... -->
+    <external-files-path name="external_files" path="." />
+
+    <!-- Optional but useful -->
+    <cache-path name="cache" path="." />
+    <external-path name="external" path="." />
+</paths>
