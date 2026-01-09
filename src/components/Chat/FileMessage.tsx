@@ -1,29 +1,16 @@
-import React, { useMemo, useState } from 'react';
-import {
-  View,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  Text,
-  ActivityIndicator,
-  Alert,
-  Pressable,
-} from 'react-native';
-import {
-  CircularProgress,
-  getFileIcon,
-  UploadProgressOverlay,
-} from './UploadOverlay';
-import { Message } from '../../typescript/interface/message.interface';
-import TouchableButton from '../TouchableButton';
 import { FontAwesome } from '@react-native-vector-icons/fontawesome';
-import { filesize } from 'filesize'; // Library recommended for file size formatting
-import { useFileCache } from '../../hooks/useFileCache';
-import RNFS from 'react-native-fs';
-import { open as openFileViewer } from 'react-native-file-viewer-turbo';
 import { Lucide } from '@react-native-vector-icons/lucide';
-import { fontSize, scale, spacing } from '../../utils';
+import { filesize } from 'filesize'; // Library recommended for file size formatting
+import React, { useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { open as openFileViewer } from 'react-native-file-viewer-turbo';
+import RNFS from 'react-native-fs';
+import { useFileCache } from '../../hooks/useFileCache';
 import { theme } from '../../theme';
+import { Message } from '../../typescript/interface/message.interface';
+import { fontSize, scale, spacing } from '../../utils';
+import TouchableButton from '../TouchableButton';
+import { CircularProgress, getFileIcon } from './UploadOverlay';
 
 const FileCardLayout = ({
   file,
@@ -155,7 +142,6 @@ const FileLoaderWrapper = ({
 
   const openLocalFile = async () => {
     try {
-      console.log(localFilePath);
       await openFileViewer(localFilePath);
     } catch (error) {
       Alert.alert(`Could not open file: ${(error as any)?.message}`);

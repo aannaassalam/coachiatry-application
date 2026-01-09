@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: theme.colors.white,
     fontFamily: theme.fonts.archivo.medium,
-    fontSize: fontSize(15),
+    fontSize: fontSize(12),
   },
   outlineButton: {
     backgroundColor: theme.colors.white,

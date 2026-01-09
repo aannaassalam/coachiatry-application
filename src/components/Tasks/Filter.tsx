@@ -52,6 +52,7 @@ type InternalSheetState = {
   tempFilter: TempFilter;
   setTempFilter: (f: TempFilter) => void;
   commitFilter: (final: Filter, editIndex?: number | null) => void;
+  removeFilter:(filter:Filter[])=>void
 };
 
 const TempFilterContext = createContext<InternalSheetState | null>(null);
@@ -65,7 +66,7 @@ export const useTempFilter = () => {
 
 const InitialFilterScreen = () => {
   const router = useSheetRouter('filter-sheet');
-  const { localFilters, setTempFilter, setLocalFilters } = useTempFilter();
+  const { localFilters, setTempFilter, setLocalFilters,removeFilter:removeParentFilter } = useTempFilter();
 
   const [
     { data: categories = [], isLoading: isCategoryLoading },
@@ -78,7 +79,9 @@ const InitialFilterScreen = () => {
   });
 
   const removeFilter = (id: number) => {
-    setLocalFilters(prev => prev.filter((_, idx) => idx !== id));
+    const filter=localFilters.filter((_, idx) => idx !== id);
+    setLocalFilters(filter);
+    removeParentFilter(filter)
     // we don't call parent setFilters here — commit happens on selection,
     // but you can also expose a commitNow() that calls payload.setFilters if needed
   };
@@ -186,7 +189,7 @@ const InitialFilterScreen = () => {
                               ? categories.find(
                                   _c => _c._id === filter.selectedValue,
                                 )?.title
-                              : 'Value'}
+                              : filter.selectedValue??'Value'}
                         </Text>
                         <Feather
                           name="chevron-down"
@@ -394,7 +397,7 @@ const SelectValueFilterScreen = () => {
     }
 
     if (key === 'dueDate') {
-      const options = ['Today', 'This week', 'This month'];
+      const options = ['today', 'this week', 'this month'];
       return options.map(o => (
         <Pressable key={o} style={styles.box} onPress={() => onPickValue(o)}>
           <Text style={styles.boxText}>{o}</Text>
@@ -477,6 +480,10 @@ export const FilterSheet = (props: SheetProps<'filter-sheet'>) => {
     [parentSetFilters],
   );
 
+  const removeFilter = useCallback((filter:any) => {
+    if (parentSetFilters) parentSetFilters(filter)
+  },[parentSetFilters])
+
   const ctx = useMemo<InternalSheetState>(
     () => ({
       localFilters,
@@ -484,8 +491,9 @@ export const FilterSheet = (props: SheetProps<'filter-sheet'>) => {
       tempFilter,
       setTempFilter,
       commitFilter,
+      removeFilter
     }),
-    [commitFilter, localFilters, tempFilter],
+    [commitFilter, localFilters, tempFilter, removeFilter],
   );
 
   return (
@@ -504,7 +512,6 @@ export const FilterSheet = (props: SheetProps<'filter-sheet'>) => {
           borderTopRightRadius: 30,
           backgroundColor: '#f9f9f9',
         }}
-        // keep props.payload untouched — it's for initial data & returning value
       />
     </TempFilterContext.Provider>
   );
@@ -593,6 +600,7 @@ const styles = createStyleSheet({
     fontFamily: theme.fonts.lato.regular,
     color: theme.colors.black,
     fontSize: fontSize(14),
+    textTransform:'capitalize'
   },
   whereContainer: {
     padding: spacing(14),
@@ -629,7 +637,7 @@ const styles = createStyleSheet({
     fontFamily: theme.fonts.lato.regular,
     fontSize: fontSize(13),
     color: theme.colors.black,
-    // textTransform: 'capitalize',
+    textTransform: 'capitalize',
   },
   footerContainer: {
     // paddingBottom: Platform.OS === 'ios' ? spacing(45) : spacing(20),

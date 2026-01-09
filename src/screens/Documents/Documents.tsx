@@ -84,6 +84,7 @@ const RenderItem = ({
           marginTop: -30,
         },
       }}
+      style={{marginBottom: spacing(16),}}
     >
       <MenuTrigger
         triggerOnLongPress
@@ -256,13 +257,13 @@ export default function Documents() {
       >
         <AppTabs tabs={TABS} RenderContent={RenderContent} />
       </View>
-      <TouchableButton
+      <TouchableOpacity
         activeOpacity={0.8}
         style={styles.addBtn}
         onPress={() => navigation.navigate('DocumentEditor', { mode: 'add' })}
       >
         <Ionicons name="add" size={25} color={theme.colors.white} />
-      </TouchableButton>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -278,7 +279,6 @@ const styles = StyleSheet.create({
     borderRadius: fontSize(12),
     paddingVertical: spacing(14),
     paddingHorizontal: spacing(12),
-    marginBottom: spacing(16),
     shadowColor: theme.colors.gray[400],
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.07,
@@ -333,6 +333,7 @@ const styles = StyleSheet.create({
   },
   option: {
     flexDirection: 'row',
+    alignItems:'center',
     gap: spacing(10),
     paddingVertical: scale(5),
     paddingHorizontal: scale(10),

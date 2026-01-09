@@ -1,21 +1,26 @@
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Lucide } from '@react-native-vector-icons/lucide';
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Dimensions,
   Image,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
 import Video from 'react-native-video';
-
+import RNFS from 'react-native-fs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../../theme';
 import { Message } from '../../typescript/interface/message.interface';
 import { fontSize, spacing } from '../../utils';
 import TouchableButton from '../TouchableButton';
+import Share from 'react-native-share';
 
 interface Props {
   files: Required<Message['files']>;
@@ -34,6 +39,7 @@ const AttachmentViewer: React.FC<Props> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     setActiveIndex(pressedIndex);
@@ -48,6 +54,43 @@ const AttachmentViewer: React.FC<Props> = ({
   }
 
   const active = files[safeIndex];
+
+  const downloadActiveFile = async () => {
+    try {
+      setDownloading(true);
+
+      const fileUrl = decodeURIComponent(active.url);
+      const fileName = fileUrl.split('/').pop() ?? `file-${Date.now()}`;
+
+      // Download folder (Android + iOS compatible)
+      const destPath = `${Platform.OS === 'ios' ? RNFS.DocumentDirectoryPath : RNFS.DownloadDirectoryPath}/${fileName}`;
+
+      const result = await RNFS.downloadFile({
+        fromUrl: fileUrl,
+        toFile: destPath,
+        progressDivider: 5,
+      }).promise;
+
+      if (result.statusCode === 200) {
+        if (Platform.OS === 'ios') {
+          await Share.open({
+            url: 'file://' + destPath,
+            // type: getMimeType(fileName), // optional, but helpful
+            failOnCancel: false,
+          });
+        }
+        Alert.alert('Download Complete', `Saved to Downloads:\n${fileName}`);
+      } else {
+        console.log(result);
+        Alert.alert('Download Failed', 'Something went wrong.');
+      }
+    } catch (e) {
+      Alert.alert('Error', (e as any)?.message || 'Could not download file.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   if (!active) return null;
 
   return (
@@ -59,10 +102,40 @@ const AttachmentViewer: React.FC<Props> = ({
           paddingBottom: insets.bottom,
         }}
       >
+        {downloading && (
+          <View
+            style={{
+              ...StyleSheet.absoluteFill,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+            }}
+          >
+            <ActivityIndicator size="large" />
+          </View>
+        )}
+
         {/* CLOSE BUTTON */}
-        <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-          <Ionicons name="close" size={26} color="#444" />
-        </TouchableOpacity>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: spacing(4),
+          }}
+        >
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={downloadActiveFile}
+          >
+            <Lucide name="download" size={fontSize(24)} color="#444" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+            <Ionicons name="close" size={26} color="#444" />
+          </TouchableOpacity>
+        </View>
         {/* MAIN LARGE PREVIEW */}
         <View style={styles.mainPreview}>
           {active.type === 'image' && (
@@ -143,7 +216,7 @@ const styles = StyleSheet.create({
   },
 
   closeBtn: {
-    alignSelf: 'flex-end',
+    // alignSelf: 'flex-end',
     padding: spacing(10),
   },
 

@@ -72,7 +72,6 @@ import CoachAiSheet from '../../components/CoachAi';
 import TouchableButton from '../../components/TouchableButton';
 import { uploadManager } from '../../helpers/uploadManager';
 import {
-  generateAndDisplayThumbnail,
   hapticOptions,
 } from '../../helpers/utils';
 import { useChatUpload } from '../../hooks/useChatHook';
@@ -94,13 +93,11 @@ const RenderMessage = ({
   conversation,
   onReply,
   onOpenReactor,
-  getStableKey,
 }: {
   item: Message;
   conversation: ChatConversation | undefined;
   onReply: () => void;
   onOpenReactor: (msg: Message, pos: { x: number; y: number }) => void;
-  getStableKey: (msg: Message) => string;
 }) => {
   const bubbleRef = useRef<any>(null);
   const { profile } = useAuth();
@@ -1116,9 +1113,12 @@ const ChatScreen = () => {
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableButton
+          style={{ paddingVertical: spacing(4), paddingHorizontal: spacing(8) }}
+          onPress={() => navigation.goBack()}
+        >
           <ChevronLeft />
-        </TouchableOpacity>
+        </TouchableButton>
         <View style={styles.userInfo}>
           <SmartAvatar
             src={details.photo}
@@ -1155,7 +1155,6 @@ const ChatScreen = () => {
                   setReactorVisibleFor({ id: msg._id! });
                   setReactorPos({ top: pos.y, left: pos.x }); // store coordinates
                 }}
-                getStableKey={getStableKey}
               />
             )}
             keyExtractor={item => getStableKey(item)}

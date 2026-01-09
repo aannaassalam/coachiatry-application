@@ -330,6 +330,7 @@ const styles = createStyleSheet({
   option: {
     flexDirection: 'row',
     gap: spacing(10),
+    alignItems:'center',
     paddingVertical: scale(5),
     paddingHorizontal: scale(10),
   },

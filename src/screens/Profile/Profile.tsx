@@ -5,6 +5,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -22,7 +23,7 @@ import { useMutation, useQueries } from '@tanstack/react-query';
 import { useState } from 'react';
 import { showMessage } from 'react-native-flash-message';
 import { KeyboardAwareFlatList } from 'react-native-keyboard-aware-scroll-view';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import { queryClient } from '../../../App';
@@ -147,13 +148,23 @@ export default function Profile() {
 
   const signOut = async () => {
     try {
-      queryClient.removeQueries();
+      queryClient.clear()
       const token = await getToken();
-      await removeFCMToken(token as string);
+    if (token) {
+      await removeFCMToken(token);
+    }
       await GoogleSignin.signOut();
-      setAuthData({ token: '', user: null });
-      await removeToken();
-      await messaging().deleteToken();
+    await messaging().deleteToken();
+    await removeToken();
+
+    setAuthData({ token: '', user: null });
+      // queryClient.removeQueries();
+      // const token = await getToken();
+      // await removeFCMToken(token as string);
+      // await GoogleSignin.signOut();
+      // setAuthData({ token: '', user: null });
+      // await removeToken();
+      // await messaging().deleteToken();
     } catch (err) {
       console.log(err);
     }
@@ -182,7 +193,8 @@ export default function Profile() {
   });
 
   return (
-    <View style={styles.container}>
+    // <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.container}>
       <View style={{ backgroundColor: theme.colors.white }}>
         {/* Header */}
         <View style={styles.header}>
@@ -428,7 +440,8 @@ export default function Profile() {
           )}
         </View>
       </Modal>
-    </View>
+    </ScrollView>
+    // </SafeAreaView>
   );
 }
 

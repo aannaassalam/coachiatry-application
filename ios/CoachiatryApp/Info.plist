@@ -22,8 +22,22 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.149359341698-e52por6ce4cdktcfsjm8026e7fpuuldm</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>google</string>
+		<string>com.googleusercontent.apps.149359341698-e52por6ce4cdktcfsjm8026e7fpuuldm</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -33,14 +47,14 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>RCTNewArchEnabled</key>
-	<true/>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app requires access to your photo library</string>
 	<key>NSCameraUsageDescription</key>
 	<string>This app requires access to your camera</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>This app needs to save photos</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app requires access to your photo library</string>
+	<key>RCTNewArchEnabled</key>
+	<true/>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Archivo-Black.ttf</string>
@@ -111,19 +125,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>CFBundleURLTypes</key>
-<array>
-  <dict>
-    <key>CFBundleURLSchemes</key>
-    <array>
-      <string>com.googleusercontent.apps.149359341698-e52por6ce4cdktcfsjm8026e7fpuuldm</string>
-    </array>
-  </dict>
-</array>
-<key>LSApplicationQueriesSchemes</key>
-<array>
-  <string>google</string>
-  <string>com.googleusercontent.apps.149359341698-e52por6ce4cdktcfsjm8026e7fpuuldm</string>
-</array>
 </dict>
 </plist>

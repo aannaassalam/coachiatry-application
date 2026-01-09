@@ -63,6 +63,7 @@ import {
   MenuTrigger,
   renderers,
 } from 'react-native-popup-menu';
+import Share from 'react-native-share';
 
 const schema = yup.object().shape({
   title: yup.string().required(),
@@ -257,7 +258,15 @@ export default function DocumentEditor() {
     }
   };
 
-  console.log(data?.user._id, profile?._id);
+  const shareDocument = () => {
+    Share.open({
+      saveToFiles: false,
+      failOnCancel: false,
+      title: "Share Document",
+      message: "Hi,I am sharing my document titled '" + data?.title + "' with you on Coachiatry. Click the link to access he document.\n",
+      url:`https://coachiatry.vercel.app/share/${data?.shareId}`
+    }).catch(err=>console.log(err))
+  }
 
   return (
     <KeyboardAvoidingView
@@ -283,6 +292,7 @@ export default function DocumentEditor() {
             {localMode === 'view' && (
               <TouchableButton
                 style={{ ...styles.iconButton, marginLeft: 'auto' }}
+                onPress={shareDocument}
               >
                 <Ionicons
                   name="arrow-redo"
@@ -590,7 +600,7 @@ export default function DocumentEditor() {
                       <Lucide
                         name="pencil"
                         color={theme.colors.primary}
-                        size={16}
+                        size={14}
                       />
                     }
                     variant="secondary-outline"
@@ -627,7 +637,7 @@ export default function DocumentEditor() {
                       <Feather
                         name="save"
                         color={theme.colors.white}
-                        size={18}
+                        size={16}
                       />
                     }
                     onPress={form.handleSubmit(onSubmit, onError)}
@@ -639,7 +649,7 @@ export default function DocumentEditor() {
                     leftIcon={
                       <Feather
                         name="download"
-                        size={18}
+                        size={16}
                         color={theme.colors.white}
                       />
                     }
@@ -668,7 +678,7 @@ const toolbarIconMap = {
     <Feather name="italic" size={fontSize(18)} color={tintColor} />
   ),
   [actions.setUnderline]: ({ tintColor }: any) => (
-    <Feather name="underline" size={fontSize(18)} color={tintColor} />
+    <Fontisto name="underline" size={fontSize(16)} color={tintColor} />
   ),
 
   [actions.setStrikethrough]: ({ tintColor }: any) => (
@@ -851,7 +861,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
     gap: spacing(10),
-    marginTop: spacing(20),
+    marginTop: spacing(10),
   },
   coachButton: {
     flexDirection: 'row',
@@ -893,6 +903,7 @@ const styles = StyleSheet.create({
   },
   option: {
     flexDirection: 'row',
+    alignItems:'center',
     gap: spacing(10),
     paddingVertical: scale(5),
     paddingHorizontal: scale(10),

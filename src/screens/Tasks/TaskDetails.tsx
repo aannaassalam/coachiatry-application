@@ -530,6 +530,7 @@ const styles = createStyleSheet({
   },
   option: {
     flexDirection: 'row',
+    alignItems:'center',
     gap: spacing(10),
     paddingVertical: scale(5),
     paddingHorizontal: scale(10),

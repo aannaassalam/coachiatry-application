@@ -10,32 +10,32 @@ function getDueDateQuery(value: string) {
   switch (value) {
     case 'today':
       return {
-        $gte: today.toDate(),
-        $lte: today.endOf('day').toDate(),
+        gte: today.toDate(),
+        lte: today.endOf('day').toDate(),
       };
 
     case 'yesterday':
       return {
-        $gte: today.clone().subtract(1, 'day').startOf('day').toDate(),
-        $lte: today.clone().subtract(1, 'day').endOf('day').toDate(),
+        gte: today.clone().subtract(1, 'day').startOf('day').toDate(),
+        lte: today.clone().subtract(1, 'day').endOf('day').toDate(),
       };
 
     case 'tomorrow':
       return {
-        $gte: today.clone().add(1, 'day').startOf('day').toDate(),
-        $lte: today.clone().add(1, 'day').endOf('day').toDate(),
+        gte: today.clone().add(1, 'day').startOf('day').toDate(),
+        lte: today.clone().add(1, 'day').endOf('day').toDate(),
       };
 
-    case 'thisWeek':
+    case 'this week':
       return {
-        $gte: today.clone().startOf('week').toDate(),
-        $lte: today.clone().endOf('week').toDate(),
+        gte: today.clone().startOf('week').toDate(),
+        lte: today.clone().endOf('week').toDate(),
       };
 
-    case 'nextWeek':
+    case 'this month':
       return {
-        $gte: today.clone().add(1, 'week').startOf('week').toDate(),
-        $lte: today.clone().add(1, 'week').endOf('week').toDate(),
+        gte: today.clone().startOf('month').toDate(),
+        lte: today.clone().endOf('month').toDate(),
       };
 
     default:
@@ -46,7 +46,7 @@ function getDueDateQuery(value: string) {
 function buildFilterQuery(values: Filter[]): Record<string, any> {
   const query: Record<string, any> = {};
 
-  values.forEach(filter => {
+  values.forEach((filter) => {
     if (
       !filter.selectedKey ||
       !filter.selectedOperator ||
@@ -57,25 +57,23 @@ function buildFilterQuery(values: Filter[]): Record<string, any> {
     const key = filter.selectedKey;
     const value = filter.selectedValue;
 
-    if (key === 'dueDate') {
+    if (key === "dueDate") {
       const dateRange = getDueDateQuery(value);
       if (!dateRange) return;
 
-      if (filter.selectedOperator === 'is') {
+      if (filter.selectedOperator === "is") {
         query.dueDate = dateRange;
-      } else if (filter.selectedOperator === 'is not') {
+      } else if (filter.selectedOperator === "is not") {
         // exclude that range -> tasks before OR after
-        query.$or = [
-          { dueDate: { $lt: dateRange.$gte } },
-          { dueDate: { $gt: dateRange.$lte } },
-        ];
+        query.dueDate = { not: dateRange };
       }
     } else {
       // Normal fields (status, category, priority)
-      if (filter.selectedOperator === 'is') {
+      console.log(filter.selectedOperator)
+      if (filter.selectedOperator === "is") {
         query[key] = value;
-      } else if (filter.selectedOperator === 'is not') {
-        query[key] = { $ne: value };
+      } else if (filter.selectedOperator === "isNot") {
+        query[key] = { ne: value };
       }
     }
   });
@@ -93,16 +91,18 @@ export const getAllTasks = async ({
   filter?: Filter[];
   startDate?: string;
   endDate?: string;
-}): Promise<Task[]> => {
+  }): Promise<Task[]> => {
+  console.log("query")
   const filterQuery = buildFilterQuery(filter);
-
   const res = await axiosInstance.get(endpoints.task.getAll, {
     params: {
       populate: 'category,status,assignedTo',
       sort,
       ...filterQuery,
       dueDate:
-        startDate && endDate ? { gte: startDate, lte: endDate } : undefined,
+        startDate && endDate
+          ? { gte: startDate, lte: endDate }
+          : filterQuery.dueDate
     },
   });
   return res.data;

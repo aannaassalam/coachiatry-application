@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 
 export const useFileCache = (fileName: string) => {
-  const localFilePath = `${Platform.OS === 'ios' ? RNFS.DocumentDirectoryPath : RNFS.ExternalDirectoryPath}/${fileName}`;
+  const localFilePath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
   const [fileExists, setFileExists] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 

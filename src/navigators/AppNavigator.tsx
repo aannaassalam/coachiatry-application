@@ -15,6 +15,7 @@ import { AppStackParamList } from '../types/navigation';
 import BottomNavigator from './BottomNavigator';
 import { navigate, navigationRef } from './navigationService';
 import notifee, { EventType } from '@notifee/react-native';
+import CoachChatScreen from '../screens/Chats/CoachChatRoom';
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -88,6 +89,7 @@ const AppNavigator = () => {
         <Stack.Screen name="EditProfile" component={EditProfile} />
         <Stack.Screen name="ClientDetails" component={ClientDetails} />
         <Stack.Screen name="ChatRoom" component={ChatScreen} />
+        <Stack.Screen name="CoachChatRoom" component={CoachChatScreen} />
       </Stack.Navigator>
     </View>
   );

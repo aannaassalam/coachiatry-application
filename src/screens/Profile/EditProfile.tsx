@@ -115,7 +115,6 @@ const EditProfile = () => {
             onPress: () => mutatePassword({ password }),
           },
         ],
-        'default',
       );
     }
   };
@@ -128,7 +127,8 @@ const EditProfile = () => {
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableButton onPress={() => navigation.goBack()}>
+        <TouchableButton style={{paddingHorizontal: spacing(5),
+              paddingVertical: spacing(3)}} onPress={() => navigation.goBack()}>
           <ChevronLeft />
         </TouchableButton>
         <Text style={styles.headerTitle}>Edit Profile</Text>
@@ -177,6 +177,7 @@ const EditProfile = () => {
             placeholder="Enter email ID"
             keyboardType="email-address"
             name="email"
+            disabled
             //   value={email}
             //   onChangeText={setEmail}
           />

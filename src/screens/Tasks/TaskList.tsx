@@ -4,7 +4,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useIsFetching } from '@tanstack/react-query';
 import moment from 'moment';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { createStyleSheet } from 'react-native-unistyles';
 import Filter from '../../components/Tasks/Filter';
 import ListView from '../../components/Tasks/ListVIew';
@@ -34,8 +34,8 @@ function TaskList() {
     }[]
   >([]);
   const [dates, setDates] = useState({
-    start: moment().startOf('week').toISOString(),
-    end: moment().endOf('week').toISOString(),
+    start: moment().startOf('isoWeek').toISOString(),
+    end: moment().endOf('isoWeek').toISOString(),
   });
 
   const validatedFilters = sanitizeFilters(filters);
@@ -82,7 +82,7 @@ function TaskList() {
         </View>
         <View style={styles.buttonContainer}>
           <Filter filters={filters} setFilters={setFilters} />
-          <Sort sort={sort} setSort={setSort} />
+          {tab === 'list' && <Sort sort={sort} setSort={setSort} />}
         </View>
       </View>
       {tab === 'week' && (
@@ -104,13 +104,13 @@ function TaskList() {
       ) : (
         <WeekView dates={dates} filters={filters} />
       )}
-      <TouchableButton
+      <TouchableOpacity
         activeOpacity={0.8}
         style={styles.addBtn}
         onPress={() => navigation.navigate('AddEditTask', {})}
       >
         <Ionicons name="add" size={25} color={theme.colors.white} />
-      </TouchableButton>
+      </TouchableOpacity>
     </View>
   );
 }

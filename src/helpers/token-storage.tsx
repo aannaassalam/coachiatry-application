@@ -1,15 +1,32 @@
 import * as Keychain from 'react-native-keychain';
 
 export const getToken = async () => {
-  const credentials = await Keychain.getGenericPassword();
+  const credentials = await Keychain.getGenericPassword({
+    service: 'auth-token',
+  });
   if (!credentials) return null;
   return credentials.password;
 };
 
 export const setToken = async (token: string) => {
-  await Keychain.setGenericPassword('token', token);
+  await Keychain.setGenericPassword('token', token, {
+    service: 'auth-token',
+  });
 };
 
 export const removeToken = async () => {
-  await Keychain.resetGenericPassword();
+  try {
+    // Overwrite with dummy values first (prevents native crash)
+    await Keychain.setGenericPassword('token', 'dummy', {
+      service: 'auth-token',
+    });
+
+    // Then safely reset
+    await Keychain.resetGenericPassword({
+      service:'auth-token'
+    });
+  } catch (err) {
+    // Absolutely ignore — logout must never fail
+    console.log(err)
+  }
 };

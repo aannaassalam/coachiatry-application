@@ -1,9 +1,9 @@
 // ClientDetailsA1.tsx
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useInfiniteQuery, useQueries } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueries, useQuery } from '@tanstack/react-query';
 import moment from 'moment';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -12,6 +12,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ViewToken,
 } from 'react-native';
 import Animated, {
   Extrapolation,
@@ -38,6 +39,11 @@ import { Document } from '../../typescript/interface/document.interface';
 import { Task } from '../../typescript/interface/task.interface';
 import { fontSize, scale, spacing } from '../../utils';
 import Feather from '@react-native-vector-icons/feather';
+import { getAllConversationsByCoach, getConversationByCoach } from '../../api/functions/chat.api';
+import { getMessages } from '../../api/functions/message.api';
+import { queryClient } from '../../../App';
+import { ChatConversation } from '../../typescript/interface/chat.interface';
+import ChatMessage from '../../components/Chat/Coach/ChatMessage';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -137,6 +143,31 @@ export default function ClientDetailsA1() {
     },
     initialPageParam: 1,
     staleTime: 60 * 1000,
+  });
+
+    const viewableItemsChanged = useRef(
+      ({
+        viewableItems,
+      }: {
+        viewableItems: Array<ViewToken & { item: ChatConversation }>;
+      }) => {
+        viewableItems.forEach(({ item }) => {
+          queryClient.prefetchQuery({
+            queryKey: ['conversations', item._id],
+            queryFn: () => getConversationByCoach(item._id),
+          });
+          queryClient.prefetchInfiniteQuery({
+            queryKey: ['messages', item._id],
+            queryFn: getMessages,
+            initialPageParam: 1,
+          });
+        });
+      },
+    ).current;
+
+    const { data:chats, isLoading:isChatLoading, refetch, isFetching } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: () => getAllConversationsByCoach({ userId: userId as string }),
   });
 
   // Animated scroll driver
@@ -407,7 +438,7 @@ export default function ClientDetailsA1() {
                     paddingBottom: spacing(40),
                   }}
                 />
-              ) : (
+              ) :activeTab==="Documents"? (
                 <View>
                   <AppButton
                     text="Add document"
@@ -483,7 +514,28 @@ export default function ClientDetailsA1() {
                     }
                   />
                 </View>
-              )}
+                ) : <View>
+                {isChatLoading ? (
+                        <View
+                          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <ActivityIndicator size="large" />
+                        </View>
+                      ) : (
+                        <FlatList
+                          data={chats?.data}
+                            renderItem={({ item }) => <ChatMessage item={item} userId={userId} />}
+                          keyExtractor={item => item._id ?? item.createdAt}
+                          refreshing={isFetching}
+                          onRefresh={refetch}
+                          showsVerticalScrollIndicator={false}
+                          onViewableItemsChanged={viewableItemsChanged}
+                          viewabilityConfig={{
+                            itemVisiblePercentThreshold: 60, // triggers when 60% visible
+                          }}
+                          contentContainerStyle={{ paddingHorizontal: spacing(10) }}
+                        />
+                      )}</View>}
             </View>
           </>
         )}

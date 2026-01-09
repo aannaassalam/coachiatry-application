@@ -17,11 +17,13 @@ function AppInput({
   name,
   placeholder,
   keyboardType,
+  disabled,
 }: {
   label: string;
   name: string;
   placeholder: string;
   keyboardType?: TextInputProps['keyboardType'];
+  disabled?: boolean;
 }) {
   const { styles } = useStyles(stylesheet);
   const { control } = useFormContext();
@@ -30,6 +32,7 @@ function AppInput({
     <Controller
       control={control}
       name={name}
+      disabled={disabled}
       render={({ field }) => (
         <View>
           <Text style={styles.label}>{label}</Text>
@@ -40,6 +43,7 @@ function AppInput({
             keyboardType={keyboardType}
             {...field}
             onChangeText={field.onChange}
+            readOnly={field.disabled}
           />
         </View>
       )}
