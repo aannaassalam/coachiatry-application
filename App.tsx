@@ -13,6 +13,7 @@ import { AxiosResponse } from 'axios';
 import { useEffect, useState } from 'react';
 import {
   AppState,
+  Platform,
   StyleSheet as RNStyleSheet,
   StatusBar,
   useColorScheme,
@@ -144,7 +145,9 @@ function AppContent() {
       <FlashMessage
         position="top"
         hideStatusBar={false}
-        // statusBarHeight={StatusBar.currentHeight}
+        statusBarHeight={
+          Platform.OS === 'android' ? StatusBar.currentHeight : 0
+        }
         icon={{ icon: 'auto', position: 'left', props: {} }}
       />
     </View>
@@ -209,7 +212,6 @@ export default function App() {
     if (!token) return;
 
     const interval = setInterval(() => {
-      console.log(navigationRef.isReady());
       if (navigationRef.isReady()) {
         const saved = storage.getString('pendingChatNavigation');
         if (saved) {

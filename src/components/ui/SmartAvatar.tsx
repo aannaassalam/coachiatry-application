@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  Image,
   ActivityIndicator,
-  StyleSheet,
-  StyleProp,
-  ViewStyle,
   ImageStyle,
+  StyleProp,
+  StyleSheet,
+  Text,
+  View,
+  ViewStyle,
 } from 'react-native';
-import { createStyleSheet } from 'react-native-unistyles';
-import { spacing, fontSize as fSize } from '../../utils';
 import Animated from 'react-native-reanimated';
+import { createStyleSheet } from 'react-native-unistyles';
+import { fontSize as fSize, spacing } from '../../utils';
 
 /**
  * Extract initials from a name.
@@ -26,7 +25,7 @@ function getInitials(name?: string) {
 
 interface SmartAvatarProps {
   /** Image source URL */
-  src?: string;
+  src?: string | null;
   /** Fallback name for initials */
   name?: string;
   /** Size of the avatar in px */

@@ -66,17 +66,21 @@ export default function Login() {
     onSuccess: async data => {
       setAuthData(data.data);
       const fcmToken = await getToken();
-      // await updateFCMToken(fcmToken as string);
+      await updateFCMToken(fcmToken as string);
     },
+    onError: err => console.log(err),
   });
 
   const { mutate: google, isPending: isGooglePending } = useMutation({
     mutationFn: googleAuth,
     onSuccess: async data => {
       setAuthData(data.data);
-      // const fcmToken = await getToken();
+      const fcmToken = await getToken();
       // console.log(fcmToken);
-      // await updateFCMToken(fcmToken as string);
+      await updateFCMToken(fcmToken as string);
+    },
+    onError: err => {
+      console.log(err);
     },
   });
 

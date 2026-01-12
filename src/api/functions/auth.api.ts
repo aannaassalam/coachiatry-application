@@ -13,10 +13,7 @@ export type LoginBody = Omit<SignupBody, 'fullName'>;
 export const signup = async (
   body: SignupBody,
 ): Promise<{ data: { token: string; user: User } }> => {
-  const res = await axiosInstance.post(endpoints.auth.signup, {
-    ...body,
-    platform: 'app',
-  });
+  const res = await axiosInstance.post(endpoints.auth.signup, body);
   return res;
 };
 
@@ -26,6 +23,20 @@ export const login = async (
   data: { token: string; user: User };
 }> => {
   const res = await axiosInstance.post(endpoints.auth.login, {
+    ...body,
+    platform: 'app',
+  });
+  return res;
+};
+
+export const verifyOtp = async (body: {
+  email: string;
+  otp: string;
+}): Promise<{
+  data: { token: string; user: User };
+}> => {
+  console.log(body);
+  const res = await axiosInstance.post(endpoints.auth.verifyOtp, {
     ...body,
     platform: 'app',
   });

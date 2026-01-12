@@ -23,7 +23,10 @@ import { useMutation, useQueries } from '@tanstack/react-query';
 import { useState } from 'react';
 import { showMessage } from 'react-native-flash-message';
 import { KeyboardAwareFlatList } from 'react-native-keyboard-aware-scroll-view';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import { queryClient } from '../../../App';
@@ -148,16 +151,16 @@ export default function Profile() {
 
   const signOut = async () => {
     try {
-      queryClient.clear()
+      queryClient.clear();
       const token = await getToken();
-    if (token) {
-      await removeFCMToken(token);
-    }
+      if (token) {
+        await removeFCMToken(token);
+      }
       await GoogleSignin.signOut();
-    await messaging().deleteToken();
-    await removeToken();
+      await messaging().deleteToken();
+      await removeToken();
 
-    setAuthData({ token: '', user: null });
+      setAuthData({ token: '', user: null });
       // queryClient.removeQueries();
       // const token = await getToken();
       // await removeFCMToken(token as string);
@@ -194,7 +197,7 @@ export default function Profile() {
 
   return (
     // <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.container}>
+    <ScrollView style={styles.container}>
       <View style={{ backgroundColor: theme.colors.white }}>
         {/* Header */}
         <View style={styles.header}>
@@ -345,7 +348,12 @@ export default function Profile() {
         onRequestClose={() => setAddPersonModal(false)}
         animationType="slide"
       >
-        <View style={{ flex: 1, paddingTop: insets.top }}>
+        <View
+          style={{
+            flex: 1,
+            paddingTop: Platform.OS === 'ios' ? insets.top : 0,
+          }}
+        >
           <View style={styles.searchHeader}>
             <Text style={styles.heading}>Add Person</Text>
             <View style={styles.searchRow}>

@@ -1,6 +1,7 @@
 export type AuthStackParamList = {
   Login: undefined;
   Signup: undefined;
+  VerifyOTP: { email: string };
   ForgotPassword: undefined;
 };
 
@@ -28,5 +29,6 @@ export type AppStackParamList = {
   EditProfile: undefined;
   ClientDetails: { userId: string };
   ChatRoom: { roomId: string };
+  GroupScreen: { roomId?: string; byCoach?: boolean };
   CoachChatRoom: { roomId: string; userId: string };
 };

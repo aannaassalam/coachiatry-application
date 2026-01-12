@@ -5,19 +5,13 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import {
-  useInfiniteQuery,
-  useQuery
-} from '@tanstack/react-query';
-import Animated, {
-  FadeInUp,
-  LinearTransition
-} from 'react-native-reanimated';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import Animated, { FadeInUp, LinearTransition } from 'react-native-reanimated';
 import { getConversation } from '../../api/functions/chat.api';
 import { getMessages } from '../../api/functions/message.api';
 import { ChevronLeft } from '../../assets';
@@ -25,9 +19,7 @@ import { SmartAvatar } from '../../components/ui/SmartAvatar';
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
-import {
-  Message
-} from '../../typescript/interface/message.interface';
+import { Message } from '../../typescript/interface/message.interface';
 import {
   fontSize,
   isAndroid,
@@ -44,6 +36,7 @@ import { FileMessage } from '../../components/Chat/FileMessage';
 import { ImageMessage } from '../../components/Chat/ImageMessage';
 import { VideoMessage } from '../../components/Chat/VideoMessage';
 import TouchableButton from '../../components/TouchableButton';
+import Feather from '@react-native-vector-icons/feather';
 
 type ChatRoomTaskNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -53,16 +46,14 @@ type ChatRoomTaskNavigationProp = NativeStackNavigationProp<
 const RenderMessage = ({
   item,
   conversation,
-  userId
+  userId,
 }: {
   item: Message;
-    conversation: ChatConversation | undefined;
-    userId:string
+  conversation: ChatConversation | undefined;
+  userId: string;
 }) => {
   const bubbleRef = useRef<any>(null);
-  const isMe = conversation?.isDeletable
-    ? item.sender?._id === userId
-    : false;
+  const isMe = conversation?.isDeletable ? item.sender?._id === userId : false;
 
   const [attachmentIndex, setAttachmentIndex] = useState<number | null>(null);
 
@@ -73,98 +64,97 @@ const RenderMessage = ({
         layout={LinearTransition.springify()}
         style={{ marginBottom: spacing(10) }}
       >
-          <View
+        <View
+          style={[
+            styles.messageRow,
+            { justifyContent: isMe ? 'flex-end' : 'flex-start' },
+          ]}
+        >
+          {!isMe && (
+            <SmartAvatar
+              src={
+                conversation?.isDeletable
+                  ? item.sender?.photo
+                  : 'https://coachiatry.s3.us-east-1.amazonaws.com/Logo+Mark+(1).png'
+              }
+              name={item.sender?.fullName}
+              size={scale(28)}
+              style={styles.avatar}
+            />
+          )}
+
+          <TouchableOpacity
+            ref={bubbleRef}
+            activeOpacity={0.9}
             style={[
-              styles.messageRow,
-              { justifyContent: isMe ? 'flex-end' : 'flex-start' },
+              styles.messageBubble,
+              isMe ? styles.myMessage : styles.otherMessage,
             ]}
           >
+            {item.replyTo?._id && (
+              <View
+                style={[
+                  styles.replyContainer,
+                  {
+                    position: 'static',
+                    marginHorizontal: 0,
+                    borderRadius: 8,
+                    paddingLeft: spacing(4),
+                    paddingVertical: spacing(6),
+                  },
+                  !isMe && {
+                    paddingHorizontal: spacing(2),
+                    paddingVertical: spacing(4),
+                  },
+                ]}
+              >
+                <View style={styles.replyLine} />
+                <View style={[styles.replyContent, { flex: 0 }]}>
+                  <Text style={styles.replyName}>
+                    {item.replyTo.sender?._id === userId
+                      ? 'You'
+                      : item.replyTo.sender?.fullName}
+                  </Text>
 
-            {!isMe && (
-              <SmartAvatar
-                src={
-                  conversation?.isDeletable
-                    ? item.sender?.photo
-                    : 'https://coachiatry.s3.us-east-1.amazonaws.com/Logo+Mark+(1).png'
-                }
-                name={item.sender?.fullName}
-                size={scale(28)}
-                style={styles.avatar}
-              />
+                  <Text style={styles.replyText} numberOfLines={1}>
+                    {item.replyTo?.content ||
+                      (item.replyTo?.type === 'image'
+                        ? `📷 ${item.replyTo?.files?.length} images`
+                        : item.replyTo?.type === 'video'
+                          ? `🎥 ${item.replyTo?.files?.length} videos`
+                          : `📁 ${item.replyTo?.files?.length} files`)}
+                  </Text>
+                </View>
+              </View>
             )}
-
-            <TouchableOpacity
-              ref={bubbleRef}
-              activeOpacity={0.9}
-              style={[
-                styles.messageBubble,
-                isMe ? styles.myMessage : styles.otherMessage,
-              ]}
-            >
-              {item.replyTo?._id && (
-                <View
-                  style={[
-                    styles.replyContainer,
-                    {
-                      position: 'static',
-                      marginHorizontal: 0,
-                      borderRadius: 8,
-                      paddingLeft: spacing(4),
-                      paddingVertical: spacing(6),
-                    },
-                    !isMe && {
-                      paddingHorizontal: spacing(2),
-                      paddingVertical: spacing(4),
-                    },
-                  ]}
-                >
-                  <View style={styles.replyLine} />
-                  <View style={[styles.replyContent, { flex: 0 }]}>
-                    <Text style={styles.replyName}>
-                      {item.replyTo.sender?._id === userId
-                        ? 'You'
-                        : item.replyTo.sender?.fullName}
-                    </Text>
-
-                    <Text style={styles.replyText} numberOfLines={1}>
-                      {item.replyTo?.content ||
-                        (item.replyTo?.type === 'image'
-                          ? `📷 ${item.replyTo?.files?.length} images`
-                          : item.replyTo?.type === 'video'
-                            ? `🎥 ${item.replyTo?.files?.length} videos`
-                            : `📁 ${item.replyTo?.files?.length} files`)}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              {item.type === 'text' ? (
-                <Text
-                  style={[
-                    styles.messageText,
-                    {
-                      color: isMe ? theme.colors.white : theme.colors.gray[900],
-                    },
-                  ]}
-                >
-                  {item.content}
-                </Text>
-              ) : item.type === 'image' ? (
-                <View style={{ paddingHorizontal: 0 }}>
-                  <ImageMessage
-                    message={item}
-                    setSelected={index => setAttachmentIndex(index)}
-                  />
-                </View>
-              ) : item.type === 'video' ? (
-                <VideoMessage
+            {item.type === 'text' ? (
+              <Text
+                style={[
+                  styles.messageText,
+                  {
+                    color: isMe ? theme.colors.white : theme.colors.gray[900],
+                  },
+                ]}
+              >
+                {item.content}
+              </Text>
+            ) : item.type === 'image' ? (
+              <View style={{ paddingHorizontal: 0 }}>
+                <ImageMessage
                   message={item}
                   setSelected={index => setAttachmentIndex(index)}
                 />
-              ) : (
-                <FileMessage message={item} />
-              )}
-            </TouchableOpacity>
-          </View>
+              </View>
+            ) : item.type === 'video' ? (
+              <VideoMessage
+                message={item}
+                setSelected={index => setAttachmentIndex(index)}
+              />
+            ) : (
+              <FileMessage message={item} />
+            )}
+          </TouchableOpacity>
+        </View>
 
         {/* Reaction Row */}
         {item.reactions && item.reactions.length > 0 && (
@@ -207,7 +197,7 @@ const CoachChatScreen = () => {
   const activeRoomRef = useRef<string | null>(null);
   const navigation = useNavigation<ChatRoomTaskNavigationProp>();
   const route = useRoute<RouteProp<AppStackParamList, 'CoachChatRoom'>>();
-  const { roomId: room,userId } = route.params;
+  const { roomId: room, userId } = route.params;
 
   const messageKeyMap = useRef<Map<string, string>>(new Map());
 
@@ -311,48 +301,62 @@ const CoachChatScreen = () => {
           />
           <Text style={styles.userName}>{details.name}</Text>
         </View>
-        <View style={{ width: 24 }} />
+        {conversation?.type === 'direct' ? (
+          <View style={{ width: 24 }} />
+        ) : (
+          <TouchableButton
+            style={{ padding: 4, borderRadius: 100 }}
+            onPress={() =>
+              navigation.navigate('GroupScreen', {
+                roomId: room,
+                byCoach: true,
+              })
+            }
+          >
+            <Feather name="info" color="#333" size={fontSize(18)} />
+          </TouchableButton>
+        )}
       </View>
 
       {/* Messages */}
       <View style={{ flex: 1 }}>
-          <FlatList
-            data={allMessages}
-            renderItem={({ item }) => (
-              <RenderMessage
-                item={item}
-                conversation={conversation}
-                getStableKey={getStableKey}
-              />
-            )}
-            keyExtractor={item => getStableKey(item)}
-            inverted
-            showsVerticalScrollIndicator={false}
-            onEndReached={() => {
-              if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-            }}
-            onEndReachedThreshold={0.3}
-            ListFooterComponent={
-              isFetchingNextPage ? (
-                <View
-                  style={{ paddingVertical: spacing(10), alignItems: 'center' }}
+        <FlatList
+          data={allMessages}
+          renderItem={({ item }) => (
+            <RenderMessage
+              item={item}
+              conversation={conversation}
+              userId={userId}
+            />
+          )}
+          keyExtractor={item => getStableKey(item)}
+          inverted
+          showsVerticalScrollIndicator={false}
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+          }}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <View
+                style={{ paddingVertical: spacing(10), alignItems: 'center' }}
+              >
+                <Text
+                  style={{
+                    color: theme.colors.gray[500],
+                    fontSize: fontSize(14),
+                  }}
                 >
-                  <Text
-                    style={{
-                      color: theme.colors.gray[500],
-                      fontSize: fontSize(14),
-                    }}
-                  >
-                    Loading messages...
-                  </Text>
-                </View>
-              ) : null
-            }
-            contentContainerStyle={{
-              padding: spacing(16),
-              flexGrow: 1,
-            }}
-          />
+                  Loading messages...
+                </Text>
+              </View>
+            ) : null
+          }
+          contentContainerStyle={{
+            padding: spacing(16),
+            flexGrow: 1,
+          }}
+        />
       </View>
       {/* Message Input */}
     </KeyboardAvoidingView>

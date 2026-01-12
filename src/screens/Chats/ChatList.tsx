@@ -29,10 +29,17 @@ import { useEffect, useRef } from 'react';
 import { queryClient } from '../../../App';
 import { getMessages } from '../../api/functions/message.api';
 import ChatMessage from '../../components/Chat/ChatMessage';
+import Entypo from 'react-native-vector-icons/Entypo';
+
+type ChatScreenNavigationProp = NativeStackNavigationProp<
+  AppStackParamList,
+  'ChatRoom'
+>;
 
 export default function ChatList() {
   const { profile } = useAuth();
   const socket = useSocket();
+  const navigation = useNavigation<ChatScreenNavigationProp>();
 
   const viewableItemsChanged = useRef(
     ({
@@ -133,39 +140,59 @@ export default function ChatList() {
           <ActivityIndicator size="large" />
         </View>
       ) : (
-        <FlatList
-          data={data?.data}
+        <View style={{ flex: 1 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              paddingHorizontal: spacing(20),
+              marginTop: spacing(5),
+              marginBottom: spacing(10),
+            }}
+          >
+            <Text style={{ color: theme.colors.gray[800] }}>All message</Text>
+            <TouchableButton onPress={() => navigation.navigate('GroupScreen')}>
+              <Entypo
+                name="plus"
+                size={fontSize(18)}
+                color={theme.colors.gray[700]}
+              />
+            </TouchableButton>
+          </View>
+          <FlatList
+            data={data?.data}
             renderItem={({ item }) => <ChatMessage item={item} />}
-          keyExtractor={item => item._id ?? item.createdAt}
-          refreshing={isFetching}
-          onRefresh={refetch}
-          showsVerticalScrollIndicator={false}
-          onViewableItemsChanged={viewableItemsChanged}
-          viewabilityConfig={{
-            itemVisiblePercentThreshold: 60, // triggers when 60% visible
-          }}
-          // onEndReached={() => {
-          //   if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-          // }}
-          // onEndReachedThreshold={0.3}
-          // ListFooterComponent={
-          //   isFetchingNextPage ? (
-          //     <View
-          //       style={{ paddingVertical: spacing(10), alignItems: 'center' }}
-          //     >
-          //       <Text
-          //         style={{
-          //           color: theme.colors.gray[500],
-          //           fontSize: fontSize(14),
-          //         }}
-          //       >
-          //         Loading...
-          //       </Text>
-          //     </View>
-          //   ) : null
-          // }
-          contentContainerStyle={{ paddingHorizontal: spacing(10) }}
-        />
+            keyExtractor={item => item._id ?? item.createdAt}
+            refreshing={isFetching}
+            onRefresh={refetch}
+            showsVerticalScrollIndicator={false}
+            onViewableItemsChanged={viewableItemsChanged}
+            viewabilityConfig={{
+              itemVisiblePercentThreshold: 60, // triggers when 60% visible
+            }}
+            // onEndReached={() => {
+            //   if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+            // }}
+            // onEndReachedThreshold={0.3}
+            // ListFooterComponent={
+            //   isFetchingNextPage ? (
+            //     <View
+            //       style={{ paddingVertical: spacing(10), alignItems: 'center' }}
+            //     >
+            //       <Text
+            //         style={{
+            //           color: theme.colors.gray[500],
+            //           fontSize: fontSize(14),
+            //         }}
+            //       >
+            //         Loading...
+            //       </Text>
+            //     </View>
+            //   ) : null
+            // }
+            contentContainerStyle={{ paddingHorizontal: spacing(10) }}
+          />
+        </View>
       )}
     </View>
   );

@@ -4,6 +4,7 @@ import Login from '../screens/Auth/Login';
 import SignUp from '../screens/Auth/SignUp';
 import ForgotPassword from '../screens/Auth/ForgotPassword';
 import { AuthStackParamList } from '../types/navigation';
+import VerifyOTP from '../screens/Auth/VerifyOTP';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
@@ -15,6 +16,7 @@ const AuthNavigator = () => {
     >
       <Stack.Screen name="Login" component={Login} />
       <Stack.Screen name="Signup" component={SignUp} />
+      <Stack.Screen name="VerifyOTP" component={VerifyOTP} />
       <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
     </Stack.Navigator>
   );

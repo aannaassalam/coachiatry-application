@@ -59,10 +59,10 @@ export default function SignUp() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: signup,
-    onSuccess: async _data => {
-      setAuthData(_data.data);
-      // const fcmToken = await getToken();
-      // await updateFCMToken(fcmToken as string);
+    onSuccess: (_, variables) => {
+      // setAuthData(_data.data);
+      navigation.navigate('VerifyOTP', { email: variables.email });
+      console.log('done');
     },
   });
 
@@ -70,9 +70,8 @@ export default function SignUp() {
     mutationFn: googleAuth,
     onSuccess: async data => {
       setAuthData(data.data);
-      // const fcmToken = await getToken();
-      // console.log(fcmToken);
-      // await updateFCMToken(fcmToken as string);
+      const fcmToken = await getToken();
+      await updateFCMToken(fcmToken as string);
     },
   });
 
@@ -101,7 +100,6 @@ export default function SignUp() {
       } else {
         await GoogleSignin.signOut();
       }
-      console.log('User Info:', userInfo);
     } catch (error) {
       console.log(error);
     }

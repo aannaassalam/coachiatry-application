@@ -1,6 +1,6 @@
 export const baseUrl = process.env.NEXT_APP_BASE_URL;
-// export const baseUrlApi = `https://backend.coachiatry.com/api/v1`;
-export const baseUrlApi = `http://192.168.1.14:3001/api/v1`;
+export const baseUrlApi = `https://backend.coachiatry.com/api/v1`;
+// export const baseUrlApi = `http://192.168.1.10:3001/api/v1`;
 export const baseUrlMedia = process.env.NEXT_APP_BASE_URL;
 
 // api doc => https://militarymoves-admin.dedicateddevelopers.us/apidoc
@@ -16,6 +16,7 @@ export const endpoints = {
   auth: {
     signup: '/auth/signup',
     login: '/auth/login',
+    verifyOtp: '/auth/verifyOtp',
     googleAuth: '/auth/google-auth',
     forgotPassword: '/auth/forgot-password',
     resetPassword: '/auth/reset-password',
@@ -85,6 +86,7 @@ export const endpoints = {
     getConversationByCoach: (roomId: string) => `/chat/coach/room/${roomId}`,
     createGroup: '/chat/group',
     editGroup: '/chat/group/edit',
+    leaveGroup: (chatId: string) => `/chat/leave-group/${chatId}`,
   },
   messages: {
     getScheduleMessages: '/message/schedule',

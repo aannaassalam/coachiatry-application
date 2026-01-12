@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
-
+import Feather from 'react-native-vector-icons/Feather';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -71,9 +71,7 @@ import { ImageMessage } from '../../components/Chat/ImageMessage';
 import CoachAiSheet from '../../components/CoachAi';
 import TouchableButton from '../../components/TouchableButton';
 import { uploadManager } from '../../helpers/uploadManager';
-import {
-  hapticOptions,
-} from '../../helpers/utils';
+import { hapticOptions } from '../../helpers/utils';
 import { useChatUpload } from '../../hooks/useChatHook';
 import AttachmentViewer from '../../components/Chat/AttachementViewer';
 import { VideoMessage } from '../../components/Chat/VideoMessage';
@@ -1114,7 +1112,11 @@ const ChatScreen = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableButton
-          style={{ paddingVertical: spacing(4), paddingHorizontal: spacing(8) }}
+          style={{
+            paddingVertical: spacing(4),
+            paddingHorizontal: spacing(8),
+            borderRadius: 100,
+          }}
           onPress={() => navigation.goBack()}
         >
           <ChevronLeft />
@@ -1125,12 +1127,23 @@ const ChatScreen = () => {
             name={details.name}
             size={scale(28)}
           />
-          <Text style={styles.userName}>{details.name}</Text>
+          <Text style={styles.userName} numberOfLines={1}>
+            {details.name}
+          </Text>
           {conversation?.type === 'direct' && friendStatus === 'online' && (
             <View style={styles.dot} />
           )}
         </View>
-        <View style={{ width: 24 }} />
+        {conversation?.type === 'direct' ? (
+          <View style={{ width: 24 }} />
+        ) : (
+          <TouchableButton
+            style={{ padding: 4, borderRadius: 100 }}
+            onPress={() => navigation.navigate('GroupScreen', { roomId: room })}
+          >
+            <Feather name="info" color="#333" size={fontSize(18)} />
+          </TouchableButton>
+        )}
       </View>
 
       {/* Messages */}
@@ -1305,7 +1318,9 @@ const styles = StyleSheet.create({
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing(8),
+    width: scale(150),
   },
   userName: {
     fontSize: fontSize(15),

@@ -92,7 +92,12 @@ export default function Search() {
         onRequestClose={() => setSearchModal(false)}
         animationType="slide"
       >
-        <View style={{ flex: 1, paddingTop: insets.top }}>
+        <View
+          style={{
+            flex: 1,
+            paddingTop: Platform.OS === 'ios' ? insets.top : 0,
+          }}
+        >
           <View style={styles.searchHeader}>
             <Text style={styles.heading}>Search</Text>
             <View style={styles.searchRow}>
