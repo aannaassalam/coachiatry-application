@@ -55,6 +55,7 @@ import {
   fontSize,
   isAndroid,
   scale,
+  SCREEN_WIDTH,
   spacing,
   verticalScale,
 } from '../../utils';
@@ -115,7 +116,7 @@ const RenderMessage = ({
 
     UIManager.measure(handle, (_fx, _fy, _w, _h, px, py) => {
       // px, py = absolute coordinates on screen
-      onOpenReactor(item, { x: _w, y: py });
+      onOpenReactor(item, { x: (SCREEN_WIDTH - 220) / 2, y: py });
     });
   };
 
