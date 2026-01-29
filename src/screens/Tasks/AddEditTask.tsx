@@ -34,7 +34,7 @@ import {
   renderers,
 } from 'react-native-popup-menu';
 import { createStyleSheet } from 'react-native-unistyles';
-import { Feather } from '@react-native-vector-icons/feather';
+import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Octicons from 'react-native-vector-icons/Octicons';
 import * as yup from 'yup';
@@ -848,7 +848,7 @@ export default function AddEditTask() {
             />
             <AppButton
               variant="primary"
-              text={`${taskId ? 'Edit' : 'Create'} Task`}
+              text={`${taskId ? 'Save' : 'Create'} Task`}
               style={{ flex: 1 }}
               onPress={form.handleSubmit(onSubmit, onError)}
               isLoading={isEditPending || isPending || isCoachPending}
@@ -989,7 +989,7 @@ const styles = createStyleSheet({
   },
   option: {
     flexDirection: 'row',
-    alignItems:'center',
+    alignItems: 'center',
     gap: spacing(10),
     paddingVertical: scale(5),
     paddingHorizontal: scale(10),

@@ -5,7 +5,7 @@ import ActionSheet, {
   SheetProps,
   ScrollView,
 } from 'react-native-actions-sheet';
-import { Feather } from '@react-native-vector-icons/feather';
+import Feather from 'react-native-vector-icons/Feather';
 import { createStyleSheet } from 'react-native-unistyles';
 
 import { assets } from '../../assets';

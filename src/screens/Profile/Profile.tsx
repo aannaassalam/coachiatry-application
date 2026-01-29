@@ -16,7 +16,6 @@ import { theme } from '../../theme';
 import { fontSize, scale, spacing, verticalScale } from '../../utils';
 // or 'react-native-vector-icons/Octicons'
 import Clipboard from '@react-native-clipboard/clipboard';
-import Lucide from '@react-native-vector-icons/lucide';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMutation, useQueries } from '@tanstack/react-query';
@@ -47,6 +46,7 @@ import { User } from '../../typescript/interface/user.interface';
 import { removeFCMToken } from '../../api/functions/auth.api';
 import messaging from '@react-native-firebase/messaging';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { Check, Pencil } from 'lucide-react-native';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -235,13 +235,7 @@ export default function Profile() {
               <AppButton
                 text="Edit Profile"
                 onPress={() => navigation.navigate('EditProfile')}
-                leftIcon={
-                  <Lucide
-                    name="pencil"
-                    color={theme.colors.primary}
-                    size={14}
-                  />
-                }
+                leftIcon={<Pencil color={theme.colors.primary} size={14} />}
                 variant="secondary-outline"
                 style={{
                   flex: 1,
@@ -426,8 +420,7 @@ export default function Profile() {
                       </View>
                     </View>
                     {selectedUsers.includes(item._id) && (
-                      <Lucide
-                        name="check"
+                      <Check
                         size={fontSize(14)}
                         color={theme.colors.gray[500]}
                       />

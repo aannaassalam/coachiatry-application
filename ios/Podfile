@@ -2,6 +2,8 @@
 platform :ios, '16.0'
 
 require_relative '../node_modules/react-native/scripts/react_native_pods'
+# require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
+
 prepare_react_native_project!
 
 use_frameworks! :linkage => :static # static linking avoids further conflicts
@@ -13,7 +15,7 @@ target 'CoachiatryApp' do
   use_react_native!(
     :path => config[:reactNativePath],
     :hermes_enabled => true,
-    :fabric_enabled => false,
+    :fabric_enabled => true,
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 

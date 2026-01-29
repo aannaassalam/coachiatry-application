@@ -5,9 +5,10 @@ export interface User {
   email: string;
   phone: string;
   photo: string;
-  role: string;
+  role: 'admin' | 'manager' | 'coach' | 'user';
   shareId: string;
   sharedViewers: User[];
+  assignedCoach: string[];
   active: boolean;
   createdAt: string;
   updatedAt: string;

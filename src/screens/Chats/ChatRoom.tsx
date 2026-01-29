@@ -58,8 +58,6 @@ import {
   spacing,
   verticalScale,
 } from '../../utils';
-// import { , scheduleOnRN } from 'react-native-worklets';
-import Lucide from '@react-native-vector-icons/lucide';
 import { KeyboardAvoidingView, Platform } from 'react-native';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -76,6 +74,7 @@ import { useChatUpload } from '../../hooks/useChatHook';
 import AttachmentViewer from '../../components/Chat/AttachementViewer';
 import { VideoMessage } from '../../components/Chat/VideoMessage';
 import { FileMessage } from '../../components/Chat/FileMessage';
+import { Reply, X } from 'lucide-react-native';
 
 const MAX_SWIPE = 60; // how far message can move, just like WhatsApp
 const SWIPE_REPLY_THRESHOLD = 40;
@@ -181,13 +180,13 @@ const RenderMessage = ({
           >
             {!isMe && (
               <Animated.View style={[styles.replyIconLeft, arrowStyle]}>
-                <Lucide name="reply" size={18} color="#666" />
+                <Reply size={18} color="#666" />
               </Animated.View>
             )}
 
             {isMe && (
               <Animated.View style={[styles.replyIconRight, arrowStyle]}>
-                <Lucide name="reply" size={18} color="#666" />
+                <Reply size={18} color="#666" />
               </Animated.View>
             )}
 
@@ -348,7 +347,7 @@ const ReplyPreview = ({
       </View>
 
       <TouchableOpacity onPress={onClose} style={styles.replyCloseBtn}>
-        <Lucide name="x" size={18} color="#6B7280" />
+        <X size={18} color="#6B7280" />
       </TouchableOpacity>
     </View>
   );
@@ -606,16 +605,10 @@ const ChatScreen = () => {
             newData = [...old.data];
           }
 
-          newData.sort((a, b) => {
-            const aCreated = a.lastMessage?.createdAt;
-            const bCreated = b.lastMessage?.createdAt;
+          const getSortTime = (chat: ChatConversation) =>
+            moment(chat.lastMessage?.createdAt ?? chat.createdAt).valueOf();
 
-            if (!aCreated && !bCreated) return 0;
-            if (!aCreated) return 1; // a goes to bottom
-            if (!bCreated) return -1; // b goes to bottom
-
-            return moment(bCreated).valueOf() - moment(aCreated).valueOf();
-          });
+          newData.sort((a, b) => getSortTime(b) - getSortTime(a));
 
           return { ...old, data: newData };
         },
@@ -666,16 +659,10 @@ const ChatScreen = () => {
               ...existing.filter((_, i) => i !== idx),
             ];
 
-            newList.sort((a, b) => {
-              const aCreated = a.lastMessage?.createdAt;
-              const bCreated = b.lastMessage?.createdAt;
+            const getSortTime = (chat: ChatConversation) =>
+              moment(chat.lastMessage?.createdAt ?? chat.createdAt).valueOf();
 
-              if (!aCreated && !bCreated) return 0;
-              if (!aCreated) return 1; // a goes to bottom
-              if (!bCreated) return -1; // b goes to bottom
-
-              return moment(bCreated).valueOf() - moment(aCreated).valueOf();
-            });
+            newList.sort((a, b) => getSortTime(b) - getSortTime(a));
 
             return { ...old, data: newList };
           },

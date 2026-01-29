@@ -38,8 +38,11 @@ import { PaginatedResponse } from '../../typescript/interface/common.interface';
 import { Document } from '../../typescript/interface/document.interface';
 import { Task } from '../../typescript/interface/task.interface';
 import { fontSize, scale, spacing } from '../../utils';
-import Feather from '@react-native-vector-icons/feather';
-import { getAllConversationsByCoach, getConversationByCoach } from '../../api/functions/chat.api';
+import Feather from 'react-native-vector-icons/Feather';
+import {
+  getAllConversationsByCoach,
+  getConversationByCoach,
+} from '../../api/functions/chat.api';
 import { getMessages } from '../../api/functions/message.api';
 import { queryClient } from '../../../App';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
@@ -91,7 +94,7 @@ const RenderDocument = ({
 export default function ClientDetailsA1() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<AppStackParamList, 'ClientDetails'>>();
-  const { userId } = route.params;
+  const { userId, fromUsersScreen } = route.params;
   const [activeTab, setActiveTab] = useState<'Tasks' | 'Documents' | 'Chats'>(
     'Documents',
   );
@@ -145,27 +148,32 @@ export default function ClientDetailsA1() {
     staleTime: 60 * 1000,
   });
 
-    const viewableItemsChanged = useRef(
-      ({
-        viewableItems,
-      }: {
-        viewableItems: Array<ViewToken & { item: ChatConversation }>;
-      }) => {
-        viewableItems.forEach(({ item }) => {
-          queryClient.prefetchQuery({
-            queryKey: ['conversations', item._id],
-            queryFn: () => getConversationByCoach(item._id),
-          });
-          queryClient.prefetchInfiniteQuery({
-            queryKey: ['messages', item._id],
-            queryFn: getMessages,
-            initialPageParam: 1,
-          });
+  const viewableItemsChanged = useRef(
+    ({
+      viewableItems,
+    }: {
+      viewableItems: Array<ViewToken & { item: ChatConversation }>;
+    }) => {
+      viewableItems.forEach(({ item }) => {
+        queryClient.prefetchQuery({
+          queryKey: ['conversations', item._id],
+          queryFn: () => getConversationByCoach(item._id),
         });
-      },
-    ).current;
+        queryClient.prefetchInfiniteQuery({
+          queryKey: ['messages', item._id],
+          queryFn: getMessages,
+          initialPageParam: 1,
+        });
+      });
+    },
+  ).current;
 
-    const { data:chats, isLoading:isChatLoading, refetch, isFetching } = useQuery({
+  const {
+    data: chats,
+    isLoading: isChatLoading,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ['conversations'],
     queryFn: () => getAllConversationsByCoach({ userId: userId as string }),
   });
@@ -347,17 +355,19 @@ export default function ClientDetailsA1() {
             </View> */}
 
               <View style={styles.buttonRow}>
-                <AppButton
-                  text="Chat Now"
-                  onPress={() => navigation.navigate('Chats')}
-                  variant="secondary-outline"
-                  style={{
-                    flex: 1,
-                    padding: spacing(9),
-                    borderRadius: fontSize(6),
-                  }}
-                  textStyle={{ fontSize: fontSize(14) }}
-                />
+                {!fromUsersScreen && (
+                  <AppButton
+                    text="Chat Now"
+                    onPress={() => navigation.navigate('Chats')}
+                    variant="secondary-outline"
+                    style={{
+                      flex: 1,
+                      padding: spacing(9),
+                      borderRadius: fontSize(6),
+                    }}
+                    textStyle={{ fontSize: fontSize(14) }}
+                  />
+                )}
                 <AppButton
                   text="View task"
                   onPress={() => setActiveTab('Tasks')}
@@ -438,7 +448,7 @@ export default function ClientDetailsA1() {
                     paddingBottom: spacing(40),
                   }}
                 />
-              ) :activeTab==="Documents"? (
+              ) : activeTab === 'Documents' ? (
                 <View>
                   <AppButton
                     text="Add document"
@@ -514,28 +524,37 @@ export default function ClientDetailsA1() {
                     }
                   />
                 </View>
-                ) : <View>
-                {isChatLoading ? (
-                        <View
-                          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <ActivityIndicator size="large" />
-                        </View>
-                      ) : (
-                        <FlatList
-                          data={chats?.data}
-                            renderItem={({ item }) => <ChatMessage item={item} userId={userId} />}
-                          keyExtractor={item => item._id ?? item.createdAt}
-                          refreshing={isFetching}
-                          onRefresh={refetch}
-                          showsVerticalScrollIndicator={false}
-                          onViewableItemsChanged={viewableItemsChanged}
-                          viewabilityConfig={{
-                            itemVisiblePercentThreshold: 60, // triggers when 60% visible
-                          }}
-                          contentContainerStyle={{ paddingHorizontal: spacing(10) }}
-                        />
-                      )}</View>}
+              ) : (
+                <View>
+                  {isChatLoading ? (
+                    <View
+                      style={{
+                        flex: 1,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <ActivityIndicator size="large" />
+                    </View>
+                  ) : (
+                    <FlatList
+                      data={chats?.data}
+                      renderItem={({ item }) => (
+                        <ChatMessage item={item} userId={userId} />
+                      )}
+                      keyExtractor={item => item._id ?? item.createdAt}
+                      refreshing={isFetching}
+                      onRefresh={refetch}
+                      showsVerticalScrollIndicator={false}
+                      onViewableItemsChanged={viewableItemsChanged}
+                      viewabilityConfig={{
+                        itemVisiblePercentThreshold: 60, // triggers when 60% visible
+                      }}
+                      contentContainerStyle={{ paddingHorizontal: spacing(10) }}
+                    />
+                  )}
+                </View>
+              )}
             </View>
           </>
         )}

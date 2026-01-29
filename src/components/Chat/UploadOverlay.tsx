@@ -1,4 +1,4 @@
-import { FontAwesome5 } from '@react-native-vector-icons/fontawesome5';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedProps } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';

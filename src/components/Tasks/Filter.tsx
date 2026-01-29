@@ -22,7 +22,7 @@ import ActionSheet, {
   useSheetRouter,
 } from 'react-native-actions-sheet';
 import { createStyleSheet } from 'react-native-unistyles';
-import { Feather } from '@react-native-vector-icons/feather';
+import Feather from 'react-native-vector-icons/Feather';
 import { assets } from '../../assets';
 import { theme } from '../../theme';
 import { fontSize, scale, spacing, verticalScale } from '../../utils';
@@ -52,7 +52,7 @@ type InternalSheetState = {
   tempFilter: TempFilter;
   setTempFilter: (f: TempFilter) => void;
   commitFilter: (final: Filter, editIndex?: number | null) => void;
-  removeFilter:(filter:Filter[])=>void
+  removeFilter: (filter: Filter[]) => void;
 };
 
 const TempFilterContext = createContext<InternalSheetState | null>(null);
@@ -66,7 +66,12 @@ export const useTempFilter = () => {
 
 const InitialFilterScreen = () => {
   const router = useSheetRouter('filter-sheet');
-  const { localFilters, setTempFilter, setLocalFilters,removeFilter:removeParentFilter } = useTempFilter();
+  const {
+    localFilters,
+    setTempFilter,
+    setLocalFilters,
+    removeFilter: removeParentFilter,
+  } = useTempFilter();
 
   const [
     { data: categories = [], isLoading: isCategoryLoading },
@@ -79,9 +84,9 @@ const InitialFilterScreen = () => {
   });
 
   const removeFilter = (id: number) => {
-    const filter=localFilters.filter((_, idx) => idx !== id);
+    const filter = localFilters.filter((_, idx) => idx !== id);
     setLocalFilters(filter);
-    removeParentFilter(filter)
+    removeParentFilter(filter);
     // we don't call parent setFilters here — commit happens on selection,
     // but you can also expose a commitNow() that calls payload.setFilters if needed
   };
@@ -189,7 +194,7 @@ const InitialFilterScreen = () => {
                               ? categories.find(
                                   _c => _c._id === filter.selectedValue,
                                 )?.title
-                              : filter.selectedValue??'Value'}
+                              : (filter.selectedValue ?? 'Value')}
                         </Text>
                         <Feather
                           name="chevron-down"
@@ -480,9 +485,12 @@ export const FilterSheet = (props: SheetProps<'filter-sheet'>) => {
     [parentSetFilters],
   );
 
-  const removeFilter = useCallback((filter:any) => {
-    if (parentSetFilters) parentSetFilters(filter)
-  },[parentSetFilters])
+  const removeFilter = useCallback(
+    (filter: any) => {
+      if (parentSetFilters) parentSetFilters(filter);
+    },
+    [parentSetFilters],
+  );
 
   const ctx = useMemo<InternalSheetState>(
     () => ({
@@ -491,7 +499,7 @@ export const FilterSheet = (props: SheetProps<'filter-sheet'>) => {
       tempFilter,
       setTempFilter,
       commitFilter,
-      removeFilter
+      removeFilter,
     }),
     [commitFilter, localFilters, tempFilter, removeFilter],
   );
@@ -600,7 +608,7 @@ const styles = createStyleSheet({
     fontFamily: theme.fonts.lato.regular,
     color: theme.colors.black,
     fontSize: fontSize(14),
-    textTransform:'capitalize'
+    textTransform: 'capitalize',
   },
   whereContainer: {
     padding: spacing(14),

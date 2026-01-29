@@ -65,8 +65,8 @@ export default function Login() {
     mutationFn: login,
     onSuccess: async data => {
       setAuthData(data.data);
-      const fcmToken = await getToken();
-      await updateFCMToken(fcmToken as string);
+      // const fcmToken = await getToken();
+      // await updateFCMToken(fcmToken as string);
     },
     onError: err => console.log(err),
   });
@@ -75,9 +75,8 @@ export default function Login() {
     mutationFn: googleAuth,
     onSuccess: async data => {
       setAuthData(data.data);
-      const fcmToken = await getToken();
-      // console.log(fcmToken);
-      await updateFCMToken(fcmToken as string);
+      // const fcmToken = await getToken();
+      // await updateFCMToken(fcmToken as string);
     },
     onError: err => {
       console.log(err);
@@ -175,6 +174,7 @@ export default function Login() {
                         >
                           <Ionicons
                             name={showPassword ? 'eye-off' : 'eye'}
+                            // name="heart"
                             size={20}
                             color={theme.colors.primary}
                           />

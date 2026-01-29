@@ -18,7 +18,7 @@ import Animated, {
 import { spacing, fontSize, scale } from '../../utils';
 import { theme } from '../../theme';
 import { emojiCategories } from './emojis'; // <- your emoji dataset file (use exactly this file)
-import Lucide from '@react-native-vector-icons/lucide';
+import { Plus } from 'lucide-react-native';
 
 export type EmojiReactorProps = {
   visible: boolean;
@@ -106,7 +106,7 @@ export default function EmojiReactor({
             }}
             style={styles.reactorBtn}
           >
-            <Lucide name="plus" size={fontSize(18)} />
+            <Plus size={fontSize(18)} />
           </TouchableOpacity>
         </Animated.View>
       )}

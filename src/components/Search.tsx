@@ -1,4 +1,4 @@
-import Lucide from '@react-native-vector-icons/lucide';
+import { Calendar, FileText, FolderOpen } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
@@ -31,11 +31,11 @@ import CoachAiSheet from './CoachAi';
 const renderSearchIcons = (type: string) => {
   switch (type) {
     case 'task':
-      return 'file-text';
+      return <FileText size={fontSize(18)} />;
     case 'document':
-      return 'folder-open';
+      return <FolderOpen size={fontSize(18)} />;
     default:
-      return 'file-text';
+      return <FileText size={fontSize(18)} />;
   }
 };
 
@@ -214,10 +214,7 @@ export default function Search() {
                   onPress={() => onItemPress(item.type, item._id)}
                 >
                   <View style={styles.icon}>
-                    <Lucide
-                      name={renderSearchIcons(item.type)}
-                      size={fontSize(18)}
-                    />
+                    {renderSearchIcons(item.type)}
                   </View>
                   <View style={styles.itemContainer}>
                     <Text style={styles.itemText}>{item.title}</Text>
@@ -232,8 +229,7 @@ export default function Search() {
                           gap: spacing(4),
                         }}
                       >
-                        <Lucide
-                          name="calendar"
+                        <Calendar
                           size={fontSize(12)}
                           color={theme.colors.gray[600]}
                         />

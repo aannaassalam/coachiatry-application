@@ -1,5 +1,4 @@
-import { FontAwesome } from '@react-native-vector-icons/fontawesome';
-import { Lucide } from '@react-native-vector-icons/lucide';
+import FontAwesome from 'react-native-vector-icons/FontAwesome5';
 import { filesize } from 'filesize'; // Library recommended for file size formatting
 import React, { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -11,6 +10,7 @@ import { Message } from '../../typescript/interface/message.interface';
 import { fontSize, scale, spacing } from '../../utils';
 import TouchableButton from '../TouchableButton';
 import { CircularProgress, getFileIcon } from './UploadOverlay';
+import { Download } from 'lucide-react-native';
 
 const FileCardLayout = ({
   file,
@@ -116,11 +116,7 @@ const FileCardLayout = ({
           <CircularProgress progress={downloadProgress} />
         ) : !fileExists ? (
           <Pressable onPress={downloadFile}>
-            <Lucide
-              name="download"
-              size={fontSize(25)}
-              color={theme.colors.gray[300]}
-            />
+            <Download size={fontSize(25)} color={theme.colors.gray[300]} />
           </Pressable>
         ) : null}
       </View>

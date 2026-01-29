@@ -39,8 +39,8 @@ import { AppStackParamList } from '../../types/navigation';
 import { PaginatedResponse } from '../../typescript/interface/common.interface';
 import { Document } from '../../typescript/interface/document.interface';
 import { fontSize, scale, spacing } from '../../utils';
-import Lucide from '@react-native-vector-icons/lucide';
 import { useAuth } from '../../hooks/useAuth';
+import { Pencil } from 'lucide-react-native';
 
 type DocumentScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -84,7 +84,7 @@ const RenderItem = ({
           marginTop: -30,
         },
       }}
-      style={{marginBottom: spacing(16),}}
+      style={{ marginBottom: spacing(16) }}
     >
       <MenuTrigger
         triggerOnLongPress
@@ -127,11 +127,7 @@ const RenderItem = ({
         }}
       >
         <MenuOption style={styles.option} onSelect={() => navigate('edit')}>
-          <Lucide
-            name="pencil"
-            color={theme.colors.gray[900]}
-            size={fontSize(16)}
-          />
+          <Pencil color={theme.colors.gray[900]} size={fontSize(16)} />
           <Text style={styles.optionText}>Edit</Text>
         </MenuOption>
         <MenuOption
@@ -333,7 +329,7 @@ const styles = StyleSheet.create({
   },
   option: {
     flexDirection: 'row',
-    alignItems:'center',
+    alignItems: 'center',
     gap: spacing(10),
     paddingVertical: scale(5),
     paddingHorizontal: scale(10),

@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, View } from 'react-native';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6';
+import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 import { theme } from '../../theme';
 import { createStyleSheet } from 'react-native-unistyles';
 import { fontSize, scale } from '../../utils';
@@ -30,7 +30,7 @@ export default function CheckBox({
       {checked && (
         <FontAwesome6
           name="check"
-          iconStyle="solid"
+          solid
           color={theme.colors.white}
           size={fontSize(10)}
         />

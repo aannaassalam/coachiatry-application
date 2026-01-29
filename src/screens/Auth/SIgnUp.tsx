@@ -62,7 +62,6 @@ export default function SignUp() {
     onSuccess: (_, variables) => {
       // setAuthData(_data.data);
       navigation.navigate('VerifyOTP', { email: variables.email });
-      console.log('done');
     },
   });
 
@@ -70,8 +69,8 @@ export default function SignUp() {
     mutationFn: googleAuth,
     onSuccess: async data => {
       setAuthData(data.data);
-      const fcmToken = await getToken();
-      await updateFCMToken(fcmToken as string);
+      // const fcmToken = await getToken();
+      // await updateFCMToken(fcmToken as string);
     },
   });
 

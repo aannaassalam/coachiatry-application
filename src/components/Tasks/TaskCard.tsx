@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { createStyleSheet } from 'react-native-unistyles';
-import { AntDesign } from '@react-native-vector-icons/ant-design';
-import { FontAwesome5 } from '@react-native-vector-icons/fontawesome5';
+import AntDesign from 'react-native-vector-icons/AntDesign';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
 import TaskBadge from './TaskBadge';
@@ -42,7 +42,7 @@ export default function TaskCard({
         >
           <FontAwesome5
             name={isExpanded ? 'caret-down' : 'caret-right'}
-            iconStyle="solid"
+            solid
             size={fontSize(16)}
             color={theme.colors.black}
           />

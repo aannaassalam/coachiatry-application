@@ -22,11 +22,13 @@ import Documents from '../screens/Documents/Documents';
 import TaskList from '../screens/Tasks/TaskList';
 import MyClients from '../screens/Clients/MyClients';
 import { useAuth } from '../hooks/useAuth';
+import Users from '../screens/Users';
 
 export type AppTabParamList = {
   Dashboard: undefined;
   Tasks: undefined;
   Chats: undefined;
+  Users: undefined;
   Clients: undefined;
   Documents: undefined;
 };
@@ -69,11 +71,13 @@ const BottomNavigator = () => {
       <Tab.Screen name="Dashboard" component={Dashboard} />
       <Tab.Screen name="Tasks" component={TaskList} options={{ lazy: false }} />
       <Tab.Screen name="Chats" component={ChatList} />
-      {profile?.role === 'coach' && (
+      {profile?.role === 'coach' ? (
         <Tab.Screen name="Clients" component={MyClients} />
-      )}
-
+      ) : null}
       <Tab.Screen name="Documents" component={Documents} />
+      {profile?.role === 'admin' || profile?.role === 'manager' ? (
+        <Tab.Screen name="Users" component={Users} />
+      ) : null}
     </Tab.Navigator>
   );
 };
@@ -90,6 +94,8 @@ const getLabel = (routeName: string) => {
       return 'Chat';
     case 'Documents':
       return 'Documents';
+    case 'Users':
+      return 'Users';
     case 'Clients':
       return 'My Clients';
     default:
@@ -116,6 +122,7 @@ const getIcon = (routeName: string, focused: boolean) => {
       return focused ? <DocumentActive /> : <DocumentInactive />;
 
     case 'Clients':
+    case 'Users':
       return focused ? <ClientsActive /> : <ClientsInactive />;
 
     default:

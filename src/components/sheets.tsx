@@ -1,4 +1,4 @@
-import { Feather } from '@react-native-vector-icons/feather';
+import Feather from 'react-native-vector-icons/Feather';
 import moment from 'moment';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SheetManager } from 'react-native-actions-sheet';

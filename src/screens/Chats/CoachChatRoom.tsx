@@ -36,7 +36,7 @@ import { FileMessage } from '../../components/Chat/FileMessage';
 import { ImageMessage } from '../../components/Chat/ImageMessage';
 import { VideoMessage } from '../../components/Chat/VideoMessage';
 import TouchableButton from '../../components/TouchableButton';
-import Feather from '@react-native-vector-icons/feather';
+import Feather from 'react-native-vector-icons/Feather';
 
 type ChatRoomTaskNavigationProp = NativeStackNavigationProp<
   AppStackParamList,

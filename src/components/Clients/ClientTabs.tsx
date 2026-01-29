@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
-import Ionicons from '@react-native-vector-icons/ionicons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import AppBadge from '../ui/AppBadge';
 import { assets, Calendar } from '../../assets';
 

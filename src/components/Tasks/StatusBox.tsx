@@ -1,7 +1,7 @@
 import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SheetManager } from 'react-native-actions-sheet';
 import { createStyleSheet } from 'react-native-unistyles';
-import { Feather } from '@react-native-vector-icons/feather';
+import Feather from 'react-native-vector-icons/Feather';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
 import { Status } from '../../typescript/interface/status.interface';

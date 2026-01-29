@@ -145,9 +145,7 @@ function AppContent() {
       <FlashMessage
         position="top"
         hideStatusBar={false}
-        statusBarHeight={
-          Platform.OS === 'android' ? StatusBar.currentHeight : 0
-        }
+        statusBarHeight={StatusBar.currentHeight}
         icon={{ icon: 'auto', position: 'left', props: {} }}
       />
     </View>

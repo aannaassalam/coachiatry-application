@@ -29,7 +29,7 @@ import { AppStackParamList } from '../../types/navigation';
 import { Task } from '../../typescript/interface/task.interface';
 import { fontSize, scale, spacing } from '../../utils';
 import TouchableButton from '../TouchableButton';
-import Lucide from '@react-native-vector-icons/lucide';
+import { Pencil } from 'lucide-react-native';
 
 type TaskScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -125,11 +125,7 @@ export default function IndividualTask({
             navigation.navigate('AddEditTask', { taskId: task._id, userId })
           }
         >
-          <Lucide
-            name="pencil"
-            color={theme.colors.gray[900]}
-            size={fontSize(16)}
-          />
+          <Pencil color={theme.colors.gray[900]} size={fontSize(16)} />
           <Text style={styles.optionText}>Edit</Text>
         </MenuOption>
         <MenuOption

@@ -107,16 +107,10 @@ export default function ChatList() {
           ];
 
           // ✅ Sort newest → oldest
-          newList.sort((a, b) => {
-            const aCreated = a.lastMessage?.createdAt;
-            const bCreated = b.lastMessage?.createdAt;
+          const getSortTime = (chat: ChatConversation) =>
+            moment(chat.lastMessage?.createdAt ?? chat.createdAt).valueOf();
 
-            if (!aCreated && !bCreated) return 0;
-            if (!aCreated) return 1; // a goes to bottom
-            if (!bCreated) return -1; // b goes to bottom
-
-            return moment(bCreated).valueOf() - moment(aCreated).valueOf();
-          });
+          newList.sort((a, b) => getSortTime(b) - getSortTime(a));
 
           return { ...old, data: newList };
         },
@@ -151,7 +145,9 @@ export default function ChatList() {
             }}
           >
             <Text style={{ color: theme.colors.gray[800] }}>All message</Text>
-            <TouchableButton onPress={() => navigation.navigate('GroupScreen')}>
+            <TouchableButton
+              onPress={() => navigation.navigate('GroupScreen', {})}
+            >
               <Entypo
                 name="plus"
                 size={fontSize(18)}

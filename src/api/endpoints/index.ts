@@ -1,6 +1,6 @@
 export const baseUrl = process.env.NEXT_APP_BASE_URL;
 export const baseUrlApi = `https://backend.coachiatry.com/api/v1`;
-// export const baseUrlApi = `http://192.168.1.10:3001/api/v1`;
+// export const baseUrlApi = `http://192.168.1.22:3001/api/v1`;
 export const baseUrlMedia = process.env.NEXT_APP_BASE_URL;
 
 // api doc => https://militarymoves-admin.dedicateddevelopers.us/apidoc
@@ -68,6 +68,8 @@ export const endpoints = {
     shared: (shareId: string) => `/task/shared/${shareId}`,
   },
   user: {
+    getAllUsers: '/user/get-all',
+    getUsers: '/user/get-users',
     getProfile: '/user/me',
     updateProfile: '/user/me',
     updateProfilePicture: '/user/me/update-profile-picture',
@@ -75,9 +77,12 @@ export const endpoints = {
     suggestUsers: '/user/suggestions',
     addWatchers: '/user/add-watchers',
     userByIds: '/user/user-by-ids',
+    createUser: '/user/create-user',
     userById: (userId: string) => `/user/user-by-id/${userId}`,
     shared: (shareId: string) => `/user/share/${shareId}`,
     revokeAccess: (viewerId: string) => `/user/share/${viewerId}`,
+    updateUser: (userId: string) => `/user/update-user/${userId}`,
+    deleteUser: (userId: string) => `/user/delete-user/${userId}`,
   },
   chat: {
     getConversations: '/chat',

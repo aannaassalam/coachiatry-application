@@ -21,8 +21,8 @@ import {
   renderers,
 } from 'react-native-popup-menu';
 import { createStyleSheet } from 'react-native-unistyles';
-import { Feather } from '@react-native-vector-icons/feather';
-import { FontAwesome5 } from '@react-native-vector-icons/fontawesome5';
+import Feather from 'react-native-vector-icons/Feather';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import Octicons from 'react-native-vector-icons/Octicons';
 import { deleteTask } from '../../api/functions/task.api';
 import { Calendar } from '../../assets';
@@ -35,7 +35,7 @@ import TouchableButton from '../TouchableButton';
 import Badge from '../ui/Badge';
 import { SmartAvatar } from '../ui/SmartAvatar';
 import TaskBadge from './TaskBadge';
-import Lucide from '@react-native-vector-icons/lucide';
+import { Pencil } from 'lucide-react-native';
 
 type TaskScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -85,7 +85,7 @@ export default function WeekTaskCard({
         <View style={[styles.caretButton]}>
           <FontAwesome5
             name={taskVisible ? 'caret-down' : 'caret-right'}
-            iconStyle="solid"
+            solid
             size={fontSize(16)}
             color={theme.colors.black}
           />
@@ -208,8 +208,7 @@ export default function WeekTaskCard({
                       navigation.navigate('AddEditTask', { taskId: task._id })
                     }
                   >
-                    <Lucide
-                      name="pencil"
+                    <Pencil
                       color={theme.colors.gray[900]}
                       size={fontSize(16)}
                     />
@@ -230,7 +229,6 @@ export default function WeekTaskCard({
                             onPress: () => mutate(task._id),
                           },
                         ],
-                        'default',
                       )
                     }
                   >
@@ -330,7 +328,7 @@ const styles = createStyleSheet({
   option: {
     flexDirection: 'row',
     gap: spacing(10),
-    alignItems:'center',
+    alignItems: 'center',
     paddingVertical: scale(5),
     paddingHorizontal: scale(10),
   },

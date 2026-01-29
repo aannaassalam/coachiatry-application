@@ -1,5 +1,5 @@
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Lucide } from '@react-native-vector-icons/lucide';
+import { Download } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -129,7 +129,7 @@ const AttachmentViewer: React.FC<Props> = ({
             style={styles.closeBtn}
             onPress={downloadActiveFile}
           >
-            <Lucide name="download" size={fontSize(24)} color="#444" />
+            <Download size={fontSize(24)} color="#444" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>

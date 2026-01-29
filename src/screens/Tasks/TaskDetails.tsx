@@ -1,4 +1,3 @@
-import Lucide from '@react-native-vector-icons/lucide';
 import Octicons from 'react-native-vector-icons/Octicons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -43,6 +42,7 @@ import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { Subtask, Task } from '../../typescript/interface/task.interface';
 import { fontSize, scale, spacing, verticalScale } from '../../utils';
+import { Pencil } from 'lucide-react-native';
 
 type AddEditTaskNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -229,11 +229,7 @@ const TaskDetailsScreen = () => {
                   })
                 }
               >
-                <Lucide
-                  name="pencil"
-                  color={theme.colors.gray[900]}
-                  size={fontSize(16)}
-                />
+                <Pencil color={theme.colors.gray[900]} size={fontSize(16)} />
                 <Text style={styles.optionText}>Edit</Text>
               </MenuOption>
               <MenuOption
@@ -530,7 +526,7 @@ const styles = createStyleSheet({
   },
   option: {
     flexDirection: 'row',
-    alignItems:'center',
+    alignItems: 'center',
     gap: spacing(10),
     paddingVertical: scale(5),
     paddingHorizontal: scale(10),

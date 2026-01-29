@@ -8,7 +8,7 @@ import {
   ScrollView,
   Dimensions,
 } from 'react-native';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp, FadeOutDown } from 'react-native-reanimated';
 import Video from 'react-native-video';
 

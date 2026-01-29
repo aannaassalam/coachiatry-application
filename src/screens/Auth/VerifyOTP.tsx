@@ -56,9 +56,8 @@ export default function VerifyOTP() {
     mutationFn: verifyOtp,
     onSuccess: async _data => {
       setAuthData(_data.data);
-      const fcmToken = await getToken();
-      await updateFCMToken(fcmToken as string);
-      //   navigation.goBack();
+      // const fcmToken = await getToken();
+      // await updateFCMToken(fcmToken as string);
     },
   });
 

@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
-import { Entypo } from '@react-native-vector-icons/entypo';
+import Entypo from 'react-native-vector-icons/Entypo';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
 import TouchableButton from '../TouchableButton';

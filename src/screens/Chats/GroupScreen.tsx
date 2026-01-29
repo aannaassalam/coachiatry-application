@@ -34,7 +34,6 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQueries, useQuery } from '@tanstack/react-query';
 import { useDebounce } from '../../hooks/useDebounce';
 import AppButton from '../../components/ui/AppButton';
-import Lucide from '@react-native-vector-icons/lucide';
 import { getUserSuggestions } from '../../api/functions/user.api';
 import { User } from '../../typescript/interface/user.interface';
 import {
@@ -46,6 +45,7 @@ import {
 import { queryClient } from '../../../App';
 import { AppStackParamList } from '../../types/navigation';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Check } from 'lucide-react-native';
 
 const RenderMember = ({
   item,
@@ -54,21 +54,6 @@ const RenderMember = ({
   item: Pick<User, '_id' | 'fullName' | 'email' | 'photo'>;
   //   removable?: boolean;
 }) => {
-  // const route = useRoute<RouteProp<AppStackParamList, 'GroupScreen'>>();
-  // const roomId = route.params?.roomId;
-
-  // const { mutate: removeMember, isPending: isRemoving } = useMutation({
-  //   mutationFn: editGroup,
-  //   onSuccess: () => {
-  //     queryClient.invalidateQueries({ queryKey: ['conversations', roomId] });
-  //     //   navigation.goBack();
-  //   },
-  //   meta: {
-  //     showToast: false,
-  //     invalidateQueries: ['conversations'],
-  //   },
-  // });
-
   return (
     <View style={styles.watcherRow}>
       <View style={styles.watcherLeft}>
@@ -83,27 +68,6 @@ const RenderMember = ({
           <Text style={styles.watcherEmail}>{item.email}</Text>
         </View>
       </View>
-      {/* {removable && (
-        <TouchableButton
-          style={styles.revokeButton}
-          onPress={() =>
-            Alert.alert(
-              'Revoke Access',
-              'Are you sure you want to revoke access from this user?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Revoke',
-                  style: 'destructive',
-                    // onPress: () => removeMember({chatId:roomId||'', members: }),
-                },
-              ],
-            )
-          }
-        >
-          <Text style={styles.revokeText}>Remove</Text>
-        </TouchableButton>
-      )} */}
     </View>
   );
 };
@@ -224,7 +188,6 @@ export default function GroupScreen() {
 
   useEffect(() => {
     if (groupData) {
-      console.log(groupData);
       form.reset({
         name: groupData?.name,
       });
@@ -503,8 +466,7 @@ export default function GroupScreen() {
                       </View>
                     </View>
                     {selectedUsers.find(s => s._id === item._id) && (
-                      <Lucide
-                        name="check"
+                      <Check
                         size={fontSize(14)}
                         color={theme.colors.gray[500]}
                       />

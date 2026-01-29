@@ -4,7 +4,7 @@ import Video from 'react-native-video';
 import { Message } from '../../typescript/interface/message.interface';
 import TouchableButton from '../TouchableButton';
 import { UploadProgressOverlay } from './UploadOverlay';
-import { FontAwesome5 } from '@react-native-vector-icons/fontawesome5';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { fontSize, spacing } from '../../utils';
 import { theme } from '../../theme';
 import { TouchableOpacity } from 'react-native';
@@ -87,7 +87,7 @@ const VideoLoaderWrapper = ({
         >
           <FontAwesome5
             name="play"
-            iconStyle="solid"
+            solid
             color={theme.colors.white}
             size={fontSize(20)}
             style={{ marginLeft: spacing(3) }}

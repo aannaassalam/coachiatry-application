@@ -27,8 +27,10 @@ export type AppStackParamList = {
     userId?: string;
   };
   EditProfile: undefined;
-  ClientDetails: { userId: string };
+  ClientDetails: { userId: string; fromUsersScreen?: boolean };
   ChatRoom: { roomId: string };
   GroupScreen: { roomId?: string; byCoach?: boolean };
   CoachChatRoom: { roomId: string; userId: string };
+  UserDetails: { id: string };
+  AddEditUser: { id?: string };
 };

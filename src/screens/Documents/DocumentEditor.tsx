@@ -11,9 +11,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Feather } from '@react-native-vector-icons/feather';
-import { Fontisto } from '@react-native-vector-icons/fontisto';
-import { Foundation } from '@react-native-vector-icons/foundation';
+import Feather from 'react-native-vector-icons/Feather';
+import Fontisto from 'react-native-vector-icons/Fontisto';
+import Foundation from 'react-native-vector-icons/Foundation';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Octicons from 'react-native-vector-icons/Octicons';
 
@@ -53,7 +53,6 @@ import { hapticOptions, onError } from '../../helpers/utils';
 import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
 import { fontSize, scale, spacing } from '../../utils';
-import Lucide from '@react-native-vector-icons/lucide';
 import { queryClient } from '../../../App';
 import CoachAiSheet from '../../components/CoachAi';
 import {
@@ -64,6 +63,7 @@ import {
   renderers,
 } from 'react-native-popup-menu';
 import Share from 'react-native-share';
+import { Pencil, Strikethrough } from 'lucide-react-native';
 
 const schema = yup.object().shape({
   title: yup.string().required(),
@@ -95,9 +95,6 @@ const DocumentCategorySheetBody = ({
       },
     ],
   });
-
-  console.log(data);
-  console.log(userCategories);
 
   return (
     <View>
@@ -262,11 +259,14 @@ export default function DocumentEditor() {
     Share.open({
       saveToFiles: false,
       failOnCancel: false,
-      title: "Share Document",
-      message: "Hi,I am sharing my document titled '" + data?.title + "' with you on Coachiatry. Click the link to access he document.\n",
-      url:`https://coachiatry.vercel.app/share/${data?.shareId}`
-    }).catch(err=>console.log(err))
-  }
+      title: 'Share Document',
+      message:
+        "Hi,I am sharing my document titled '" +
+        data?.title +
+        "' with you on Coachiatry. Click the link to access he document.\n",
+      url: `https://coachiatry.vercel.app/share/${data?.shareId}`,
+    }).catch(err => console.log(err));
+  };
 
   return (
     <KeyboardAvoidingView
@@ -301,7 +301,8 @@ export default function DocumentEditor() {
                 />
               </TouchableButton>
             )}
-            {data?.user._id === profile?._id || profile?.role === 'coach' ? (
+            {data?.user._id === profile?._id ||
+            ['coach', 'manager', 'admin'].includes(profile?.role ?? '') ? (
               <Menu
                 renderer={renderers.Popover}
                 onOpen={() =>
@@ -346,8 +347,7 @@ export default function DocumentEditor() {
                     style={styles.option}
                     onSelect={() => setLocalMode('edit')}
                   >
-                    <Lucide
-                      name="pencil"
+                    <Pencil
                       color={theme.colors.gray[900]}
                       size={fontSize(16)}
                     />
@@ -596,13 +596,7 @@ export default function DocumentEditor() {
                     onPress={() => {
                       setLocalMode('edit');
                     }}
-                    leftIcon={
-                      <Lucide
-                        name="pencil"
-                        color={theme.colors.primary}
-                        size={14}
-                      />
-                    }
+                    leftIcon={<Pencil color={theme.colors.primary} size={14} />}
                     variant="secondary-outline"
                     style={{ marginRight: 'auto' }}
                   />
@@ -678,11 +672,11 @@ const toolbarIconMap = {
     <Feather name="italic" size={fontSize(18)} color={tintColor} />
   ),
   [actions.setUnderline]: ({ tintColor }: any) => (
-    <Fontisto name="underline" size={fontSize(16)} color={tintColor} />
+    <Feather name="underline" size={fontSize(18)} color={tintColor} />
   ),
 
   [actions.setStrikethrough]: ({ tintColor }: any) => (
-    <Fontisto name="strikethrough" size={fontSize(13)} color={tintColor} />
+    <Strikethrough size={fontSize(18)} color={tintColor} />
   ),
 
   [actions.insertBulletsList]: ({ tintColor }: any) => (
@@ -903,7 +897,7 @@ const styles = StyleSheet.create({
   },
   option: {
     flexDirection: 'row',
-    alignItems:'center',
+    alignItems: 'center',
     gap: spacing(10),
     paddingVertical: scale(5),
     paddingHorizontal: scale(10),
