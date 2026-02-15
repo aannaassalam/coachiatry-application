@@ -64,6 +64,9 @@ import {
 } from 'react-native-popup-menu';
 import Share from 'react-native-share';
 import { Pencil, Strikethrough } from 'lucide-react-native';
+import { generatePDF } from 'react-native-html-to-pdf';
+
+import RNFS from 'react-native-fs';
 
 const schema = yup.object().shape({
   title: yup.string().required(),
@@ -146,6 +149,7 @@ export default function DocumentEditor() {
   const headerHeight = useHeaderHeight();
   const [editorValue, setEditorValue] = useState(content);
   const [localMode, setLocalMode] = useState(mode);
+  const [downloading, setDownloading] = useState(false);
 
   const { mutate, isPending } = useMutation({
     mutationFn: createDocument,
@@ -269,6 +273,94 @@ export default function DocumentEditor() {
     }).catch(err => console.log(err));
   };
 
+  const downloadAsPDF = async () => {
+    try {
+      setDownloading(true);
+      const htmlContent = `
+<html>
+  <head>
+    <meta charset="utf-8"/>
+
+    <style>
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        color: #111;
+      }
+
+      /* PAGE WRAPPER (this simulates padding on every page) */
+      .page {
+        padding: 10mm;
+        box-sizing: border-box;
+      }
+
+      h1 {
+        margin-bottom: 12px;
+      }
+
+      p {
+        line-height: 1.6;
+      }
+
+      /* Force proper page breaks */
+      .page-break {
+        page-break-after: always;
+      }
+
+    </style>
+  </head>
+
+  <body>
+    <div class="page">
+      <h1>${data?.title}</h1>
+      ${editorValue}
+    </div>
+  </body>
+</html>
+`;
+
+      const fileName = `${data?.title || 'document'}-${Date.now()}.pdf`;
+
+      // 1️⃣ Generate PDF (app internal folder)
+      const pdf = await generatePDF({
+        html: htmlContent,
+        fileName: fileName.replace('.pdf', ''),
+        directory: 'Documents',
+      });
+
+      if (!pdf.filePath) throw new Error('PDF not created');
+
+      const sourcePath = pdf.filePath;
+
+      // 2️⃣ Move to public Downloads (ANDROID)
+      const destPath =
+        Platform.OS === 'android'
+          ? `${RNFS.DownloadDirectoryPath}/${fileName}`
+          : sourcePath;
+
+      if (Platform.OS === 'android') {
+        await RNFS.copyFile(sourcePath, destPath);
+      }
+
+      // 3️⃣ iOS share like before
+      if (Platform.OS === 'ios') {
+        await Share.open({
+          url: 'file://' + destPath,
+          failOnCancel: false,
+        });
+      }
+
+      Alert.alert('Download Complete', `Saved to Downloads:\n${fileName}`);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'PDF download failed');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -276,6 +368,19 @@ export default function DocumentEditor() {
       style={{ flex: 1 }}
     >
       <View style={styles.container}>
+        {downloading && (
+          <View
+            style={{
+              ...StyleSheet.absoluteFill,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+            }}
+          >
+            <ActivityIndicator size="large" />
+          </View>
+        )}
         {/* Header */}
         <View style={styles.header}>
           <TouchableButton
@@ -648,9 +753,7 @@ export default function DocumentEditor() {
                         color={theme.colors.white}
                       />
                     }
-                    onPress={() =>
-                      Alert.alert('Downloaded', 'Document is downloaded')
-                    }
+                    onPress={downloadAsPDF}
                   />
                 )}
               </View>
