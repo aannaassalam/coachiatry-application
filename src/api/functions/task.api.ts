@@ -46,7 +46,7 @@ function getDueDateQuery(value: string) {
 function buildFilterQuery(values: Filter[]): Record<string, any> {
   const query: Record<string, any> = {};
 
-  values.forEach((filter) => {
+  values.forEach(filter => {
     if (
       !filter.selectedKey ||
       !filter.selectedOperator ||
@@ -57,22 +57,22 @@ function buildFilterQuery(values: Filter[]): Record<string, any> {
     const key = filter.selectedKey;
     const value = filter.selectedValue;
 
-    if (key === "dueDate") {
+    if (key === 'dueDate') {
       const dateRange = getDueDateQuery(value);
       if (!dateRange) return;
 
-      if (filter.selectedOperator === "is") {
+      if (filter.selectedOperator === 'is') {
         query.dueDate = dateRange;
-      } else if (filter.selectedOperator === "is not") {
+      } else if (filter.selectedOperator === 'is not') {
         // exclude that range -> tasks before OR after
         query.dueDate = { not: dateRange };
       }
     } else {
       // Normal fields (status, category, priority)
-      console.log(filter.selectedOperator)
-      if (filter.selectedOperator === "is") {
+      console.log(filter.selectedOperator);
+      if (filter.selectedOperator === 'is') {
         query[key] = value;
-      } else if (filter.selectedOperator === "isNot") {
+      } else if (filter.selectedOperator === 'isNot') {
         query[key] = { ne: value };
       }
     }
@@ -91,8 +91,7 @@ export const getAllTasks = async ({
   filter?: Filter[];
   startDate?: string;
   endDate?: string;
-  }): Promise<Task[]> => {
-  console.log("query")
+}): Promise<Task[]> => {
   const filterQuery = buildFilterQuery(filter);
   const res = await axiosInstance.get(endpoints.task.getAll, {
     params: {
@@ -102,7 +101,7 @@ export const getAllTasks = async ({
       dueDate:
         startDate && endDate
           ? { gte: startDate, lte: endDate }
-          : filterQuery.dueDate
+          : filterQuery.dueDate,
     },
   });
   return res.data;
