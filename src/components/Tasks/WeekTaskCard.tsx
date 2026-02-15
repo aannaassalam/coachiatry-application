@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import moment from 'moment';
 import { useState } from 'react';
 import {
@@ -24,7 +24,7 @@ import { createStyleSheet } from 'react-native-unistyles';
 import Feather from 'react-native-vector-icons/Feather';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import Octicons from 'react-native-vector-icons/Octicons';
-import { deleteTask } from '../../api/functions/task.api';
+import { deleteTask, getTask } from '../../api/functions/task.api';
 import { Calendar } from '../../assets';
 import { hapticOptions } from '../../helpers/utils';
 import { theme } from '../../theme';
@@ -42,6 +42,153 @@ type TaskScreenNavigationProp = NativeStackNavigationProp<
   'Tasks'
 >;
 
+function TaskCard({ task }: { task: Task }) {
+  const queryClient = useQueryClient();
+  const width = Dimensions.get('screen').width;
+
+  const navigation = useNavigation<TaskScreenNavigationProp>();
+
+  queryClient.prefetchQuery({
+    queryKey: ['task', task._id],
+    queryFn: () => getTask(task._id),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { mutate } = useMutation({
+    mutationFn: deleteTask,
+    onMutate: () => {
+      showMessage({
+        type: 'info',
+        message: 'Deleting...',
+        description: 'Deleting task, Please wait...',
+      });
+    },
+    meta: {
+      invalidateQueries: ['tasks'],
+    },
+  });
+
+  return (
+    <Menu
+      key={task._id}
+      renderer={renderers.Popover}
+      onOpen={() =>
+        ReactNativeHapticFeedback.trigger('impactMedium', hapticOptions)
+      }
+      rendererProps={{
+        placement: 'bottom',
+        anchorStyle: {
+          marginLeft: width * 0.85,
+          marginTop: -30,
+        },
+      }}
+    >
+      <MenuTrigger
+        triggerOnLongPress
+        onAlternativeAction={() =>
+          navigation.navigate('TaskDetails', { taskId: task._id })
+        }
+        customStyles={{
+          TriggerTouchableComponent: TouchableOpacity,
+          triggerTouchable: {
+            activeOpacity: 0.5,
+          },
+        }}
+        style={styles.taskCard}
+      >
+        <Text style={styles.taskTitle} numberOfLines={2}>
+          {task.title}
+        </Text>
+        <View style={styles.taskCardRow}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing(2),
+            }}
+          >
+            <Calendar width={scale(16)} height={scale(16)} />
+            <Text style={styles.metaLabel}>Start:</Text>
+            <Text style={styles.metaDate}>
+              {moment(task?.createdAt).format('MMM DD')}
+            </Text>
+          </View>
+          <View
+            style={{
+              width: scale(4),
+              height: scale(4),
+              backgroundColor: theme.colors.gray[200],
+              borderRadius: 100,
+            }}
+          />
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+          >
+            <SmartAvatar
+              src={task?.assignedTo.photo}
+              name={task?.assignedTo.fullName}
+              size={scale(16)}
+              fontSize={fontSize(14)}
+              style={styles.avatar}
+            />
+            <Text style={styles.authorName}>{task?.assignedTo.fullName}</Text>
+          </View>
+        </View>
+        <View style={{ alignSelf: 'flex-start' }}>
+          <Badge
+            title={task.category.title}
+            bgColor={task.category.color.bg}
+            color={task.category.color.text}
+          />
+        </View>
+      </MenuTrigger>
+      <MenuOptions
+        customStyles={{
+          optionsContainer: {
+            width: scale(100),
+            borderRadius: 10,
+            paddingVertical: scale(5),
+          },
+        }}
+      >
+        <MenuOption
+          style={styles.option}
+          onSelect={() =>
+            navigation.navigate('AddEditTask', { taskId: task._id })
+          }
+        >
+          <Pencil color={theme.colors.gray[900]} size={fontSize(16)} />
+          <Text style={styles.optionText}>Edit</Text>
+        </MenuOption>
+        <MenuOption
+          value={1}
+          style={styles.option}
+          onSelect={() =>
+            Alert.alert(
+              'Delete task',
+              'Are you sure you want to delete this task?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: () => mutate(task._id),
+                },
+              ],
+            )
+          }
+        >
+          <Octicons name="trash" color="#ef4444" size={fontSize(16)} />
+          <Text style={[styles.optionText, { color: '#ef4444' }]}>Delete</Text>
+        </MenuOption>
+      </MenuOptions>
+    </Menu>
+  );
+}
+
 export default function WeekTaskCard({
   day,
   defaultExpanded = false,
@@ -57,24 +204,7 @@ export default function WeekTaskCard({
   tasks: Task[];
   date: string;
 }) {
-  const width = Dimensions.get('screen').width;
-
-  const navigation = useNavigation<TaskScreenNavigationProp>();
   const [taskVisible, setTaskVisible] = useState(defaultExpanded);
-
-  const { mutate } = useMutation({
-    mutationFn: deleteTask,
-    onMutate: () => {
-      showMessage({
-        type: 'info',
-        message: 'Deleting...',
-        description: 'Deleting task, Please wait...',
-      });
-    },
-    meta: {
-      invalidateQueries: ['tasks'],
-    },
-  });
 
   return (
     <View style={styles.card}>
@@ -111,139 +241,7 @@ export default function WeekTaskCard({
             <Text style={styles.addTaskText}>Add Task</Text>
           </TouchableButton>
           {tasks.map(task => {
-            return (
-              <Menu
-                key={task._id}
-                renderer={renderers.Popover}
-                onOpen={() =>
-                  ReactNativeHapticFeedback.trigger(
-                    'impactMedium',
-                    hapticOptions,
-                  )
-                }
-                rendererProps={{
-                  placement: 'bottom',
-                  anchorStyle: {
-                    marginLeft: width * 0.85,
-                    marginTop: -30,
-                  },
-                }}
-              >
-                <MenuTrigger
-                  triggerOnLongPress
-                  onAlternativeAction={() =>
-                    navigation.navigate('TaskDetails', { taskId: task._id })
-                  }
-                  customStyles={{
-                    TriggerTouchableComponent: TouchableOpacity,
-                    triggerTouchable: {
-                      activeOpacity: 0.5,
-                    },
-                  }}
-                  style={styles.taskCard}
-                >
-                  <Text style={styles.taskTitle} numberOfLines={2}>
-                    {task.title}
-                  </Text>
-                  <View style={styles.taskCardRow}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: spacing(2),
-                      }}
-                    >
-                      <Calendar width={scale(16)} height={scale(16)} />
-                      <Text style={styles.metaLabel}>Start:</Text>
-                      <Text style={styles.metaDate}>
-                        {moment(task?.createdAt).format('MMM DD')}
-                      </Text>
-                    </View>
-                    <View
-                      style={{
-                        width: scale(4),
-                        height: scale(4),
-                        backgroundColor: theme.colors.gray[200],
-                        borderRadius: 100,
-                      }}
-                    />
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <SmartAvatar
-                        src={task?.assignedTo.photo}
-                        name={task?.assignedTo.fullName}
-                        size={scale(16)}
-                        fontSize={fontSize(14)}
-                        style={styles.avatar}
-                      />
-                      <Text style={styles.authorName}>
-                        {task?.assignedTo.fullName}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={{ alignSelf: 'flex-start' }}>
-                    <Badge
-                      title={task.category.title}
-                      bgColor={task.category.color.bg}
-                      color={task.category.color.text}
-                    />
-                  </View>
-                </MenuTrigger>
-                <MenuOptions
-                  customStyles={{
-                    optionsContainer: {
-                      width: scale(100),
-                      borderRadius: 10,
-                      paddingVertical: scale(5),
-                    },
-                  }}
-                >
-                  <MenuOption
-                    style={styles.option}
-                    onSelect={() =>
-                      navigation.navigate('AddEditTask', { taskId: task._id })
-                    }
-                  >
-                    <Pencil
-                      color={theme.colors.gray[900]}
-                      size={fontSize(16)}
-                    />
-                    <Text style={styles.optionText}>Edit</Text>
-                  </MenuOption>
-                  <MenuOption
-                    value={1}
-                    style={styles.option}
-                    onSelect={() =>
-                      Alert.alert(
-                        'Delete task',
-                        'Are you sure you want to delete this task?',
-                        [
-                          { text: 'Cancel', style: 'cancel' },
-                          {
-                            text: 'Delete',
-                            style: 'destructive',
-                            onPress: () => mutate(task._id),
-                          },
-                        ],
-                      )
-                    }
-                  >
-                    <Octicons
-                      name="trash"
-                      color="#ef4444"
-                      size={fontSize(16)}
-                    />
-                    <Text style={[styles.optionText, { color: '#ef4444' }]}>
-                      Delete
-                    </Text>
-                  </MenuOption>
-                </MenuOptions>
-              </Menu>
-            );
+            return <TaskCard task={task} />;
           })}
         </>
       )}

@@ -51,11 +51,13 @@ export default function ChatList() {
         queryClient.prefetchQuery({
           queryKey: ['conversations', item._id],
           queryFn: () => getConversation(item._id),
+          staleTime: 5 * 60 * 1000,
         });
         queryClient.prefetchInfiniteQuery({
           queryKey: ['messages', item._id],
           queryFn: getMessages,
           initialPageParam: 1,
+          staleTime: 5 * 60 * 1000,
         });
       });
     },

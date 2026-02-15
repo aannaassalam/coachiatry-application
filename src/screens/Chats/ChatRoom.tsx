@@ -418,7 +418,7 @@ const ChatScreen = () => {
     isFetchingNextPage,
     isLoading,
   } = useInfiniteQuery({
-    queryKey: ['messages', room],
+    queryKey: ['messages', room!],
     queryFn: getMessages,
     initialPageParam: 1,
     enabled: !!room,

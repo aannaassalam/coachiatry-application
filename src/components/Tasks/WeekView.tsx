@@ -1,13 +1,20 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
-import { getAllTasks } from '../../api/functions/task.api';
+import { getAllTasks, getTask } from '../../api/functions/task.api';
 import { Filter } from '../../typescript/interface/common.interface';
-import { ActivityIndicator, FlatList, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Text,
+  View,
+  ViewToken,
+} from 'react-native';
 import WeekTaskCard from './WeekTaskCard';
 import moment from 'moment';
 import { createStyleSheet } from 'react-native-unistyles';
 import { fontSize, spacing } from '../../utils';
 import { theme } from '../../theme';
+import { Task } from '../../typescript/interface/task.interface';
 
 const days = [
   {
@@ -54,6 +61,8 @@ export default function WeekView({
   dates: { start: string; end: string };
   filters: Filter[];
 }) {
+  const queryClient = useQueryClient();
+
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['tasks', filters, dates],
     queryFn: () =>
@@ -64,6 +73,36 @@ export default function WeekView({
       }),
     // placeholderData: (prev: Task[] | undefined) => prev
   });
+
+  const onViewableItemsChanged = React.useCallback(
+    ({
+      viewableItems,
+    }: {
+      viewableItems: ViewToken<(typeof days)[number]>[];
+    }) => {
+      viewableItems.forEach(({ index }) => {
+        if (index === null || index === undefined || !data) return;
+
+        // get date for that visible day
+        const date = moment(dates.start).add(index, 'day').format('DD/MM/YYYY');
+
+        // filter tasks for that day
+        const tasksForDay = data.filter(
+          task => moment(task.dueDate).format('DD/MM/YYYY') === date,
+        );
+
+        // prefetch each task
+        tasksForDay.forEach(task => {
+          queryClient.prefetchQuery({
+            queryKey: ['task', task._id],
+            queryFn: () => getTask(task._id),
+            staleTime: 5 * 60 * 1000,
+          });
+        });
+      });
+    },
+    [data, dates.start, queryClient],
+  );
 
   if (isLoading)
     return (
@@ -98,6 +137,10 @@ export default function WeekView({
           <Text style={styles.emptyText}>No tasks found.</Text>
         </View>
       }
+      onViewableItemsChanged={onViewableItemsChanged}
+      viewabilityConfig={{
+        itemVisiblePercentThreshold: 100,
+      }}
       contentContainerStyle={{
         padding: spacing(20),
       }}

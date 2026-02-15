@@ -1,6 +1,10 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useInfiniteQuery, useMutation } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import moment from 'moment';
 import { useState } from 'react';
 import {
@@ -27,6 +31,7 @@ import Octicons from 'react-native-vector-icons/Octicons';
 import {
   deleteDocument,
   getAllDocuments,
+  getDocument,
 } from '../../api/functions/document.api';
 import { Calendar } from '../../assets';
 import TouchableButton from '../../components/TouchableButton';
@@ -41,6 +46,10 @@ import { Document } from '../../typescript/interface/document.interface';
 import { fontSize, scale, spacing } from '../../utils';
 import { useAuth } from '../../hooks/useAuth';
 import { Pencil } from 'lucide-react-native';
+import {
+  getAllCategories,
+  getAllCategoriesByCoach,
+} from '../../api/functions/category.api';
 
 type DocumentScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -56,6 +65,19 @@ const RenderItem = ({
 }) => {
   const { profile } = useAuth();
   const width = Dimensions.get('screen').width;
+  const queryClient = useQueryClient();
+
+  queryClient.prefetchQuery({
+    queryKey: ['documents', item._id],
+    queryFn: () => getDocument(item._id),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  queryClient.prefetchQuery({
+    queryKey: ['categories'],
+    queryFn: getAllCategories,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const { mutate } = useMutation({
     mutationFn: deleteDocument,

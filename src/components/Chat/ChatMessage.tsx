@@ -11,6 +11,11 @@ import { fontSize, scale, spacing } from '../../utils';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../types/navigation';
 import { useNavigation } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
+import { getConversation } from '../../api/functions/chat.api';
+import { getMessages } from '../../api/functions/message.api';
+import { Message } from '../../typescript/interface/message.interface';
+import { PaginatedResponse } from '../../typescript/interface/common.interface';
 
 type ChatScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -20,6 +25,7 @@ type ChatScreenNavigationProp = NativeStackNavigationProp<
 export default function ChatMessage({ item }: { item: ChatConversation }) {
   const { profile } = useAuth();
   const navigation = useNavigation<ChatScreenNavigationProp>();
+  const queryClient = useQueryClient();
 
   const chatUser = item.members.find(
     _member => _member.user._id !== profile?._id,

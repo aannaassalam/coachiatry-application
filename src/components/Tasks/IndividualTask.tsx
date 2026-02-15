@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import moment from 'moment';
 import {
   Alert,
@@ -22,7 +22,7 @@ import {
 import { createStyleSheet } from 'react-native-unistyles';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Octicons from 'react-native-vector-icons/Octicons';
-import { deleteTask } from '../../api/functions/task.api';
+import { deleteTask, getTask } from '../../api/functions/task.api';
 import { hapticOptions } from '../../helpers/utils';
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
@@ -45,6 +45,13 @@ export default function IndividualTask({
 }) {
   const navigation = useNavigation<TaskScreenNavigationProp>();
   const width = Dimensions.get('screen').width;
+  const queryClient = useQueryClient();
+
+  queryClient.prefetchQuery({
+    queryKey: ['task', task._id],
+    queryFn: () => getTask(task._id),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const { mutate } = useMutation({
     mutationFn: deleteTask,

@@ -216,6 +216,7 @@ export default function DocumentEditor() {
       {
         queryKey: ['categories', userId],
         queryFn: () => getAllCategoriesByCoach(userId as string),
+        enabled: !!userId,
       },
     ],
   });
