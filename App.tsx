@@ -122,9 +122,9 @@ function AppContent() {
       GoogleSignin.configure({
         scopes: ['profile', 'email'], // what info you want
         webClientId:
-          '149359341698-tt7bv0k4adpq368vgkv6cug0ruupm9qp.apps.googleusercontent.com', // from Google Cloud Console (Web client)
+          '281907580585-0t8555ivr673q6rhj6b20qnfjrnfut1b.apps.googleusercontent.com', // from Google Cloud Console (Web client)
         iosClientId:
-          '149359341698-e52por6ce4cdktcfsjm8026e7fpuuldm.apps.googleusercontent.com',
+          '281907580585-9akd8qfkn3unc37ta3k6q3fk84g129d1.apps.googleusercontent.com',
         offlineAccess: true,
         forceCodeForRefreshToken: false,
       });

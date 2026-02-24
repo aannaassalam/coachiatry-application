@@ -98,6 +98,7 @@ type Chat =
       role: 'system';
       data: {
         tasks: ChatTask[];
+        message: string;
       };
       type: 'tasks';
     };
@@ -118,31 +119,29 @@ const getFullMessages = (msg: string) => {
 const SystemMessage = ({
   chat,
   setIsModalOpen,
-  // taskInfo,
-  // setTaskInfo,
+  taskInfo,
+  setTaskInfo,
 }: {
   chat: Chat;
   setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  taskInfo: TaskInfo | null;
+  taskInfo: TaskInfo;
   setTaskInfo: React.Dispatch<React.SetStateAction<TaskInfo>>;
 }) => {
   const navigation = useNavigation<ChatScreenNavigationProp>();
   const [selectedTasksId, setSelectedTasksId] = useState<string[]>([]);
-  const [taskInfo, setTaskInfo] = useState<TaskInfo>({
-    isTaskRendered: false,
-    isTaskAdded: false,
-    selectedTasks: [],
-  });
 
   useEffect(() => {
     if (chat.type === 'tasks') {
-      setTaskInfo({
+      // reset local selections when new tasks arrive
+      setSelectedTasksId([]);
+      setTaskInfo(prev => ({
+        ...prev,
         isTaskRendered: true,
         isTaskAdded: false,
         selectedTasks: [],
-      });
+      }));
     }
-  }, [chat.type]);
+  }, [chat.type, setTaskInfo]);
 
   const { mutate: addTasks, isPending: isAddingTasks } = useMutation({
     mutationFn: importBulkTasks,
@@ -232,107 +231,111 @@ const SystemMessage = ({
           Click on tasks to select and import into your tasklist
         </Text>
       ) : null}
-      <FlatList
-        data={chat.data.tasks}
-        renderItem={({ item }) =>
-          !taskInfo?.isTaskAdded ? (
-            <TouchableButton
-              style={styles.taskItem}
-              onPress={() => toggleTaskCheckbox(item)}
-              disabled={isAddingTasks}
-            >
-              <CheckBox
-                checked={selectedTasksId.includes(item.tempId)}
+      {chat.data.tasks.length > 0 ? (
+        <FlatList
+          data={chat.data.tasks}
+          renderItem={({ item }) =>
+            !taskInfo?.isTaskAdded ? (
+              <TouchableButton
+                style={styles.taskItem}
+                onPress={() => toggleTaskCheckbox(item)}
                 disabled={isAddingTasks}
-              />
-              <Text style={styles.taskText}>{item.title}</Text>
-            </TouchableButton>
-          ) : null
-        }
-        keyExtractor={_item => _item.tempId}
-        scrollEnabled={false}
-        ListFooterComponent={
-          <View
-            style={[
-              styles.taskFooter,
-              taskInfo?.isTaskAdded && { justifyContent: 'center' },
-            ]}
-          >
-            {!taskInfo?.isTaskAdded && taskInfo?.isTaskRendered ? (
-              <>
-                <AppButton
-                  text="Import tasks"
-                  variant="secondary-outline"
-                  style={{
-                    paddingVertical: spacing(8),
-                    borderColor: theme.colors.primary,
-                  }}
-                  textStyle={{
-                    fontSize: fontSize(14),
-                    color: theme.colors.primary,
-                  }}
-                  onPress={() =>
-                    addTasks({
-                      tasks: taskInfo.selectedTasks?.map(_task => ({
-                        title: _task.title,
-                        description: _task.description,
-                        priority: _task.priority,
-                        category: _task.category.id,
-                        frequency: _task.recurrence ?? 'none',
-                      })),
-                      // userId: userId as string,
-                    })
-                  }
-                  isLoading={isAddingTasks}
-                  disabled={taskInfo.selectedTasks.length === 0}
-                />
-                <AppButton
-                  text="Select all"
-                  variant="secondary-outline"
-                  style={{
-                    paddingVertical: spacing(8),
-                    borderColor: theme.colors.primary,
-                  }}
-                  textStyle={{
-                    fontSize: fontSize(14),
-                    color: theme.colors.primary,
-                  }}
-                  onPress={() => {
-                    setSelectedTasksId(
-                      chat.data.tasks.map(_task => _task.tempId),
-                    );
-
-                    setTaskInfo(prev => ({
-                      ...prev,
-                      selectedTasks: chat.data.tasks,
-                    }));
-                  }}
+              >
+                <CheckBox
+                  checked={selectedTasksId.includes(item.tempId)}
                   disabled={isAddingTasks}
                 />
-              </>
-            ) : (
-              <AppButton
-                text="View tasks"
-                variant="secondary-outline"
-                style={{ flex: 1 }}
-                // style={{
-                //   paddingVertical: spacing(8),
-                //   borderColor: theme.colors.primary,
-                // }}
-                // textStyle={{
-                //   fontSize: fontSize(14),
-                //   color: theme.colors.primary,
-                // }}
-                onPress={() => {
-                  navigation.navigate('Tasks');
-                  setIsModalOpen(false);
-                }}
-                isLoading={isAddingTasks}
-              />
-            )}
-          </View>
-        }
-      />
+                <Text style={styles.taskText}>{item.title}</Text>
+              </TouchableButton>
+            ) : null
+          }
+          keyExtractor={_item => _item.tempId}
+          scrollEnabled={false}
+          ListFooterComponent={
+            <View
+              style={[
+                styles.taskFooter,
+                taskInfo?.isTaskAdded && { justifyContent: 'center' },
+              ]}
+            >
+              {!taskInfo?.isTaskAdded && taskInfo?.isTaskRendered ? (
+                <>
+                  <AppButton
+                    text="Import tasks"
+                    variant="secondary-outline"
+                    style={{
+                      paddingVertical: spacing(8),
+                      borderColor: theme.colors.primary,
+                    }}
+                    textStyle={{
+                      fontSize: fontSize(14),
+                      color: theme.colors.primary,
+                    }}
+                    onPress={() =>
+                      addTasks({
+                        tasks: taskInfo.selectedTasks?.map(_task => ({
+                          title: _task.title,
+                          description: _task.description,
+                          priority: _task.priority,
+                          category: _task.category.id,
+                          frequency: _task.recurrence ?? 'none',
+                        })),
+                        // userId: userId as string,
+                      })
+                    }
+                    isLoading={isAddingTasks}
+                    disabled={taskInfo.selectedTasks.length === 0}
+                  />
+                  <AppButton
+                    text="Select all"
+                    variant="secondary-outline"
+                    style={{
+                      paddingVertical: spacing(8),
+                      borderColor: theme.colors.primary,
+                    }}
+                    textStyle={{
+                      fontSize: fontSize(14),
+                      color: theme.colors.primary,
+                    }}
+                    onPress={() => {
+                      setSelectedTasksId(
+                        chat.data.tasks.map(_task => _task.tempId),
+                      );
+
+                      setTaskInfo(prev => ({
+                        ...prev,
+                        selectedTasks: chat.data.tasks,
+                      }));
+                    }}
+                    disabled={isAddingTasks}
+                  />
+                </>
+              ) : (
+                <AppButton
+                  text="View tasks"
+                  variant="secondary-outline"
+                  style={{ flex: 1 }}
+                  // style={{
+                  //   paddingVertical: spacing(8),
+                  //   borderColor: theme.colors.primary,
+                  // }}
+                  // textStyle={{
+                  //   fontSize: fontSize(14),
+                  //   color: theme.colors.primary,
+                  // }}
+                  onPress={() => {
+                    navigation.navigate('Tasks');
+                    setIsModalOpen(false);
+                  }}
+                  isLoading={isAddingTasks}
+                />
+              )}
+            </View>
+          }
+        />
+      ) : (
+        <Text>{chat.data.message}</Text>
+      )}
     </View>
   ) : null;
 };
@@ -354,6 +357,10 @@ function CoachAiSheet({
   const dot3 = useSharedValue(0);
 
   const [value, setValue] = useState('');
+  const chatWindows = React.useMemo(
+    () => ['last 2 days', 'last 7 days', 'last 2 weeks', 'last month'],
+    [],
+  );
 
   const [chats, setChats] = useState<Chat[]>([]);
   const [documentInfo, setDocumentInfo] = useState<DocumentInfo>({
@@ -436,13 +443,13 @@ function CoachAiSheet({
           document_id: '',
         });
       }
-      // if (data.type === 'tasks') {
-      //   setTaskInfo({
-      //     isTaskRendered: true,
-      //     isTaskAdded: false,
-      //     selectedTasks: [],
-      //   });
-      // }
+      if (data.type === 'tasks') {
+        setTaskInfo({
+          isTaskRendered: true,
+          isTaskAdded: false,
+          selectedTasks: [],
+        });
+      }
       setChats(prev => [{ role: 'system', ...data }, ...prev]);
     },
     meta: {
@@ -564,107 +571,178 @@ function CoachAiSheet({
                     </View>
 
                     {/* Suggested Section */}
-                    <Text style={styles.suggestedTitle}>Suggested</Text>
-                    <View style={styles.suggestedList}>
-                      <TouchableButton
-                        style={styles.suggestedCard}
-                        onPress={() =>
-                          mutate({
-                            action: 'create_tasks',
-                            id,
-                            session_id: session,
-                            page,
-                            // user: userId as string,
-                          })
-                        }
-                      >
-                        <Ionicons
-                          name="document-text-outline"
-                          size={fontSize(16)}
-                          color={theme.colors.gray[700]}
-                        />
-                        <Text style={styles.suggestedText}>
-                          Generate a Task
+                    {page !== 'chat' ? (
+                      <>
+                        <Text style={styles.suggestedTitle}>Suggested</Text>
+                        <View style={styles.suggestedList}>
+                          <TouchableButton
+                            style={styles.suggestedCard}
+                            onPress={() =>
+                              mutate({
+                                action: 'create_tasks',
+                                id,
+                                session_id: session,
+                                page,
+                              })
+                            }
+                          >
+                            <Ionicons
+                              name="document-text-outline"
+                              size={fontSize(16)}
+                              color={theme.colors.gray[700]}
+                            />
+                            <Text style={styles.suggestedText}>
+                              Generate a Task
+                            </Text>
+                          </TouchableButton>
+                          <TouchableButton
+                            style={styles.suggestedCard}
+                            onPress={() =>
+                              mutate({
+                                action: 'create_document',
+                                id,
+                                session_id: session,
+                                page,
+                              })
+                            }
+                          >
+                            <Thunderbolt />
+                            <Text style={styles.suggestedText}>
+                              Create a doc
+                            </Text>
+                          </TouchableButton>
+                          <TouchableButton
+                            style={styles.suggestedCard}
+                            onPress={() =>
+                              mutate({
+                                action: 'summarize',
+                                id,
+                                session_id: session,
+                                page,
+                              })
+                            }
+                          >
+                            <Fireballa />
+                            <Text style={styles.suggestedText}>Summarize</Text>
+                          </TouchableButton>
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.suggestedTitle}>
+                          Choose a chat window
                         </Text>
-                      </TouchableButton>
-                      <TouchableButton
-                        style={styles.suggestedCard}
-                        onPress={() =>
-                          mutate({
-                            action: 'create_document',
-                            id,
-                            session_id: session,
-                            page,
-                            // user: userId as string,
-                          })
-                        }
-                      >
-                        <Thunderbolt />
-                        <Text style={styles.suggestedText}>Create a doc</Text>
-                      </TouchableButton>
-                      <TouchableButton
-                        style={styles.suggestedCard}
-                        onPress={() =>
-                          mutate({
-                            action: 'summarize',
-                            id,
-                            session_id: session,
-                            page,
-                            // user: userId as string,
-                          })
-                        }
-                      >
-                        <Fireballa />
-                        <Text style={styles.suggestedText}>Summarize</Text>
-                      </TouchableButton>
-                    </View>
+                        <View
+                          style={[
+                            styles.suggestedList,
+                            { flexDirection: 'row', flexWrap: 'wrap' },
+                          ]}
+                        >
+                          {chatWindows.map(range => (
+                            <TouchableButton
+                              key={range}
+                              style={[
+                                styles.suggestedCard,
+                                { flex: 1, minWidth: '46%' },
+                              ]}
+                              onPress={() =>
+                                mutate({
+                                  query: range,
+                                  id,
+                                  session_id: session,
+                                  page,
+                                })
+                              }
+                              disabled={isPending}
+                            >
+                              <Text style={styles.suggestedText}>{range}</Text>
+                            </TouchableButton>
+                          ))}
+                        </View>
+                      </>
+                    )}
                   </View>
                 }
               />
             </ScrollView>
 
             {/* Footer Input */}
-            <View style={[styles.footer]}>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  placeholder="Ask anything..."
-                  placeholderTextColor={theme.colors.gray[400]}
-                  style={styles.textInput}
-                  value={value}
-                  onChangeText={setValue}
-                  readOnly={isPending}
-                />
-                {/* <View style={styles.inputIcons}>
-              <Ionicons
-                name="globe-outline"
-                size={fontSize(18)}
-                color={theme.colors.gray[500]}
-              />
-              <Ionicons
-                name="attach-outline"
-                size={fontSize(18)}
-                color={theme.colors.gray[500]}
-              />
-              <Ionicons
-                name="mic-outline"
-                size={fontSize(18)}
-                color={theme.colors.gray[500]}
-              />
-            </View> */}
-              </View>
+            {
+              page !== 'chat' ? (
+                <View style={[styles.footer]}>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      placeholder="Ask anything..."
+                      placeholderTextColor={theme.colors.gray[400]}
+                      style={styles.textInput}
+                      value={value}
+                      onChangeText={setValue}
+                      readOnly={isPending}
+                    />
+                  </View>
 
-              <TouchableButton
-                style={styles.sendBtn}
-                onPress={handleSend}
-                disabled={isPending}
-              >
-                <Ionicons
-                  name="arrow-up"
-                  size={fontSize(18)}
-                  color={theme.colors.white}
-                />
-              </TouchableButton>
-            </View>
+                  <TouchableButton
+                    style={styles.sendBtn}
+                    onPress={handleSend}
+                    disabled={isPending}
+                  >
+                    <Ionicons
+                      name="arrow-up"
+                      size={fontSize(18)}
+                      color={theme.colors.white}
+                    />
+                  </TouchableButton>
+                </View>
+              ) : null
+              // <View
+              //   style={{
+              //     flexDirection: 'row',
+              //     flexWrap: 'wrap',
+              //     gap: spacing(8),
+              //     paddingHorizontal: spacing(12),
+              //     paddingVertical: spacing(10),
+              //     borderTopWidth: 1,
+              //     borderTopColor: theme.colors.gray[200],
+              //     backgroundColor: theme.colors.white,
+              //   }}
+              // >
+              //   {chatWindows.map(range => (
+              //     <TouchableButton
+              //       key={range}
+              //       style={{
+              //         flexGrow: 1,
+              //         minWidth: '46%',
+              //         paddingVertical: spacing(10),
+              //         paddingHorizontal: spacing(12),
+              //         borderWidth: 1,
+              //         borderColor: theme.colors.gray[200],
+              //         borderRadius: fontSize(10),
+              //         backgroundColor: theme.colors.white,
+              //       }}
+              //       onPress={() =>
+              //         mutate({
+              //           query: range,
+              //           id,
+              //           session_id: session,
+              //           page,
+              //         })
+              //       }
+              //       disabled={isPending}
+              //     >
+              //       <Text
+              //         style={{
+              //           fontFamily: theme.fonts.lato.regular,
+              //           fontSize: fontSize(14),
+              //           color: theme.colors.gray[800],
+              //           textAlign: 'center',
+              //         }}
+              //       >
+              //         {range}
+              //       </Text>
+              //     </TouchableButton>
+              //   ))}
+              // </View>
+            }
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
@@ -754,6 +832,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize(14),
     fontFamily: theme.fonts.lato.regular,
     color: theme.colors.gray[800],
+    textTransform: 'capitalize',
   },
   footer: {
     flexDirection: 'row',
