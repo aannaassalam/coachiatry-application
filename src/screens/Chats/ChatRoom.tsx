@@ -37,7 +37,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { queryClient } from '../../../App';
 import { getConversation } from '../../api/functions/chat.api';
 import { getMessages } from '../../api/functions/message.api';
-import { ChatAttachment, ChatCoach, ChevronLeft } from '../../assets';
+import { ChatCoach, ChevronLeft } from '../../assets';
 import EmojiReactor from '../../components/Chat/EmojiReactor';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
 import { useAuth } from '../../hooks/useAuth';
@@ -356,7 +356,6 @@ const ReplyPreview = ({
 
 const ChatScreen = () => {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
-  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [attachments, setAttachments] = useState<
     {
       uri: string;
@@ -428,6 +427,8 @@ const ChatScreen = () => {
       }
       return undefined;
     },
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   const { data: conversation, isLoading: isConversationLoading } = useQuery({
@@ -496,12 +497,18 @@ const ChatScreen = () => {
     if (!socket) return;
     if (!room) return;
 
-    socket.emit('join_room', {
-      chatId: room,
-      userId: profile?._id,
-      friendId: friend?.user._id,
-      isGroup: conversation?.type === 'group',
-    });
+    const joinRoom = () => {
+      socket.emit('join_room', {
+        chatId: room,
+        userId: profile?._id,
+        friendId: friend?.user._id,
+        isGroup: conversation?.type === 'group',
+      });
+    };
+
+    // Join on mount and rejoin on reconnection (new server socket = lost rooms)
+    joinRoom();
+    socket.on('connect', joinRoom);
 
     // socket.emit('mark_seen', { chatId: room, userId: profile?._id });
 
@@ -687,16 +694,29 @@ const ChatScreen = () => {
       );
     });
 
-    socket.on('user_typing', ({ userId }) => {
-      if (profile?._id !== userId)
-        setTypingUsers(prev => [...new Set([...prev, userId])]);
-    });
+    socket.on(
+      'user_typing',
+      ({ chatId, userId }: { chatId: string; userId: string }) => {
+        if (chatId === room && userId !== profile?._id) {
+          setTypingUsers(prev =>
+            prev.includes(userId) ? prev : [...prev, userId],
+          );
+        }
+      },
+    );
 
-    socket.on('user_stop_typing', ({ userId }) => {
-      setTypingUsers(prev => prev.filter(id => id !== userId));
-    });
+    socket.on(
+      'user_stop_typing',
+      ({ chatId, userId }: { chatId: string; userId: string }) => {
+        if (chatId === room) {
+          setTypingUsers(prev => prev.filter(id => id !== userId));
+        }
+      },
+    );
 
     return () => {
+      socket.off('connect', joinRoom);
+      socket.emit('stop_typing', { chatId: room, userId: profile?._id });
       socket.emit('leave_room', { chatId: room, userId: profile?._id });
       socket.off('new_message');
       socket.off('message_delivered_update');
@@ -795,6 +815,28 @@ const ChatScreen = () => {
       return { ...old, pages: newPages };
     });
 
+    // Optimistically update conversations list immediately
+    queryClient.setQueryData<PaginatedResponse<ChatConversation[]>>(
+      ['conversations'],
+      old => {
+        if (!old) return old;
+
+        const existing = [...old.data];
+        const idx = existing.findIndex(c => c._id === room);
+        if (idx === -1) return old;
+
+        const updatedConv = {
+          ...existing[idx],
+          lastMessage: optimisticMessage as unknown as Message,
+          updatedAt: now,
+        };
+
+        const newList = [updatedConv, ...existing.filter((_, i) => i !== idx)];
+
+        return { ...old, data: newList };
+      },
+    );
+
     if (files.length > 0) {
       const totalSize = files.reduce((a, f) => a + f.size, 0);
       const progressPerFile = Array(files.length).fill(0);
@@ -832,8 +874,7 @@ const ChatScreen = () => {
                         m.tempId === tempId
                           ? {
                               ...m,
-                              overallProgress:
-                                overallPct < 100 ? overallPct : 0, // update progress immutably
+                              overallProgress: Math.min(overallPct, 100),
                               files: m.files?.map((f: any, fi: number) =>
                                 i === fi ? { ...f, progress: pct } : f,
                               ),
@@ -852,12 +893,13 @@ const ChatScreen = () => {
             type: file.mimeType,
             size: file.size,
           });
-        } catch {
+        } catch (err) {
           if (controller.signal.aborted) {
             console.log('Upload cancelled:', file.name);
-            return null;
+            return; // user cancelled — abort entire send
           }
-          return null;
+          console.error('Upload failed:', file.name, err);
+          continue; // skip this file, try the rest
         }
       }
 
@@ -901,14 +943,136 @@ const ChatScreen = () => {
       });
 
       if (validFiles.length > 0) {
-        socket.emit('send_message', {
-          ...optimisticMessage,
-          files: validFiles,
-          status: 'sent',
-        });
+        socket.emit(
+          'send_message',
+          {
+            ...optimisticMessage,
+            sender: profile?._id,
+            files: validFiles,
+            status: 'sent',
+          },
+          (response: {
+            success: boolean;
+            messageId?: string;
+            status?: string;
+            error?: string;
+          }) => {
+            if (response?.success) {
+              queryClient.setQueryData<
+                InfiniteData<PaginatedResponse<Message[]>, number>
+              >(['messages', room], old => {
+                if (!old) return old;
+                return {
+                  ...old,
+                  pages: old.pages.map((page, idx) =>
+                    idx === 0
+                      ? {
+                          ...page,
+                          data: page.data.map(m =>
+                            m.tempId === tempId
+                              ? {
+                                  ...m,
+                                  _id: response.messageId,
+                                  status: (response.status ??
+                                    'sent') as MessageStatus,
+                                }
+                              : m,
+                          ),
+                        }
+                      : page,
+                  ),
+                };
+              });
+            } else {
+              console.error('File message failed:', response?.error);
+              queryClient.setQueryData<
+                InfiniteData<PaginatedResponse<Message[]>, number>
+              >(['messages', room], old => {
+                if (!old) return old;
+                return {
+                  ...old,
+                  pages: old.pages.map((page, idx) =>
+                    idx === 0
+                      ? {
+                          ...page,
+                          data: page.data.map(m =>
+                            m.tempId === tempId
+                              ? { ...m, status: 'failed' as MessageStatus }
+                              : m,
+                          ),
+                        }
+                      : page,
+                  ),
+                };
+              });
+            }
+          },
+        );
       }
     } else {
-      socket.emit('send_message', optimisticMessage);
+      socket.emit(
+        'send_message',
+        {
+          ...optimisticMessage,
+          sender: profile?._id,
+        },
+        (response: {
+          success: boolean;
+          messageId?: string;
+          status?: string;
+          error?: string;
+        }) => {
+          if (response?.success) {
+            queryClient.setQueryData<
+              InfiniteData<PaginatedResponse<Message[]>, number>
+            >(['messages', room], old => {
+              if (!old) return old;
+              return {
+                ...old,
+                pages: old.pages.map((page, idx) =>
+                  idx === 0
+                    ? {
+                        ...page,
+                        data: page.data.map(m =>
+                          m.tempId === tempId
+                            ? {
+                                ...m,
+                                _id: response.messageId,
+                                status: (response.status ??
+                                  'sent') as MessageStatus,
+                              }
+                            : m,
+                        ),
+                      }
+                    : page,
+                ),
+              };
+            });
+          } else {
+            console.error('Message failed:', response?.error);
+            queryClient.setQueryData<
+              InfiniteData<PaginatedResponse<Message[]>, number>
+            >(['messages', room], old => {
+              if (!old) return old;
+              return {
+                ...old,
+                pages: old.pages.map((page, idx) =>
+                  idx === 0
+                    ? {
+                        ...page,
+                        data: page.data.map(m =>
+                          m.tempId === tempId
+                            ? { ...m, status: 'failed' as MessageStatus }
+                            : m,
+                        ),
+                      }
+                    : page,
+                ),
+              };
+            });
+          }
+        },
+      );
     }
     // setTimeout(() => {
     //   bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1025,7 +1189,7 @@ const ChatScreen = () => {
   };
 
   const handleAttachmentSelect = (type: 'image' | 'video' | 'file') => {
-    setShowAttachmentMenu(false);
+    Keyboard.dismiss();
 
     if (type === 'image') handlePickImage();
     if (type === 'video') handlePickVideo();
@@ -1206,19 +1370,19 @@ const ChatScreen = () => {
           </TouchableOpacity>
 
           <TextInput
-            onFocus={() => setShowEmojiPicker(false)}
+            onFocus={() => {
+              setShowEmojiPicker(false);
+            }}
             placeholder="Write your message..."
             placeholderTextColor={theme.colors.gray[400]}
             style={styles.input}
             value={message}
             onChangeText={handleTyping}
           />
-          <TouchableOpacity
-            onPress={() => setShowAttachmentMenu(true)}
-            style={{ padding: spacing(5) }}
-          >
-            <ChatAttachment />
-          </TouchableOpacity>
+          <AttachmentMenu
+            onSelect={handleAttachmentSelect}
+            // onOpen={() => setShowEmojiPicker(false)}
+          />
         </View>
 
         {!isTyping && (
@@ -1270,11 +1434,6 @@ const ChatScreen = () => {
         onSelect={(emoji: any) => {
           setMessage(prev => prev + emoji);
         }}
-      />
-      <AttachmentMenu
-        visible={showAttachmentMenu}
-        onClose={() => setShowAttachmentMenu(false)}
-        onSelect={handleAttachmentSelect}
       />
       <EmojiReactor
         visible={!!reactorVisibleFor}

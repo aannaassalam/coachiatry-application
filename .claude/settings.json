@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Volumes/2.0/Applications/**)",
+      "Read(//Users/aannaassalam/Documents/**)",
+      "Read(//Users/**)",
+      "Read(//Volumes/**)",
+      "Bash(grep -r \"socket\\\\|Socket\" /Users/aannaassalam/Documents/Github/coachiatry/pages --include=*.tsx --include=*.ts)",
+      "Read(//Volumes/2.0/Applications/coachiatry-application/$HOME/Library/Application Support/Code/User/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/aannaassalam/Documents/Github/coachiatry-backend/src/sockets",
+      "/Users/aannaassalam/Documents/Github/coachiatry/components/Chats",
+      "/Users/aannaassalam/Documents/Github/coachiatry/hooks",
+      "/Users/aannaassalam/Documents/Github/coachiatry/lib",
+      "/Users/aannaassalam/Library/Application Support/Code/User"
+    ]
+  }
+}

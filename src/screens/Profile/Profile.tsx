@@ -196,8 +196,10 @@ export default function Profile() {
   });
 
   return (
-    // <SafeAreaView style={styles.container}>
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ flexGrow: 1 }}
+    >
       <View style={{ backgroundColor: theme.colors.white }}>
         {/* Header */}
         <View style={styles.header}>
@@ -442,7 +444,6 @@ export default function Profile() {
         </View>
       </Modal>
     </ScrollView>
-    // </SafeAreaView>
   );
 }
 

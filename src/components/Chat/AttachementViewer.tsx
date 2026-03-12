@@ -138,14 +138,14 @@ const AttachmentViewer: React.FC<Props> = ({
         </View>
         {/* MAIN LARGE PREVIEW */}
         <View style={styles.mainPreview}>
-          {active.type === 'image' && (
+          {active.type?.startsWith('image') && (
             <Image
               source={{ uri: active.url }}
               style={styles.mainMedia}
               key={active.url}
             />
           )}
-          {active.type === 'video' && (
+          {active.type?.startsWith('video') && (
             <Video
               source={{ uri: active.url }}
               style={styles.mainMedia}
@@ -174,13 +174,13 @@ const AttachmentViewer: React.FC<Props> = ({
                 ]}
               >
                 {/* IMAGE/VIDEO THUMB */}
-                {file.type === 'image' ? (
+                {file.type?.startsWith('image') ? (
                   <Image
                     source={{ uri: file.url }}
                     style={styles.thumb}
                     key={file.url}
                   />
-                ) : file.type === 'video' ? (
+                ) : file.type?.startsWith('video') ? (
                   <Video
                     source={{ uri: file.url }}
                     paused

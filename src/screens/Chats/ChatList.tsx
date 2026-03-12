@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { InfiniteData, useQuery } from '@tanstack/react-query';
 import moment from 'moment';
 import {
   ActivityIndicator,
@@ -76,6 +76,9 @@ export default function ChatList() {
       lastMessage: Message;
       updatedAt: string;
     }) => {
+      console.log(update);
+
+      // Update conversations list
       queryClient.setQueryData<PaginatedResponse<ChatConversation[]>>(
         ['conversations'],
         old => {
@@ -83,6 +86,7 @@ export default function ChatList() {
 
           const existing = Array.isArray(old.data) ? [...old.data] : [];
           const idx = existing.findIndex(c => c._id === update.chatId);
+          if (idx === -1) return old;
 
           const isMyMessage = update.lastMessage?.sender?._id === profile?._id;
 
@@ -94,13 +98,8 @@ export default function ChatList() {
             unreadCount: current.unreadCount || 0,
           } as ChatConversation;
 
-          if (idx > -1) {
-            // ✅ Only increase unread count if:
-            // - this message is NOT mine
-            // - and I am NOT currently inside that chat
-            if (!isMyMessage) {
-              updatedConv.unreadCount = (current.unreadCount || 0) + 1;
-            }
+          if (!isMyMessage) {
+            updatedConv.unreadCount = (current.unreadCount || 0) + 1;
           }
 
           const newList = [
@@ -108,7 +107,6 @@ export default function ChatList() {
             ...existing.filter((_, i) => i !== idx),
           ];
 
-          // ✅ Sort newest → oldest
           const getSortTime = (chat: ChatConversation) =>
             moment(chat.lastMessage?.createdAt ?? chat.createdAt).valueOf();
 
@@ -117,6 +115,36 @@ export default function ChatList() {
           return { ...old, data: newList };
         },
       );
+
+      // Also upsert the message into that chat's messages cache
+      if (update.lastMessage) {
+        queryClient.setQueryData<
+          InfiniteData<PaginatedResponse<Message[]>, number>
+        >(['messages', update.chatId], old => {
+          if (!old) return old;
+
+          const firstPage = old.pages[0];
+          if (!firstPage) return old;
+
+          const exists = firstPage.data.some(
+            m =>
+              (m._id && m._id === update.lastMessage._id) ||
+              (m.tempId &&
+                update.lastMessage.tempId &&
+                m.tempId === update.lastMessage.tempId),
+          );
+
+          if (exists) return old;
+
+          return {
+            ...old,
+            pages: [
+              { ...firstPage, data: [update.lastMessage, ...firstPage.data] },
+              ...old.pages.slice(1),
+            ],
+          };
+        });
+      }
     };
 
     socket.on('conversation_updated', handleConversationUpdated);

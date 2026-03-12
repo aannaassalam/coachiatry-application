@@ -282,7 +282,8 @@ const TaskDetailsScreen = () => {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          style={{ flexGrow: 1 }}
+          contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={isFetching} onRefresh={refetch} />
@@ -396,12 +397,16 @@ const TaskDetailsScreen = () => {
           <View style={styles.divider} />
 
           {/* Description */}
-          <View>
+          <View style={{ marginBottom: spacing(20) }}>
             <Text style={styles.sectionTitle}>Description</Text>
             <View style={styles.descriptionBox}>
               <Text style={styles.descriptionText}>{data?.description}</Text>
             </View>
           </View>
+
+          <Text style={styles.createdOn}>
+            Created on: {moment(data?.createdAt).format('LLL')}
+          </Text>
         </ScrollView>
       )}
     </View>
@@ -533,5 +538,12 @@ const styles = createStyleSheet({
   },
   optionText: {
     fontSize: fontSize(16),
+  },
+  createdOn: {
+    marginTop: 'auto',
+    fontFamily: theme.fonts.lato.regular,
+    color: theme.colors.gray[500],
+    fontSize: fontSize(12),
+    marginBottom: spacing(10),
   },
 });

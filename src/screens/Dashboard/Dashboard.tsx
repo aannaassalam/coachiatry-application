@@ -363,8 +363,7 @@ function Dashboard() {
         queryKey: ['tasks'],
         queryFn: () =>
           getAllTasks({
-            startDate: moment().startOf('month').toISOString(),
-            endDate: moment().endOf('month').toISOString(),
+            sort: '-createdAt',
           }),
       },
       {
@@ -384,7 +383,7 @@ function Dashboard() {
     ],
   });
 
-  const slicedTasks = tasks?.slice(0, 5);
+  const slicedTasks = tasks?.slice(0, 30);
   const isAllLoading =
     isLoading || isStatusLoading || isChatsLoading || isDocumentsLoading;
 

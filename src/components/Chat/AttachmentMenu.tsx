@@ -1,130 +1,129 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  View,
+  Pressable,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import { spacing, fontSize, isAndroid } from '../../utils';
+import { spacing, fontSize } from '../../utils';
 import { theme } from '../../theme';
+import { ChatAttachment } from '../../assets';
 
 interface AttachmentMenuProps {
-  visible: boolean;
-  onClose: () => void;
   onSelect: (type: 'image' | 'video' | 'file') => void;
+  onOpen?: () => void;
 }
 
 const AttachmentMenu: React.FC<AttachmentMenuProps> = ({
-  visible,
-  onClose,
   onSelect,
+  onOpen,
 }) => {
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: withTiming(visible ? 1 : 0, { duration: 120 }),
-      transform: [
-        {
-          scale: withTiming(visible ? 1 : 0.85, { duration: 120 }),
-        },
-      ],
-    };
-  });
+  const [visible, setVisible] = useState(false);
 
-  if (!visible) return null;
+  const toggle = () => {
+    if (!visible) onOpen?.();
+    setVisible(prev => !prev);
+  };
+
+  const handleSelect = (type: 'image' | 'video' | 'file') => {
+    setVisible(false);
+    onSelect(type);
+  };
 
   return (
-    <TouchableWithoutFeedback onPress={onClose}>
-      <View style={styles.overlay}>
-        <Animated.View style={[styles.container, animatedStyle]}>
-          <MenuItem
-            label="Images"
-            icon={<Ionicons name="image-outline" size={20} color="#6B7280" />}
-            onPress={() => onSelect('image')}
+    <View>
+      {/* Menu floats above the trigger via absolute positioning */}
+      {visible && (
+        <>
+          {/* Backdrop to close on outside tap */}
+          <Pressable
+            style={styles.backdrop}
+            onPress={() => setVisible(false)}
           />
+          <Animated.View
+            entering={FadeIn.duration(150)}
+            exiting={FadeOut.duration(100)}
+            style={styles.menuContainer}
+          >
+            <TouchableOpacity
+              style={styles.item}
+              onPress={() => handleSelect('image')}
+              activeOpacity={0.6}
+            >
+              <Ionicons name="image-outline" size={20} color="#6B7280" />
+              <Text style={styles.label}>Images</Text>
+            </TouchableOpacity>
 
-          <MenuItem
-            label="Videos"
-            icon={
+            <TouchableOpacity
+              style={styles.item}
+              onPress={() => handleSelect('video')}
+              activeOpacity={0.6}
+            >
               <Ionicons name="videocam-outline" size={20} color="#6B7280" />
-            }
-            onPress={() => onSelect('video')}
-          />
+              <Text style={styles.label}>Videos</Text>
+            </TouchableOpacity>
 
-          <MenuItem
-            label="Documents"
-            icon={
+            <TouchableOpacity
+              style={styles.item}
+              onPress={() => handleSelect('file')}
+              activeOpacity={0.6}
+            >
               <Ionicons
                 name="document-text-outline"
                 size={20}
                 color="#6B7280"
               />
-            }
-            onPress={() => onSelect('file')}
-          />
-        </Animated.View>
-      </View>
-    </TouchableWithoutFeedback>
+              <Text style={styles.label}>Documents</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </>
+      )}
+
+      {/* Trigger button */}
+      <TouchableOpacity onPress={toggle} style={{ padding: spacing(5) }}>
+        <ChatAttachment />
+      </TouchableOpacity>
+    </View>
   );
 };
-
-const MenuItem = ({
-  label,
-  icon,
-  onPress,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  onPress: () => void;
-}) => (
-  <TouchableOpacity style={styles.item} onPress={onPress}>
-    {icon}
-    <Text style={styles.label}>{label}</Text>
-  </TouchableOpacity>
-);
 
 export default AttachmentMenu;
 
 const styles = StyleSheet.create({
-  overlay: {
+  backdrop: {
     position: 'absolute',
-    bottom: spacing(60),
-    right: spacing(10),
-    left: 0,
-    top: 0,
-    justifyContent: 'flex-end',
-    alignItems: 'flex-end',
+    top: -1000,
+    bottom: -1000,
+    left: -1000,
+    right: -1000,
+    zIndex: 1,
   },
-
-  container: {
-    backgroundColor: theme.colors.white,
-    paddingVertical: spacing(2),
+  menuContainer: {
+    position: 'absolute',
+    bottom: '100%',
+    right: spacing(-20),
+    marginBottom: spacing(10),
     width: spacing(150),
     borderRadius: spacing(10),
-
+    paddingVertical: spacing(2),
+    backgroundColor: theme.colors.white,
     shadowColor: '#000',
     shadowOpacity: 0.12,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: -2 },
     elevation: 5,
-
-    marginRight: isAndroid ? spacing(30) : spacing(20),
-    marginBottom: isAndroid ? spacing(15) : spacing(5),
+    zIndex: 2,
   },
-
   item: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing(8),
     paddingHorizontal: spacing(10),
   },
-
   label: {
     fontSize: fontSize(14),
     marginLeft: spacing(10),

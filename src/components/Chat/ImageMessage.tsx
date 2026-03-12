@@ -36,8 +36,7 @@ const ImageLoaderWrapper = ({
       key={file._id || index}
       style={[
         styles.imageWrapper,
-        // !isGrid && { width: '100%' },
-        // Dim the image slightly while loading
+        !isGrid && { width: '100%', aspectRatio: 4 / 3 },
         isLoading && { backgroundColor: 'rgba(0, 0, 0, 0.1)' },
       ]}
       onPress={onPress}

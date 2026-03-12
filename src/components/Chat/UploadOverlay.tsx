@@ -1,7 +1,13 @@
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedProps } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedProps,
+  useSharedValue,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
+import { useEffect } from 'react';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -15,12 +21,19 @@ export const CircularProgress = ({ progress }: Props) => {
   const normalizedRadius = radius - stroke * 2;
   const circumference = normalizedRadius * 2 * Math.PI;
 
-  const animatedProps = useAnimatedProps(() => {
-    const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const animatedProgress = useSharedValue(progress);
 
-    return {
-      strokeDashoffset,
-    };
+  useEffect(() => {
+    animatedProgress.value = withTiming(progress, {
+      duration: 300,
+      easing: Easing.out(Easing.ease),
+    });
+  }, [progress]);
+
+  const animatedProps = useAnimatedProps(() => {
+    const strokeDashoffset =
+      circumference - (animatedProgress.value / 100) * circumference;
+    return { strokeDashoffset };
   });
 
   if (progress >= 100) return null;
@@ -69,12 +82,19 @@ export const UploadProgressOverlay = ({ progress }: Props) => {
   const normalizedRadius = radius - stroke * 2;
   const circumference = normalizedRadius * 2 * Math.PI;
 
-  const animatedProps = useAnimatedProps(() => {
-    const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const animatedProgress = useSharedValue(progress);
 
-    return {
-      strokeDashoffset,
-    };
+  useEffect(() => {
+    animatedProgress.value = withTiming(progress, {
+      duration: 300,
+      easing: Easing.out(Easing.ease),
+    });
+  }, [progress]);
+
+  const animatedProps = useAnimatedProps(() => {
+    const strokeDashoffset =
+      circumference - (animatedProgress.value / 100) * circumference;
+    return { strokeDashoffset };
   });
 
   if (progress >= 100) return null;

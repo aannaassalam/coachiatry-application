@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import AppHeader from '../../components/ui/AppHeader';
+import UserSearch from '../../components/UserSearch';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
@@ -34,6 +35,7 @@ type ClientScreenNavigationProp = NativeStackNavigationProp<
 
 export default function Users() {
   const navigation = useNavigation<ClientScreenNavigationProp>();
+  const [searchVisible, setSearchVisible] = useState(false);
 
   const {
     data,
@@ -82,28 +84,6 @@ export default function Users() {
   return (
     <View style={styles.container}>
       <AppHeader heading="Users & Permissions" showSearch />
-      {/* <View style={{ paddingHorizontal: spacing(16) }}>
-        <View style={styles.buttonContainer}>
-          <Pressable style={styles.filterIcon} onPress={() => {}}>
-            <Image source={assets.icons.filter} style={styles.sortIcon} />
-          </Pressable>
-          <Pressable style={styles.filterIcon} onPress={() => {}}>
-            <Image source={assets.icons.sort} style={styles.sortIcon} />
-          </Pressable>
-          <AppButton
-            text="Add a New Client"
-            onPress={() => {}}
-            variant="secondary-outline"
-            style={{
-              padding: spacing(8),
-              borderRadius: fontSize(6),
-              marginLeft: 'auto',
-            }}
-            textStyle={{ fontSize: fontSize(14) }}
-          />
-        </View>
-      </View> */}
-      {/* <ScrollView showsVerticalScrollIndicator={false}> */}
       {isLoading ? (
         <View
           style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
@@ -155,11 +135,22 @@ export default function Users() {
       )}
       <TouchableOpacity
         activeOpacity={0.8}
+        style={styles.searchBtn}
+        onPress={() => setSearchVisible(true)}
+      >
+        <Ionicons name="search" size={23} color={theme.colors.white} />
+      </TouchableOpacity>
+      <TouchableOpacity
+        activeOpacity={0.8}
         style={styles.addBtn}
         onPress={() => navigation.navigate('AddEditUser', {})}
       >
         <Ionicons name="add" size={25} color={theme.colors.white} />
       </TouchableOpacity>
+      <UserSearch
+        visible={searchVisible}
+        onClose={() => setSearchVisible(false)}
+      />
     </View>
   );
 }
@@ -263,6 +254,14 @@ const styles = StyleSheet.create({
     gap: spacing(10),
     width: '100%',
     marginTop: spacing(6),
+  },
+  searchBtn: {
+    position: 'absolute',
+    bottom: spacing(70),
+    right: spacing(16),
+    padding: spacing(10),
+    backgroundColor: theme.colors.primary,
+    borderRadius: 100,
   },
   addBtn: {
     position: 'absolute',
