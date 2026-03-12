@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  Image,
   Modal,
   Platform,
   ScrollView,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import FastImage from 'react-native-fast-image';
 import Video from 'react-native-video';
 import RNFS from 'react-native-fs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -98,8 +98,8 @@ const AttachmentViewer: React.FC<Props> = ({
       <View
         style={{
           ...styles.wrapper,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom,
+          paddingTop: Platform.OS === 'ios' ? insets.top : spacing(10),
+          paddingBottom: Platform.OS === 'ios' ? insets.bottom : spacing(10),
         }}
       >
         {downloading && (
@@ -139,9 +139,14 @@ const AttachmentViewer: React.FC<Props> = ({
         {/* MAIN LARGE PREVIEW */}
         <View style={styles.mainPreview}>
           {active.type?.startsWith('image') && (
-            <Image
-              source={{ uri: active.url }}
+            <FastImage
+              source={{
+                uri: active.url,
+                priority: FastImage.priority.high,
+                cache: FastImage.cacheControl.immutable,
+              }}
               style={styles.mainMedia}
+              resizeMode={FastImage.resizeMode.contain}
               key={active.url}
             />
           )}
@@ -175,9 +180,14 @@ const AttachmentViewer: React.FC<Props> = ({
               >
                 {/* IMAGE/VIDEO THUMB */}
                 {file.type?.startsWith('image') ? (
-                  <Image
-                    source={{ uri: file.url }}
+                  <FastImage
+                    source={{
+                      uri: file.url,
+                      priority: FastImage.priority.normal,
+                      cache: FastImage.cacheControl.immutable,
+                    }}
                     style={styles.thumb}
+                    resizeMode={FastImage.resizeMode.cover}
                     key={file.url}
                   />
                 ) : file.type?.startsWith('video') ? (
@@ -229,7 +239,6 @@ const styles = StyleSheet.create({
   mainMedia: {
     width: '100%',
     height: '90%',
-    resizeMode: 'contain',
   },
 
   docBox: {

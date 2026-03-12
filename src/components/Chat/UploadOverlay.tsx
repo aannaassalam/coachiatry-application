@@ -68,12 +68,16 @@ export const CircularProgress = ({ progress }: Props) => {
 };
 
 export const getFileIcon = (mimeType: string) => {
-  if (mimeType.includes('pdf')) return { name: 'file-pdf-o', color: '#E53935' };
+  if (mimeType.includes('pdf')) return { name: 'file-pdf', color: '#E53935' };
+  if (mimeType.includes('word') || mimeType.includes('doc'))
+    return { name: 'file-word', color: '#2196F3' };
+  if (mimeType.includes('presentation') || mimeType.includes('ppt'))
+    return { name: 'file-powerpoint', color: '#FF7043' };
   if (mimeType.includes('audio'))
-    return { name: 'file-audio-o', color: '#4DB6AC' };
+    return { name: 'file-audio', color: '#4DB6AC' };
   if (mimeType.includes('text'))
-    return { name: 'file-text-o', color: '#7986CB' };
-  return { name: 'file-o', color: '#9E9E9E' };
+    return { name: 'file-alt', color: '#7986CB' };
+  return { name: 'file', color: '#9E9E9E' };
 };
 
 export const UploadProgressOverlay = ({ progress }: Props) => {

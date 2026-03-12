@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
   Dimensions,
 } from 'react-native';
+import FastImage from 'react-native-fast-image';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { FadeInUp, FadeOutDown } from 'react-native-reanimated';
 import Video from 'react-native-video';
@@ -63,7 +63,11 @@ const AttachmentFullPreview: React.FC<Props> = ({
       {/* MAIN LARGE PREVIEW */}
       <View style={styles.mainPreview}>
         {active.type === 'image' && (
-          <Image source={{ uri: active.uri }} style={styles.mainMedia} />
+          <FastImage
+            source={{ uri: active.uri }}
+            style={styles.mainMedia}
+            resizeMode={FastImage.resizeMode.contain}
+          />
         )}
 
         {active.type === 'video' && (
@@ -103,7 +107,7 @@ const AttachmentFullPreview: React.FC<Props> = ({
             >
               {/* IMAGE/VIDEO THUMB */}
               {file.type === 'image' ? (
-                <Image source={{ uri: file.uri }} style={styles.thumb} />
+                <FastImage source={{ uri: file.uri }} style={styles.thumb} resizeMode={FastImage.resizeMode.cover} />
               ) : file.type === 'video' ? (
                 <Video source={{ uri: file.uri }} paused style={styles.thumb} />
               ) : (
@@ -155,7 +159,6 @@ const styles = StyleSheet.create({
   mainMedia: {
     width: screenWidth,
     height: '90%',
-    resizeMode: 'contain',
   },
 
   docBox: {

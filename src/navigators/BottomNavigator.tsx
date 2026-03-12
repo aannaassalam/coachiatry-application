@@ -69,7 +69,7 @@ const BottomNavigator = () => {
       })}
     >
       <Tab.Screen name="Dashboard" component={Dashboard} />
-      <Tab.Screen name="Tasks" component={TaskList} options={{ lazy: false }} />
+      <Tab.Screen name="Tasks" component={TaskList} />
       <Tab.Screen name="Chats" component={ChatList} />
       {profile?.role === 'coach' ? (
         <Tab.Screen name="Clients" component={MyClients} />

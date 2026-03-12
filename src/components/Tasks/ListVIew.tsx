@@ -1,9 +1,9 @@
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
-import { getAllTasks } from '../../api/functions/task.api';
+import { getAllTasks, getTask } from '../../api/functions/task.api';
 import { Task } from '../../typescript/interface/task.interface';
 import { getAllStatuses } from '../../api/functions/status.api';
-import { ActivityIndicator, FlatList, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, InteractionManager, Text, View } from 'react-native';
 import TaskCard from './TaskCard';
 import { Filter } from '../../typescript/interface/common.interface';
 import { createStyleSheet } from 'react-native-unistyles';
@@ -17,6 +17,8 @@ export default function ListView({
   sort: string;
   filters: Filter[];
 }) {
+  const queryClient = useQueryClient();
+
   const [
     { data: tasks = [], isLoading, isFetching, refetch },
     {
@@ -42,6 +44,44 @@ export default function ListView({
       },
     ],
   });
+
+  // Stable key that only changes when the actual task list changes
+  const taskIds = tasks.map(t => t._id).join(',');
+
+  // Prefetch individual task details after tasks load,
+  // staggered via InteractionManager so the UI doesn't freeze
+  React.useEffect(() => {
+    if (tasks.length === 0) return;
+
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    const handle = InteractionManager.runAfterInteractions(() => {
+      const BATCH_SIZE = 3;
+      let i = 0;
+
+      const prefetchBatch = () => {
+        const batch = tasks.slice(i, i + BATCH_SIZE);
+        batch.forEach(task => {
+          queryClient.prefetchQuery({
+            queryKey: ['task', task._id],
+            queryFn: () => getTask(task._id),
+            staleTime: 5 * 60 * 1000,
+          });
+        });
+        i += BATCH_SIZE;
+        if (i < tasks.length) {
+          timeouts.push(setTimeout(prefetchBatch, 200));
+        }
+      };
+
+      prefetchBatch();
+    });
+
+    return () => {
+      handle.cancel();
+      timeouts.forEach(clearTimeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskIds, queryClient]);
 
   if (isLoading || isStatusLoading)
     return (

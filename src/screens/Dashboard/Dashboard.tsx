@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Image,
+  InteractionManager,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -348,6 +348,15 @@ const ChatSection = ({ chats }: { chats: ChatConversation[] }) => {
 };
 
 function Dashboard() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const handle = InteractionManager.runAfterInteractions(() => {
+      setReady(true);
+    });
+    return () => handle.cancel();
+  }, []);
+
   const [
     { data: status = [], isLoading: isStatusLoading },
     { data: tasks = [], isLoading },
@@ -358,17 +367,21 @@ function Dashboard() {
       {
         queryKey: ['status'],
         queryFn: getAllStatuses,
+        enabled: ready,
       },
       {
-        queryKey: ['tasks'],
+        queryKey: ['tasks', { dashboard: true }],
         queryFn: () =>
           getAllTasks({
             sort: '-createdAt',
+            limit: 30,
           }),
+        enabled: ready,
       },
       {
         queryKey: ['conversations-dashboard'],
         queryFn: () => getAllConversations({ limit: 4, sort: '-updatedAt' }),
+        enabled: ready,
       },
       {
         queryKey: ['documents'],
@@ -379,21 +392,19 @@ function Dashboard() {
             limit: 4,
             page: 1,
           }),
+        enabled: ready,
       },
     ],
   });
 
-  const slicedTasks = tasks?.slice(0, 30);
   const isAllLoading =
-    isLoading || isStatusLoading || isChatsLoading || isDocumentsLoading;
+    !ready || isLoading || isStatusLoading || isChatsLoading || isDocumentsLoading;
 
   return (
     <View style={styles.container}>
       <AppHeader heading="Dashboard" showSearch />
       {isAllLoading ? (
-        <View
-          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-        >
+        <View style={styles.sectionLoader}>
           <ActivityIndicator size="large" />
         </View>
       ) : (
@@ -404,7 +415,7 @@ function Dashboard() {
           style={{ backgroundColor: theme.colors.gray[50] }}
           showsVerticalScrollIndicator={false}
         >
-          <TasksSection status={status} tasks={slicedTasks} />
+          <TasksSection status={status} tasks={tasks} />
           <DocumentsSection documents={documents.data} />
           <ChatSection chats={chats.data} />
         </ScrollView>
@@ -419,6 +430,11 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
     flex: 1,
     position: 'relative',
+  },
+  sectionLoader: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   card: {
     backgroundColor: theme.colors.white,

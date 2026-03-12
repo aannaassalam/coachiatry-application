@@ -1,15 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
-  Image,
   TouchableOpacity,
   StyleSheet,
   Text,
   ActivityIndicator,
 } from 'react-native';
+import FastImage from 'react-native-fast-image';
 import { UploadProgressOverlay } from './UploadOverlay';
 import { Message } from '../../typescript/interface/message.interface';
-import TouchableButton from '../TouchableButton';
 import { fontSize, scale, spacing } from '../../utils';
 
 const ImageLoaderWrapper = ({
@@ -29,7 +28,7 @@ const ImageLoaderWrapper = ({
   overallProgress: number;
   onPress: () => void;
 }) => {
-  const [isLoading, setIsLoading] = useState(true); // 👈 Local state for loading
+  const [isLoading, setIsLoading] = useState(true);
 
   return (
     <TouchableOpacity
@@ -42,39 +41,36 @@ const ImageLoaderWrapper = ({
       onPress={onPress}
       activeOpacity={0.9}
     >
-      {/* 1. Loader: Show activity indicator while loading */}
       {isLoading && (
         <View style={styles.absoluteCenter}>
           <ActivityIndicator size="small" color="#fff" />
         </View>
       )}
 
-      {/* 2. Image: Use onLoadEnd to hide the loader */}
       <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: file.thumbnailUrl || file.url }}
+        <FastImage
+          source={{
+            uri: file.thumbnailUrl || file.url,
+            priority: FastImage.priority.high,
+            cache: FastImage.cacheControl.immutable,
+          }}
           onLoadEnd={() => setIsLoading(false)}
-          style={[
-            // StyleSheet.absoluteFill,
-            {
-              width: '100%',
-              height: '100%',
-              opacity: isLoading ? 0 : 1,
-              borderRadius: 10,
-            },
-          ]}
-          resizeMode="cover"
+          style={{
+            width: '100%',
+            height: '100%',
+            opacity: isLoading ? 0 : 1,
+            borderRadius: 10,
+          }}
+          resizeMode={FastImage.resizeMode.cover}
         />
       </View>
 
-      {/* 3. More Overlay (if applicable) */}
       {index === 3 && filesLength > 4 && (
         <View style={styles.moreOverlay}>
           <Text style={styles.moreText}>+{filesLength - 4}</Text>
         </View>
       )}
 
-      {/* 4. Upload Progress Overlay (if applicable) */}
       {showProgress && (
         <UploadProgressOverlay
           progress={
@@ -106,20 +102,16 @@ export function ImageMessage({
 
   const filesToAverage = files.slice(3);
 
-  // 2. Filter for only the files that are actively uploading and have progress
   const uploadingFiles = filesToAverage.filter(
     f => f.uploading && typeof f.progress === 'number',
   );
 
   if (uploadingFiles.length > 0) {
-    // 3. Sum the progress of the filtered uploading files
     const totalProgress = uploadingFiles.reduce((sum, file) => {
-      // We already checked for 'number' type in the filter, but using the check is harmless.
       const progress = file.progress ?? 0;
       return sum + progress;
     }, 0);
 
-    // 4. Calculate the average progress
     overallProgress = totalProgress / uploadingFiles.length;
   }
 
@@ -161,7 +153,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 5, // Make sure it's above the image, but below the UploadOverlay (zIndex 10)
+    zIndex: 5,
   },
 
   single: {

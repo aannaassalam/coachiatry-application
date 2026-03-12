@@ -6,7 +6,11 @@
       "Read(//Users/**)",
       "Read(//Volumes/**)",
       "Bash(grep -r \"socket\\\\|Socket\" /Users/aannaassalam/Documents/Github/coachiatry/pages --include=*.tsx --include=*.ts)",
-      "Read(//Volumes/2.0/Applications/coachiatry-application/$HOME/Library/Application Support/Code/User/**)"
+      "Read(//Volumes/2.0/Applications/coachiatry-application/$HOME/Library/Application Support/Code/User/**)",
+      "Bash(npm install:*)",
+      "Bash(npx pod-install:*)",
+      "WebSearch",
+      "Bash(xargs cat:*)"
     ],
     "additionalDirectories": [
       "/Users/aannaassalam/Documents/Github/coachiatry-backend/src/sockets",

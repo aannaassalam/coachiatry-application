@@ -86,11 +86,13 @@ export const getAllTasks = async ({
   filter = [],
   startDate,
   endDate,
+  limit,
 }: {
   sort?: string;
   filter?: Filter[];
   startDate?: string;
   endDate?: string;
+  limit?: number;
 }): Promise<Task[]> => {
   const filterQuery = buildFilterQuery(filter);
   const res = await axiosInstance.get(endpoints.task.getAll, {
@@ -98,6 +100,7 @@ export const getAllTasks = async ({
       populate: 'category,status,assignedTo',
       sort,
       ...filterQuery,
+      ...(limit ? { limit } : {}),
       dueDate:
         startDate && endDate
           ? { gte: startDate, lte: endDate }

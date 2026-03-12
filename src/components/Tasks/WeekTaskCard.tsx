@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import moment from 'moment';
 import { useState } from 'react';
 import {
@@ -24,7 +24,7 @@ import { createStyleSheet } from 'react-native-unistyles';
 import Feather from 'react-native-vector-icons/Feather';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import Octicons from 'react-native-vector-icons/Octicons';
-import { deleteTask, getTask } from '../../api/functions/task.api';
+import { deleteTask } from '../../api/functions/task.api';
 import { Calendar } from '../../assets';
 import { hapticOptions } from '../../helpers/utils';
 import { theme } from '../../theme';
@@ -43,16 +43,9 @@ type TaskScreenNavigationProp = NativeStackNavigationProp<
 >;
 
 function TaskCard({ task }: { task: Task }) {
-  const queryClient = useQueryClient();
   const width = Dimensions.get('screen').width;
 
   const navigation = useNavigation<TaskScreenNavigationProp>();
-
-  queryClient.prefetchQuery({
-    queryKey: ['task', task._id],
-    queryFn: () => getTask(task._id),
-    staleTime: 5 * 60 * 1000,
-  });
 
   const { mutate } = useMutation({
     mutationFn: deleteTask,
