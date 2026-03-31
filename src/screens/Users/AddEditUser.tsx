@@ -240,11 +240,12 @@ export default function AddEditUser() {
     queries: [
       {
         queryKey: ['total-users'],
-        queryFn: getAllUsers,
+        queryFn: ({ signal }: { signal: AbortSignal }) => getAllUsers(signal),
       },
       {
         queryKey: ['user', id],
-        queryFn: () => getUserById(id ?? ''),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getUserById(id ?? '', signal),
         enabled: !!id,
       },
     ],

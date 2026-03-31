@@ -69,13 +69,13 @@ const RenderItem = ({
 
   queryClient.prefetchQuery({
     queryKey: ['documents', item._id],
-    queryFn: () => getDocument(item._id),
+    queryFn: ({ signal }) => getDocument(item._id, signal),
     staleTime: 5 * 60 * 1000,
   });
 
   queryClient.prefetchQuery({
     queryKey: ['categories'],
-    queryFn: getAllCategories,
+    queryFn: ({ signal }) => getAllCategories(signal),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -191,8 +191,8 @@ const RenderContent = ({ activeTab }: { activeTab: string }) => {
     isRefetching,
   } = useInfiniteQuery<PaginatedResponse<Document[]>>({
     queryKey: ['documents', activeTab],
-    queryFn: ({ pageParam = 1 }) =>
-      getAllDocuments({ tab: activeTab, page: pageParam as number }),
+    queryFn: ({ pageParam = 1, signal }) =>
+      getAllDocuments({ tab: activeTab, page: pageParam as number }, signal),
     getNextPageParam: lastPage => {
       const { currentPage, totalPages } = lastPage.meta;
       return currentPage < totalPages ? currentPage + 1 : undefined;

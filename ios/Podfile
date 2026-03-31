@@ -25,5 +25,18 @@ target 'CoachiatryApp' do
       config[:reactNativePath],
       :mac_catalyst_enabled => false
     )
+
+    # Fix fmt consteval errors with Xcode 26+ / newer Clang
+    fmt_base = File.join(__dir__, 'Pods', 'fmt', 'include', 'fmt', 'base.h')
+    if File.exist?(fmt_base)
+      content = File.read(fmt_base)
+      unless content.include?('force disable consteval')
+        content.sub!(
+          /\/\/ Detect consteval.*?#define FMT_USE_CONSTEVAL 0\n#endif/m,
+          "// Detect consteval, C++20 constexpr extensions and std::is_constant_evaluated.\n// Patched: force disable consteval for Xcode 26+ compatibility\n#define FMT_USE_CONSTEVAL 0"
+        )
+        File.write(fmt_base, content)
+      end
+    end
   end
 end

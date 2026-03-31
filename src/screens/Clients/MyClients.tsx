@@ -39,7 +39,7 @@ function MyClients() {
 
   const { data = [], isLoading } = useQuery({
     queryKey: ['clients'],
-    queryFn: getClients,
+    queryFn: ({ signal }) => getClients(signal),
   });
 
   const renderItem = ({ item }: { item: User }) => (

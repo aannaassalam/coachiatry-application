@@ -229,7 +229,7 @@ const CoachChatScreen = () => {
     isLoading,
   } = useInfiniteQuery({
     queryKey: ['messages', room],
-    queryFn: getMessages,
+    queryFn: ctx => getMessages(ctx),
     initialPageParam: 1,
     enabled: !!room,
     getNextPageParam: lastPage => {
@@ -242,7 +242,7 @@ const CoachChatScreen = () => {
 
   const { data: conversation, isLoading: isConversationLoading } = useQuery({
     queryKey: ['conversations', room],
-    queryFn: () => getConversation(room),
+    queryFn: ({ signal }) => getConversation(room, signal),
     enabled: !!room,
   });
 

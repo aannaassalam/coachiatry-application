@@ -88,12 +88,14 @@ const DocumentCategorySheetBody = ({
     queries: [
       {
         queryKey: ['categories'],
-        queryFn: getAllCategories,
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllCategories(signal),
         enabled: !forClient,
       },
       {
         queryKey: ['categories', userId],
-        queryFn: () => getAllCategoriesByCoach(userId as string),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllCategoriesByCoach(userId as string, signal),
         enabled: forClient,
       },
     ],
@@ -210,16 +212,19 @@ export default function DocumentEditor() {
     queries: [
       {
         queryKey: ['documents', documentId],
-        queryFn: () => getDocument(documentId),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getDocument(documentId, signal),
         enabled: !!documentId,
       },
       {
         queryKey: ['categories'],
-        queryFn: getAllCategories,
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllCategories(signal),
       },
       {
         queryKey: ['categories', userId],
-        queryFn: () => getAllCategoriesByCoach(userId as string),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllCategoriesByCoach(userId as string, signal),
         enabled: !!userId,
       },
     ],

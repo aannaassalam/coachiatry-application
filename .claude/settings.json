@@ -10,7 +10,16 @@
       "Bash(npm install:*)",
       "Bash(npx pod-install:*)",
       "WebSearch",
-      "Bash(xargs cat:*)"
+      "Bash(xargs cat:*)",
+      "Bash(npm run:*)",
+      "Bash(node -e \"console.log\\(require\\(''react-native/package.json''\\).version\\)\")",
+      "Bash(xcodebuild -version)",
+      "Bash(pod install:*)",
+      "Bash(xcodebuild -project Pods/Pods.xcodeproj -target fmt -configuration Debug -showBuildSettings)",
+      "Bash(xcodebuild clean:*)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts|jsx|js\\)$\")",
+      "Bash(npx tsc:*)",
+      "Bash(ls /Volumes/2.0/Applications/coachiatry-application/tsconfig*.json)"
     ],
     "additionalDirectories": [
       "/Users/aannaassalam/Documents/Github/coachiatry-backend/src/sockets",

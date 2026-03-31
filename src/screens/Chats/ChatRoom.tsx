@@ -253,30 +253,102 @@ const RenderMessage = ({
                 </View>
               )}
               {item.type === 'text' ? (
-                <Text
-                  style={[
-                    styles.messageText,
-                    {
-                      color: isMe ? theme.colors.white : theme.colors.gray[900],
-                    },
-                  ]}
-                >
-                  {item.content}
-                </Text>
+                <View style={styles.textWithTime}>
+                  <Text
+                    style={[
+                      styles.messageText,
+                      {
+                        color: isMe
+                          ? theme.colors.white
+                          : theme.colors.gray[900],
+                      },
+                    ]}
+                  >
+                    {item.content}
+                    {/* Invisible spacer to reserve room for the timestamp */}
+                    <Text style={styles.timeSpacer}>
+                      {'      ' +
+                        (item.createdAt
+                          ? moment(item.createdAt).format('h:mm A')
+                          : '')}
+                    </Text>
+                  </Text>
+                  {/* Real timestamp positioned at bottom-right */}
+                  <Text
+                    style={[
+                      styles.timestamp,
+                      {
+                        color: isMe
+                          ? 'rgba(255,255,255,0.6)'
+                          : theme.colors.gray[400],
+                      },
+                    ]}
+                  >
+                    {item.createdAt
+                      ? moment(item.createdAt).format('h:mm A')
+                      : ''}
+                  </Text>
+                </View>
               ) : item.type === 'image' ? (
                 <View style={{ paddingHorizontal: 0 }}>
                   <ImageMessage
                     message={item}
                     setSelected={index => setAttachmentIndex(index)}
                   />
+                  <Text
+                    style={[
+                      styles.mediaTimestamp,
+                      {
+                        color: isMe
+                          ? 'rgba(255,255,255,0.6)'
+                          : theme.colors.gray[400],
+                      },
+                    ]}
+                  >
+                    {item.createdAt
+                      ? moment(item.createdAt).format('h:mm A')
+                      : ''}
+                  </Text>
                 </View>
               ) : item.type === 'video' ? (
-                <VideoMessage
-                  message={item}
-                  setSelected={index => setAttachmentIndex(index)}
-                />
+                <View>
+                  <VideoMessage
+                    message={item}
+                    setSelected={index => setAttachmentIndex(index)}
+                  />
+                  <Text
+                    style={[
+                      styles.mediaTimestamp,
+                      {
+                        color: isMe
+                          ? 'rgba(255,255,255,0.6)'
+                          : theme.colors.gray[400],
+                      },
+                    ]}
+                  >
+                    {item.createdAt
+                      ? moment(item.createdAt).format('h:mm A')
+                      : ''}
+                  </Text>
+                </View>
               ) : (
-                <FileMessage message={item} />
+                <View>
+                  <FileMessage message={item} />
+                  <Text
+                    style={[
+                      styles.mediaTimestamp,
+                      {
+                        color: isMe
+                          ? 'rgba(255,255,255,0.6)'
+                          : theme.colors.gray[400],
+                      },
+                    ]}
+                  >
+                    {item.createdAt
+                      ? moment(item.createdAt).format('h:mm A')
+                      : ''}
+                  </Text>
+                </View>
               )}
             </TouchableOpacity>
           </Animated.View>
@@ -418,7 +490,7 @@ const ChatScreen = () => {
     isLoading,
   } = useInfiniteQuery({
     queryKey: ['messages', room!],
-    queryFn: getMessages,
+    queryFn: ctx => getMessages(ctx),
     initialPageParam: 1,
     enabled: !!room,
     getNextPageParam: lastPage => {
@@ -433,7 +505,7 @@ const ChatScreen = () => {
 
   const { data: conversation, isLoading: isConversationLoading } = useQuery({
     queryKey: ['conversations', room],
-    queryFn: () => getConversation(room),
+    queryFn: ({ signal }) => getConversation(room, signal),
     enabled: !!room,
   });
 
@@ -583,44 +655,43 @@ const ChatScreen = () => {
         };
       });
 
-      // Update conversation preview list
-      queryClient.setQueryData<PaginatedResponse<ChatConversation[]>>(
-        ['conversations'],
-        old => {
-          if (!old) return old;
+      // Update conversation preview list (infinite query shape)
+      queryClient.setQueryData<
+        InfiniteData<PaginatedResponse<ChatConversation[]>>
+      >(['conversations'], old => {
+        if (!old || !old.pages.length) return old;
 
-          const idx = old.data.findIndex(c => c._id === msg.chat);
+        const allConvs = old.pages.flatMap(p => p.data);
+        const idx = allConvs.findIndex(c => c._id === msg.chat);
+        if (idx === -1) return old;
 
-          let newData: ChatConversation[];
+        const updatedConv = {
+          ...allConvs[idx],
+          lastMessage: msg,
+          updatedAt: msg.updatedAt ?? new Date().toISOString(),
+        };
 
-          if (idx > -1) {
-            const updatedConv = {
-              ...old.data[idx],
-              lastMessage: msg,
-              updatedAt: msg.updatedAt ?? new Date().toISOString(),
-            };
+        if (
+          msg.sender?._id !== profile?._id &&
+          activeRoomRef.current !== msg.chat
+        ) {
+          updatedConv.unreadCount = (updatedConv.unreadCount || 0) + 1;
+        }
 
-            if (
-              msg.sender?._id !== profile?._id &&
-              activeRoomRef.current !== msg.chat
-            ) {
-              updatedConv.unreadCount = (updatedConv.unreadCount || 0) + 1;
-            }
+        const withoutUpdated = allConvs.filter((_, i) => i !== idx);
+        const newFirstPageData = [updatedConv, ...withoutUpdated].slice(
+          0,
+          old.pages[0].meta.limit || 20,
+        );
 
-            newData = [...old.data];
-            newData[idx] = updatedConv;
-          } else {
-            newData = [...old.data];
-          }
-
-          const getSortTime = (chat: ChatConversation) =>
-            moment(chat.lastMessage?.createdAt ?? chat.createdAt).valueOf();
-
-          newData.sort((a, b) => getSortTime(b) - getSortTime(a));
-
-          return { ...old, data: newData };
-        },
-      );
+        return {
+          ...old,
+          pages: [
+            { ...old.pages[0], data: newFirstPageData },
+            ...old.pages.slice(1),
+          ],
+        };
+      });
     });
 
     // Delivery, seen, reaction updates (same as before)
@@ -649,32 +720,25 @@ const ChatScreen = () => {
 
       // also update chat list preview
       if (userId === profile?._id) {
-        queryClient.setQueryData<PaginatedResponse<ChatConversation[]>>(
-          ['conversations'],
-          old => {
-            if (!old) return old;
-            const existing = [...old.data];
-            const idx = existing.findIndex(c => c._id === chatId);
-            if (idx === -1) return old;
+        queryClient.setQueryData<
+          InfiniteData<PaginatedResponse<ChatConversation[]>>
+        >(['conversations'], old => {
+          if (!old || !old.pages.length) return old;
 
-            const updatedConv = {
-              ...existing[idx],
-              unreadCount: 0,
-            };
+          const allItems = old.pages.flatMap(p => p.data);
+          const idx = allItems.findIndex(c => c._id === chatId);
+          if (idx === -1) return old;
 
-            const newList = [
-              updatedConv,
-              ...existing.filter((_, i) => i !== idx),
-            ];
+          allItems[idx] = { ...allItems[idx], unreadCount: 0 };
 
-            const getSortTime = (chat: ChatConversation) =>
-              moment(chat.lastMessage?.createdAt ?? chat.createdAt).valueOf();
-
-            newList.sort((a, b) => getSortTime(b) - getSortTime(a));
-
-            return { ...old, data: newList };
-          },
-        );
+          return {
+            ...old,
+            pages: [
+              { ...old.pages[0], data: allItems.slice(0, old.pages[0].meta.limit || 20) },
+              ...old.pages.slice(1),
+            ],
+          };
+        });
       }
     });
 
@@ -815,27 +879,36 @@ const ChatScreen = () => {
       return { ...old, pages: newPages };
     });
 
-    // Optimistically update conversations list immediately
-    queryClient.setQueryData<PaginatedResponse<ChatConversation[]>>(
-      ['conversations'],
-      old => {
-        if (!old) return old;
+    // Optimistically update conversations list immediately (infinite query shape)
+    queryClient.setQueryData<
+      InfiniteData<PaginatedResponse<ChatConversation[]>>
+    >(['conversations'], old => {
+      if (!old || !old.pages.length) return old;
 
-        const existing = [...old.data];
-        const idx = existing.findIndex(c => c._id === room);
-        if (idx === -1) return old;
+      const allItems = old.pages.flatMap(p => p.data);
+      const idx = allItems.findIndex(c => c._id === room);
+      if (idx === -1) return old;
 
-        const updatedConv = {
-          ...existing[idx],
-          lastMessage: optimisticMessage as unknown as Message,
-          updatedAt: now,
-        };
+      const updatedConv = {
+        ...allItems[idx],
+        lastMessage: optimisticMessage as unknown as Message,
+        updatedAt: now,
+      };
 
-        const newList = [updatedConv, ...existing.filter((_, i) => i !== idx)];
+      const withoutUpdated = allItems.filter((_, i) => i !== idx);
+      const newFirstPageData = [updatedConv, ...withoutUpdated].slice(
+        0,
+        old.pages[0].meta.limit || 20,
+      );
 
-        return { ...old, data: newList };
-      },
-    );
+      return {
+        ...old,
+        pages: [
+          { ...old.pages[0], data: newFirstPageData },
+          ...old.pages.slice(1),
+        ],
+      };
+    });
 
     if (files.length > 0) {
       const totalSize = files.reduce((a, f) => a + f.size, 0);
@@ -1504,6 +1577,27 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: fontSize(14),
     fontFamily: theme.fonts.lato.regular,
+  },
+  textWithTime: {
+    position: 'relative' as const,
+  },
+  timeSpacer: {
+    fontSize: fontSize(10),
+    opacity: 0,
+  },
+  timestamp: {
+    position: 'absolute' as const,
+    bottom: -2,
+    right: 0,
+    fontSize: fontSize(10),
+    lineHeight: fontSize(14),
+    fontFamily: theme.fonts.lato.regular,
+  },
+  mediaTimestamp: {
+    fontSize: fontSize(10),
+    fontFamily: theme.fonts.lato.regular,
+    alignSelf: 'flex-end' as const,
+    marginTop: spacing(2),
   },
   inputBar: {
     flexDirection: 'row',

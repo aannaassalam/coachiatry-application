@@ -140,11 +140,12 @@ export default function Profile() {
     queries: [
       {
         queryKey: ['settings-profile'],
-        queryFn: getMyProfile,
+        queryFn: ({ signal }: { signal: AbortSignal }) => getMyProfile(signal),
       },
       {
         queryKey: ['suggest-users', debouncedSearch, 'watchers'],
-        queryFn: () => getUserSuggestions(debouncedSearch, 'watchers'),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getUserSuggestions(debouncedSearch, 'watchers', signal),
       },
     ],
   });

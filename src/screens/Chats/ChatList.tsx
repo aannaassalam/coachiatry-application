@@ -1,6 +1,9 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { InfiniteData, useQuery } from '@tanstack/react-query';
+import {
+  InfiniteData,
+  useInfiniteQuery,
+} from '@tanstack/react-query';
 import moment from 'moment';
 import {
   ActivityIndicator,
@@ -12,24 +15,25 @@ import {
 } from 'react-native';
 import TouchableButton from '../../components/TouchableButton';
 import AppHeader from '../../components/ui/AppHeader';
-import { SmartAvatar } from '../../components/ui/SmartAvatar';
 import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
 import { PaginatedResponse } from '../../typescript/interface/common.interface';
-import { fontSize, scale, spacing } from '../../utils';
+import { fontSize, spacing } from '../../utils';
 import {
   getAllConversations,
   getConversation,
 } from '../../api/functions/chat.api';
 import { Message } from '../../typescript/interface/message.interface';
 import { useSocket } from '../../hooks/useSocket';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { queryClient } from '../../../App';
 import { getMessages } from '../../api/functions/message.api';
 import ChatMessage from '../../components/Chat/ChatMessage';
 import Entypo from 'react-native-vector-icons/Entypo';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import ChatSearch from '../../components/Chat/ChatSearch';
 
 type ChatScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -40,6 +44,7 @@ export default function ChatList() {
   const { profile } = useAuth();
   const socket = useSocket();
   const navigation = useNavigation<ChatScreenNavigationProp>();
+  const [searchVisible, setSearchVisible] = useState(false);
 
   const viewableItemsChanged = useRef(
     ({
@@ -50,12 +55,12 @@ export default function ChatList() {
       viewableItems.forEach(({ item }) => {
         queryClient.prefetchQuery({
           queryKey: ['conversations', item._id],
-          queryFn: () => getConversation(item._id),
+          queryFn: ({ signal }) => getConversation(item._id, signal),
           staleTime: 5 * 60 * 1000,
         });
         queryClient.prefetchInfiniteQuery({
           queryKey: ['messages', item._id],
-          queryFn: getMessages,
+          queryFn: ctx => getMessages(ctx),
           initialPageParam: 1,
           staleTime: 5 * 60 * 1000,
         });
@@ -63,10 +68,26 @@ export default function ChatList() {
     },
   ).current;
 
-  const { data, isLoading, refetch, isFetching } = useQuery({
+  const {
+    data,
+    isLoading,
+    refetch,
+    isFetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['conversations'],
-    queryFn: () => getAllConversations({ limit: 50, sort: '-updatedAt' }),
+    queryFn: ({ pageParam = 1, signal }) =>
+      getAllConversations({ page: pageParam, sort: '-updatedAt' }, signal),
+    initialPageParam: 1,
+    getNextPageParam: lastPage => {
+      const { currentPage, totalPages } = lastPage.meta;
+      return currentPage < totalPages ? currentPage + 1 : undefined;
+    },
   });
+
+  const conversations = data?.pages.flatMap(page => page.data) ?? [];
 
   useEffect(() => {
     if (!socket) return;
@@ -78,43 +99,48 @@ export default function ChatList() {
     }) => {
       console.log(update);
 
-      // Update conversations list
-      queryClient.setQueryData<PaginatedResponse<ChatConversation[]>>(
-        ['conversations'],
-        old => {
-          if (!old) return old;
+      // Update conversations list (infinite query shape)
+      queryClient.setQueryData<
+        InfiniteData<PaginatedResponse<ChatConversation[]>, number>
+      >(['conversations'], old => {
+        if (!old || !old.pages.length) return old;
 
-          const existing = Array.isArray(old.data) ? [...old.data] : [];
-          const idx = existing.findIndex(c => c._id === update.chatId);
-          if (idx === -1) return old;
+        // Flatten all pages to find the conversation
+        const allConvs = old.pages.flatMap(p => p.data);
+        const idx = allConvs.findIndex(c => c._id === update.chatId);
+        if (idx === -1) return old;
 
-          const isMyMessage = update.lastMessage?.sender?._id === profile?._id;
+        const isMyMessage = update.lastMessage?.sender?._id === profile?._id;
 
-          const current = existing[idx];
-          const updatedConv = {
-            ...current,
-            lastMessage: update.lastMessage,
-            updatedAt: update.updatedAt,
-            unreadCount: current.unreadCount || 0,
-          } as ChatConversation;
+        const current = allConvs[idx];
+        const updatedConv = {
+          ...current,
+          lastMessage: update.lastMessage,
+          updatedAt: update.updatedAt,
+          unreadCount: current.unreadCount || 0,
+        } as ChatConversation;
 
-          if (!isMyMessage) {
-            updatedConv.unreadCount = (current.unreadCount || 0) + 1;
-          }
+        if (!isMyMessage) {
+          updatedConv.unreadCount = (current.unreadCount || 0) + 1;
+        }
 
-          const newList = [
-            updatedConv,
-            ...existing.filter((_, i) => i !== idx),
-          ];
+        // Move updated conversation to top of first page
+        const withoutUpdated = allConvs.filter(
+          (_, i) => i !== idx,
+        );
+        const newFirstPageData = [updatedConv, ...withoutUpdated].slice(
+          0,
+          old.pages[0].meta.limit || 20,
+        );
 
-          const getSortTime = (chat: ChatConversation) =>
-            moment(chat.lastMessage?.createdAt ?? chat.createdAt).valueOf();
-
-          newList.sort((a, b) => getSortTime(b) - getSortTime(a));
-
-          return { ...old, data: newList };
-        },
-      );
+        return {
+          ...old,
+          pages: [
+            { ...old.pages[0], data: newFirstPageData },
+            ...old.pages.slice(1),
+          ],
+        };
+      });
 
       // Also upsert the message into that chat's messages cache
       if (update.lastMessage) {
@@ -169,57 +195,67 @@ export default function ChatList() {
             style={{
               flexDirection: 'row',
               justifyContent: 'space-between',
+              alignItems: 'center',
               paddingHorizontal: spacing(20),
               marginTop: spacing(5),
               marginBottom: spacing(10),
             }}
           >
             <Text style={{ color: theme.colors.gray[800] }}>All message</Text>
-            <TouchableButton
-              onPress={() => navigation.navigate('GroupScreen', {})}
-            >
-              <Entypo
-                name="plus"
-                size={fontSize(18)}
-                color={theme.colors.gray[700]}
-              />
-            </TouchableButton>
+            <View style={{ flexDirection: 'row', gap: spacing(12), alignItems: 'center' }}>
+              <TouchableButton onPress={() => setSearchVisible(true)}>
+                <Ionicons
+                  name="search"
+                  size={fontSize(18)}
+                  color={theme.colors.gray[700]}
+                />
+              </TouchableButton>
+              <TouchableButton
+                onPress={() => navigation.navigate('GroupScreen', {})}
+              >
+                <Entypo
+                  name="plus"
+                  size={fontSize(18)}
+                  color={theme.colors.gray[700]}
+                />
+              </TouchableButton>
+            </View>
           </View>
           <FlatList
-            data={data?.data}
+            data={conversations}
             renderItem={({ item }) => <ChatMessage item={item} />}
             keyExtractor={item => item._id ?? item.createdAt}
-            refreshing={isFetching}
+            refreshing={isFetching && !isFetchingNextPage}
             onRefresh={refetch}
             showsVerticalScrollIndicator={false}
             onViewableItemsChanged={viewableItemsChanged}
             viewabilityConfig={{
-              itemVisiblePercentThreshold: 60, // triggers when 60% visible
+              itemVisiblePercentThreshold: 60,
             }}
-            // onEndReached={() => {
-            //   if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-            // }}
-            // onEndReachedThreshold={0.3}
-            // ListFooterComponent={
-            //   isFetchingNextPage ? (
-            //     <View
-            //       style={{ paddingVertical: spacing(10), alignItems: 'center' }}
-            //     >
-            //       <Text
-            //         style={{
-            //           color: theme.colors.gray[500],
-            //           fontSize: fontSize(14),
-            //         }}
-            //       >
-            //         Loading...
-            //       </Text>
-            //     </View>
-            //   ) : null
-            // }
+            onEndReached={() => {
+              if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+            }}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <View
+                  style={{
+                    paddingVertical: spacing(10),
+                    alignItems: 'center',
+                  }}
+                >
+                  <ActivityIndicator size="small" />
+                </View>
+              ) : null
+            }
             contentContainerStyle={{ paddingHorizontal: spacing(10) }}
           />
         </View>
       )}
+      <ChatSearch
+        visible={searchVisible}
+        onClose={() => setSearchVisible(false)}
+      />
     </View>
   );
 }

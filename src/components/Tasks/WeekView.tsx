@@ -65,12 +65,15 @@ export default function WeekView({
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['tasks', filters, dates],
-    queryFn: () =>
-      getAllTasks({
-        filter: filters,
-        startDate: dates.start,
-        endDate: dates.end,
-      }),
+    queryFn: ({ signal }) =>
+      getAllTasks(
+        {
+          filter: filters,
+          startDate: dates.start,
+          endDate: dates.end,
+        },
+        signal,
+      ),
     // placeholderData: (prev: Task[] | undefined) => prev
   });
 
@@ -95,7 +98,7 @@ export default function WeekView({
         tasksForDay.forEach(task => {
           queryClient.prefetchQuery({
             queryKey: ['task', task._id],
-            queryFn: () => getTask(task._id),
+            queryFn: ({ signal }) => getTask(task._id, signal),
             staleTime: 5 * 60 * 1000,
           });
         });

@@ -2,8 +2,10 @@ import axiosInstance from '../axiosInstance';
 import { endpoints } from '../endpoints';
 import { Category } from '../../typescript/interface/category.interface';
 
-export const getAllCategories = async (): Promise<Category[]> => {
-  const res = await axiosInstance.get(endpoints.category.getAll);
+export const getAllCategories = async (
+  signal?: AbortSignal,
+): Promise<Category[]> => {
+  const res = await axiosInstance.get(endpoints.category.getAll, { signal });
   return res.data;
 };
 
@@ -20,8 +22,11 @@ export const addCategory = async (body: {
 
 export const getAllCategoriesByCoach = async (
   userId: string,
+  signal?: AbortSignal,
 ): Promise<Category[]> => {
-  const res = await axiosInstance.get(endpoints.category.getAllCoach(userId));
+  const res = await axiosInstance.get(endpoints.category.getAllCoach(userId), {
+    signal,
+  });
   return res.data;
 };
 

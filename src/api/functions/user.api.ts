@@ -5,8 +5,10 @@ import { endpoints } from '../endpoints';
 import { Platform } from 'react-native';
 import { PaginatedResponse } from '../../typescript/interface/common.interface';
 
-export const fetchProfile = async (): Promise<User> => {
-  const res = await axiosInstance.get(endpoints.user.getProfile);
+export const fetchProfile = async (
+  signal?: AbortSignal,
+): Promise<User> => {
+  const res = await axiosInstance.get(endpoints.user.getProfile, { signal });
   return res.data;
 };
 
@@ -43,18 +45,21 @@ export const revokeViewAccess = async (viewerId: string) => {
   return res;
 };
 
-export const getAllWatching = async (): Promise<
-  Pick<User, '_id' | 'photo' | 'fullName' | 'shareId'>[]
-> => {
-  const res = await axiosInstance.get(endpoints.user.getAllWatching);
+export const getAllWatching = async (
+  signal?: AbortSignal,
+): Promise<Pick<User, '_id' | 'photo' | 'fullName' | 'shareId'>[]> => {
+  const res = await axiosInstance.get(endpoints.user.getAllWatching, { signal });
   return res.data;
 };
 
-export const getMyProfile = async (): Promise<User> => {
+export const getMyProfile = async (
+  signal?: AbortSignal,
+): Promise<User> => {
   const res = await axiosInstance.get(endpoints.user.getProfile, {
     params: {
       populate: 'sharedViewers',
     },
+    signal,
   });
   return res.data;
 };
@@ -62,29 +67,34 @@ export const getMyProfile = async (): Promise<User> => {
 export const getUserSuggestions = async (
   search: string,
   type: 'group' | 'watchers' = 'group',
+  signal?: AbortSignal,
 ): Promise<Pick<User, '_id' | 'fullName' | 'email' | 'photo'>[]> => {
   const res = await axiosInstance.get(endpoints.user.suggestUsers, {
     params: { search, type },
+    signal,
   });
   return res.data;
 };
 
 export const getUserById = async (
   id: string,
+  signal?: AbortSignal,
 ): Promise<
   Pick<User, '_id' | 'fullName' | 'email' | 'photo' | 'createdAt' | 'role'> & {
     assignedCoach: User[];
   }
 > => {
-  const res = await axiosInstance.get(endpoints.user.userById(id));
+  const res = await axiosInstance.get(endpoints.user.userById(id), { signal });
   return res.data;
 };
 
 export const getUsersByIds = async (
   ids: string[],
+  signal?: AbortSignal,
 ): Promise<Pick<User, '_id' | 'fullName' | 'email' | 'photo'>[]> => {
   const res = await axiosInstance.get(endpoints.user.userByIds, {
     params: { ids },
+    signal,
   });
   return res.data;
 };
@@ -94,21 +104,27 @@ export const addWatchers = async (userIds: string[]) => {
   return res;
 };
 
-export const getUsers = async ({
-  search = '',
-  page,
-}: {
-  search?: string;
-  page: number;
-}): Promise<PaginatedResponse<User[]>> => {
+export const getUsers = async (
+  {
+    search = '',
+    page,
+  }: {
+    search?: string;
+    page: number;
+  },
+  signal?: AbortSignal,
+): Promise<PaginatedResponse<User[]>> => {
   const res = await axiosInstance.get(endpoints.user.getUsers, {
     params: { search, page, limit: 10 },
+    signal,
   });
   return res.data;
 };
 
-export const getAllUsers = async (): Promise<User[]> => {
-  const res = await axiosInstance.get(endpoints.user.getAllUsers);
+export const getAllUsers = async (
+  signal?: AbortSignal,
+): Promise<User[]> => {
+  const res = await axiosInstance.get(endpoints.user.getAllUsers, { signal });
   return res.data;
 };
 

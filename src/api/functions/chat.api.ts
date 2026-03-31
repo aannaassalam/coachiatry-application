@@ -7,9 +7,11 @@ import { Platform } from 'react-native';
 
 export const getAllConversations = async (
   filters?: Record<string, any>,
+  signal?: AbortSignal,
 ): Promise<PaginatedResponse<ChatConversation[]>> => {
   const res = await axiosInstance.get(endpoints.chat.getConversations, {
     params: filters,
+    signal,
   });
 
   return res.data;
@@ -17,22 +19,29 @@ export const getAllConversations = async (
 
 export const getConversation = async (
   roomId: string,
+  signal?: AbortSignal,
 ): Promise<ChatConversation> => {
-  const res = await axiosInstance.get(endpoints.chat.getConversation(roomId));
+  const res = await axiosInstance.get(endpoints.chat.getConversation(roomId), {
+    signal,
+  });
   return res.data;
 };
 
-export const getAllConversationsByCoach = async ({
-  filters,
-  userId,
-}: {
-  filters?: Record<string, any>;
-  userId: string;
-}): Promise<PaginatedResponse<ChatConversation[]>> => {
+export const getAllConversationsByCoach = async (
+  {
+    filters,
+    userId,
+  }: {
+    filters?: Record<string, any>;
+    userId: string;
+  },
+  signal?: AbortSignal,
+): Promise<PaginatedResponse<ChatConversation[]>> => {
   const res = await axiosInstance.get(
     endpoints.chat.getConversationsByCoach(userId),
     {
       params: filters,
+      signal,
     },
   );
   return res.data;
@@ -40,9 +49,11 @@ export const getAllConversationsByCoach = async ({
 
 export const getConversationByCoach = async (
   roomId: string,
+  signal?: AbortSignal,
 ): Promise<ChatConversation> => {
   const res = await axiosInstance.get(
     endpoints.chat.getConversationByCoach(roomId),
+    { signal },
   );
   return res.data;
 };

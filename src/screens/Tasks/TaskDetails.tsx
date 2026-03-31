@@ -154,7 +154,7 @@ const TaskDetailsScreen = () => {
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['task', taskId],
-    queryFn: () => getTask(taskId as string),
+    queryFn: ({ signal }) => getTask(taskId as string, signal),
   });
 
   const { mutate } = useMutation({

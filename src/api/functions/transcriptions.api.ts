@@ -3,11 +3,14 @@ import axiosInstance from '../axiosInstance';
 import { endpoints } from '../endpoints';
 import { PaginatedResponse } from '../../typescript/interface/common.interface';
 
-export const getAllTranscriptions = async ({
-  page,
-}: {
-  page: number;
-}): Promise<PaginatedResponse<Transcription[]>> => {
+export const getAllTranscriptions = async (
+  {
+    page,
+  }: {
+    page: number;
+  },
+  signal?: AbortSignal,
+): Promise<PaginatedResponse<Transcription[]>> => {
   const res = await axiosInstance.get(
     endpoints.transcriptions.getAllTranscriptions,
     {
@@ -16,20 +19,24 @@ export const getAllTranscriptions = async ({
         limit: 9,
         populate: 'user',
       },
+      signal,
     },
   );
   return res.data;
 };
 
-export const getAllTranscriptionsByCoach = async ({
-  page,
-  userId,
-  search,
-}: {
-  page: number;
-  userId: string;
-  search: string;
-}): Promise<PaginatedResponse<Transcription[]>> => {
+export const getAllTranscriptionsByCoach = async (
+  {
+    page,
+    userId,
+    search,
+  }: {
+    page: number;
+    userId: string;
+    search: string;
+  },
+  signal?: AbortSignal,
+): Promise<PaginatedResponse<Transcription[]>> => {
   const res = await axiosInstance.get(
     endpoints.transcriptions.getAllTranscriptionsByCoach,
     {
@@ -41,18 +48,23 @@ export const getAllTranscriptionsByCoach = async ({
         search,
         searchFields: 'title',
       },
+      signal,
     },
   );
   return res.data;
 };
 
-export const getTranscription = async (id: string): Promise<Transcription> => {
+export const getTranscription = async (
+  id: string,
+  signal?: AbortSignal,
+): Promise<Transcription> => {
   const res = await axiosInstance.get(
     endpoints.transcriptions.getTranscription(id),
     {
       params: {
         populate: 'user',
       },
+      signal,
     },
   );
   return res.data;

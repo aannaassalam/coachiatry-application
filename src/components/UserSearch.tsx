@@ -46,8 +46,8 @@ export default function UserSearch({ visible, onClose }: UserSearchProps) {
     isFetching,
   } = useInfiniteQuery({
     queryKey: ['users-search', debouncedSearch],
-    queryFn: ({ pageParam = 1 }) =>
-      getUsers({ search: debouncedSearch, page: pageParam }),
+    queryFn: ({ pageParam = 1, signal }) =>
+      getUsers({ search: debouncedSearch, page: pageParam }, signal),
     initialPageParam: 1,
     getNextPageParam: lastPage => {
       const { currentPage, totalPages } = lastPage.meta;

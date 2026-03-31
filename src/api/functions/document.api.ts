@@ -4,36 +4,43 @@ import { endpoints } from '../endpoints';
 import { PaginatedResponse } from '../../typescript/interface/common.interface';
 import { User } from '../../typescript/interface/user.interface';
 
-export const getAllDocuments = async ({
-  sort,
-  tab,
-  limit,
-  page,
-}: {
-  sort?: string;
-  tab: string;
-  limit?: number;
-  page: number;
-}): Promise<PaginatedResponse<Document[]>> => {
+export const getAllDocuments = async (
+  {
+    sort,
+    tab,
+    limit,
+    page,
+  }: {
+    sort?: string;
+    tab: string;
+    limit?: number;
+    page: number;
+  },
+  signal?: AbortSignal,
+): Promise<PaginatedResponse<Document[]>> => {
   const res = await axiosInstance.get(endpoints.document.getAll, {
     params: { sort, tab, select: '-shareId', populate: 'tag', limit, page },
+    signal,
   });
   return res.data;
 };
 
-export const getAllDocumentsByCoach = async ({
-  sort,
-  tab,
-  limit,
-  userId,
-  page,
-}: {
-  sort: string;
-  tab: string;
-  limit?: number;
-  userId: string;
-  page: number;
-}): Promise<PaginatedResponse<Document[]>> => {
+export const getAllDocumentsByCoach = async (
+  {
+    sort,
+    tab,
+    limit,
+    userId,
+    page,
+  }: {
+    sort: string;
+    tab: string;
+    limit?: number;
+    userId: string;
+    page: number;
+  },
+  signal?: AbortSignal,
+): Promise<PaginatedResponse<Document[]>> => {
   const res = await axiosInstance.get(endpoints.document.coachAccess, {
     params: {
       sort,
@@ -44,6 +51,7 @@ export const getAllDocumentsByCoach = async ({
       userId,
       page,
     },
+    signal,
   });
   return res.data;
 };
@@ -54,11 +62,13 @@ type DetailDocument = Omit<Document, 'user'> & {
 
 export const getDocument = async (
   documentId: string,
+  signal?: AbortSignal,
 ): Promise<DetailDocument> => {
   const res = await axiosInstance.get(endpoints.document.getOne(documentId), {
     params: {
       populate: 'user,tag',
     },
+    signal,
   });
   return res.data;
 };
@@ -103,7 +113,10 @@ export const deleteDocument = async (documentId: string) => {
 
 export const accessSharedDocument = async (
   shareId: string,
+  signal?: AbortSignal,
 ): Promise<Document> => {
-  const res = await axiosInstance.get(endpoints.document.shared(shareId));
+  const res = await axiosInstance.get(endpoints.document.shared(shareId), {
+    signal,
+  });
   return res.data;
 };

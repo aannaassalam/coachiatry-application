@@ -366,32 +366,40 @@ function Dashboard() {
     queries: [
       {
         queryKey: ['status'],
-        queryFn: getAllStatuses,
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllStatuses(signal),
         enabled: ready,
       },
       {
         queryKey: ['tasks', { dashboard: true }],
-        queryFn: () =>
-          getAllTasks({
-            sort: '-createdAt',
-            limit: 30,
-          }),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllTasks(
+            {
+              sort: '-createdAt',
+              limit: 30,
+            },
+            signal,
+          ),
         enabled: ready,
       },
       {
         queryKey: ['conversations-dashboard'],
-        queryFn: () => getAllConversations({ limit: 4, sort: '-updatedAt' }),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllConversations({ limit: 4, sort: '-updatedAt' }, signal),
         enabled: ready,
       },
       {
         queryKey: ['documents'],
-        queryFn: () =>
-          getAllDocuments({
-            sort: '-updatedAt',
-            tab: 'all',
-            limit: 4,
-            page: 1,
-          }),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllDocuments(
+            {
+              sort: '-updatedAt',
+              tab: 'all',
+              limit: 4,
+              page: 1,
+            },
+            signal,
+          ),
         enabled: ready,
       },
     ],

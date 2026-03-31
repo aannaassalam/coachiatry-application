@@ -128,12 +128,14 @@ export default function GroupScreen() {
     queries: [
       {
         queryKey: ['conversations', roomId],
-        queryFn: () => getConversation(roomId ?? ''),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getConversation(roomId ?? '', signal),
         enabled: !!roomId,
       },
       {
         queryKey: ['suggest-users', debouncedSearch, 'group-users'],
-        queryFn: () => getUserSuggestions(debouncedSearch, 'group'),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getUserSuggestions(debouncedSearch, 'group', signal),
       },
     ],
   });

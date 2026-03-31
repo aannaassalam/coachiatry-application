@@ -77,11 +77,12 @@ export default function UserDetails() {
     queries: [
       {
         queryKey: ['user', id],
-        queryFn: () => getUserById(id),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getUserById(id, signal),
       },
       {
         queryKey: ['total-users'],
-        queryFn: getAllUsers,
+        queryFn: ({ signal }: { signal: AbortSignal }) => getAllUsers(signal),
       },
     ],
   });

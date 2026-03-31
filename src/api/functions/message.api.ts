@@ -15,6 +15,7 @@ export const getMessages = async (
       page,
       limit: 40,
     },
+    signal: ctx.signal,
   });
   return res.data;
 };
@@ -47,32 +48,40 @@ export const editScheduleMessage = async (body: {
   return res;
 };
 
-export const getScheduleMessages = async ({
-  page = 1,
-}: {
-  page: number;
-}): Promise<
+export const getScheduleMessages = async (
+  {
+    page = 1,
+  }: {
+    page: number;
+  },
+  signal?: AbortSignal,
+): Promise<
   PaginatedResponse<(Omit<Message, 'chat'> & { chat: ChatConversation })[]>
 > => {
   const res = await axiosInstance.get(endpoints.messages.getScheduleMessages, {
     params: { page, limit: 10 },
+    signal,
   });
   return res.data;
 };
 
-export const getScheduleMessagesByCoach = async ({
-  page = 1,
-  userId,
-}: {
-  page: number;
-  userId: string;
-}): Promise<
+export const getScheduleMessagesByCoach = async (
+  {
+    page = 1,
+    userId,
+  }: {
+    page: number;
+    userId: string;
+  },
+  signal?: AbortSignal,
+): Promise<
   PaginatedResponse<(Omit<Message, 'chat'> & { chat: ChatConversation })[]>
 > => {
   const res = await axiosInstance.get(
     endpoints.messages.getScheduleMessagesByCoach(userId),
     {
       params: { page, limit: 10 },
+      signal,
     },
   );
   return res.data;

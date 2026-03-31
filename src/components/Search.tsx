@@ -57,7 +57,7 @@ export default function Search() {
     isFetching,
   } = useQuery({
     queryKey: ['search', category, debouncedSearch],
-    queryFn: () => getSearch(debouncedSearch, category),
+    queryFn: ({ signal }) => getSearch(debouncedSearch, category, signal),
     staleTime: 60 * 1000,
   });
 

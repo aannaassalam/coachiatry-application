@@ -81,19 +81,22 @@ function buildFilterQuery(values: Filter[]): Record<string, any> {
   return query;
 }
 
-export const getAllTasks = async ({
-  sort,
-  filter = [],
-  startDate,
-  endDate,
-  limit,
-}: {
-  sort?: string;
-  filter?: Filter[];
-  startDate?: string;
-  endDate?: string;
-  limit?: number;
-}): Promise<Task[]> => {
+export const getAllTasks = async (
+  {
+    sort,
+    filter = [],
+    startDate,
+    endDate,
+    limit,
+  }: {
+    sort?: string;
+    filter?: Filter[];
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  },
+  signal?: AbortSignal,
+): Promise<Task[]> => {
   const filterQuery = buildFilterQuery(filter);
   const res = await axiosInstance.get(endpoints.task.getAll, {
     params: {
@@ -106,19 +109,23 @@ export const getAllTasks = async ({
           ? { gte: startDate, lte: endDate }
           : filterQuery.dueDate,
     },
+    signal,
   });
   return res.data;
 };
 
-export const getAllTasksByCoach = async ({
-  sort,
-  filter = [],
-  userId,
-}: {
-  sort?: string;
-  filter?: Filter[];
-  userId: string;
-}): Promise<Task[]> => {
+export const getAllTasksByCoach = async (
+  {
+    sort,
+    filter = [],
+    userId,
+  }: {
+    sort?: string;
+    filter?: Filter[];
+    userId: string;
+  },
+  signal?: AbortSignal,
+): Promise<Task[]> => {
   const filterQuery = buildFilterQuery(filter);
 
   const res = await axiosInstance.get(endpoints.task.getAll, {
@@ -128,15 +135,20 @@ export const getAllTasksByCoach = async ({
       ...filterQuery,
       user: userId,
     },
+    signal,
   });
   return res.data;
 };
 
-export const getTask = async (id: string): Promise<Task> => {
+export const getTask = async (
+  id: string,
+  signal?: AbortSignal,
+): Promise<Task> => {
   const res = await axiosInstance.get(endpoints.task.getOne(id), {
     params: {
       populate: 'category,status,assignedTo',
     },
+    signal,
   });
   return res.data;
 };
@@ -188,19 +200,22 @@ export const deleteTask = async (task_id: string) => {
   return res;
 };
 
-export const getAllSharedTasks = async ({
-  shareId,
-  sort,
-  filter = [],
-  startDate,
-  endDate,
-}: {
-  shareId: string;
-  sort?: string;
-  filter?: Filter[];
-  startDate?: string;
-  endDate?: string;
-}): Promise<Task[]> => {
+export const getAllSharedTasks = async (
+  {
+    shareId,
+    sort,
+    filter = [],
+    startDate,
+    endDate,
+  }: {
+    shareId: string;
+    sort?: string;
+    filter?: Filter[];
+    startDate?: string;
+    endDate?: string;
+  },
+  signal?: AbortSignal,
+): Promise<Task[]> => {
   const filterQuery = buildFilterQuery(filter);
 
   const res = await axiosInstance.get(endpoints.task.shared(shareId), {
@@ -211,6 +226,7 @@ export const getAllSharedTasks = async ({
       dueDate:
         startDate && endDate ? { gte: startDate, lte: endDate } : undefined,
     },
+    signal,
   });
   return res.data;
 };

@@ -107,20 +107,25 @@ export default function ClientDetailsA1() {
     queries: [
       {
         queryKey: ['clientDetails', userId],
-        queryFn: () => getUserById(userId as string),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getUserById(userId as string, signal),
       },
       {
         queryKey: ['tasks', userId],
-        queryFn: () =>
-          getAllTasksByCoach({
-            userId: userId as string,
-          }),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllTasksByCoach(
+            {
+              userId: userId as string,
+            },
+            signal,
+          ),
         placeholderData: (prev: Task[] | undefined) => prev,
         staleTime: 60 * 1000,
       },
       {
         queryKey: ['status', userId],
-        queryFn: () => getAllStatusesByCoach(userId as string),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllStatusesByCoach(userId as string, signal),
       },
     ],
   });
@@ -133,13 +138,16 @@ export default function ClientDetailsA1() {
     hasNextPage,
   } = useInfiniteQuery<PaginatedResponse<Document[]>>({
     queryKey: ['documents', userId],
-    queryFn: ({ pageParam = 1 }) =>
-      getAllDocumentsByCoach({
-        sort: 'latest',
-        tab: 'all',
-        userId: userId as string,
-        page: pageParam as number,
-      }),
+    queryFn: ({ pageParam = 1, signal }) =>
+      getAllDocumentsByCoach(
+        {
+          sort: 'latest',
+          tab: 'all',
+          userId: userId as string,
+          page: pageParam as number,
+        },
+        signal,
+      ),
     getNextPageParam: lastPage => {
       const { currentPage, totalPages } = lastPage.meta;
       return currentPage < totalPages ? currentPage + 1 : undefined;
@@ -157,11 +165,11 @@ export default function ClientDetailsA1() {
       viewableItems.forEach(({ item }) => {
         queryClient.prefetchQuery({
           queryKey: ['conversations', item._id],
-          queryFn: () => getConversationByCoach(item._id),
+          queryFn: ({ signal }) => getConversationByCoach(item._id, signal),
         });
         queryClient.prefetchInfiniteQuery({
           queryKey: ['messages', item._id],
-          queryFn: getMessages,
+          queryFn: ctx => getMessages(ctx),
           initialPageParam: 1,
         });
       });
@@ -175,7 +183,8 @@ export default function ClientDetailsA1() {
     isFetching,
   } = useQuery({
     queryKey: ['conversations'],
-    queryFn: () => getAllConversationsByCoach({ userId: userId as string }),
+    queryFn: ({ signal }) =>
+      getAllConversationsByCoach({ userId: userId as string }, signal),
   });
 
   // Animated scroll driver

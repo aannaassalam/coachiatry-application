@@ -11,7 +11,7 @@ import { getAllStatuses } from '../../api/functions/status.api';
 const StatusBoxSheetBody = ({ status }: { status: Status }) => {
   const { data = [] } = useQuery({
     queryKey: ['status'],
-    queryFn: getAllStatuses,
+    queryFn: ({ signal }) => getAllStatuses(signal),
   });
 
   return (

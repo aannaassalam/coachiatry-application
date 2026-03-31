@@ -46,7 +46,8 @@ export default function Users() {
     error,
   } = useInfiniteQuery({
     queryKey: ['all-users'],
-    queryFn: ({ pageParam = 1 }) => getUsers({ page: pageParam }),
+    queryFn: ({ pageParam = 1, signal }) =>
+      getUsers({ page: pageParam }, signal),
     initialPageParam: 1,
     getNextPageParam: lastPage => {
       const { currentPage, totalPages } = lastPage.meta;

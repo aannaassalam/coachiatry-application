@@ -226,27 +226,32 @@ export default function AddEditTask() {
     queries: [
       {
         queryKey: ['task', taskId],
-        queryFn: () => getTask(taskId as string),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getTask(taskId as string, signal),
         enabled: !!taskId,
       },
       {
         queryKey: ['categories'],
-        queryFn: getAllCategories,
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllCategories(signal),
         enabled: !userId,
       },
       {
         queryKey: ['status'],
-        queryFn: getAllStatuses,
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllStatuses(signal),
         enabled: !userId,
       },
       {
         queryKey: ['categories', userId],
-        queryFn: () => getAllCategoriesByCoach(userId as string),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllCategoriesByCoach(userId as string, signal),
         enabled: !!userId,
       },
       {
         queryKey: ['status', userId],
-        queryFn: () => getAllStatusesByCoach(userId as string),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllStatusesByCoach(userId as string, signal),
         enabled: !!userId,
       },
     ],

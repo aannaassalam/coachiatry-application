@@ -31,16 +31,20 @@ export default function ListView({
     queries: [
       {
         queryKey: ['tasks', sort, filters],
-        queryFn: () =>
-          getAllTasks({
-            sort: sort,
-            filter: filters,
-          }),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllTasks(
+            {
+              sort: sort,
+              filter: filters,
+            },
+            signal,
+          ),
         placeholderData: (prev: Task[] | undefined) => prev,
       },
       {
         queryKey: ['status'],
-        queryFn: getAllStatuses,
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllStatuses(signal),
       },
     ],
   });
@@ -63,7 +67,7 @@ export default function ListView({
         batch.forEach(task => {
           queryClient.prefetchQuery({
             queryKey: ['task', task._id],
-            queryFn: () => getTask(task._id),
+            queryFn: ({ signal }) => getTask(task._id, signal),
             staleTime: 5 * 60 * 1000,
           });
         });

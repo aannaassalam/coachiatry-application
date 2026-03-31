@@ -12,9 +12,11 @@ export type SearchResult =
 export const getSearch = async (
   query: string,
   category: string,
+  signal?: AbortSignal,
 ): Promise<SearchResult[]> => {
   const res = await axiosInstance.get(endpoints.common.search, {
     params: { query, category },
+    signal,
   });
   return res.data;
 };

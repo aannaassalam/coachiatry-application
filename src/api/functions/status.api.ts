@@ -3,8 +3,10 @@ import { Status } from '../../typescript/interface/status.interface';
 import axiosInstance from '../axiosInstance';
 import { endpoints } from '../endpoints';
 
-export const getAllStatuses = async (): Promise<Status[]> => {
-  const res = await axiosInstance.get(endpoints.status.getAll);
+export const getAllStatuses = async (
+  signal?: AbortSignal,
+): Promise<Status[]> => {
+  const res = await axiosInstance.get(endpoints.status.getAll, { signal });
   return res.data;
 };
 
@@ -21,8 +23,11 @@ export const addStatus = async (body: {
 
 export const getAllStatusesByCoach = async (
   userId: string,
+  signal?: AbortSignal,
 ): Promise<Status[]> => {
-  const res = await axiosInstance.get(endpoints.status.getAllCoach(userId));
+  const res = await axiosInstance.get(endpoints.status.getAllCoach(userId), {
+    signal,
+  });
   return res.data;
 };
 

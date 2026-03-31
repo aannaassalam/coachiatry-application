@@ -78,8 +78,16 @@ const InitialFilterScreen = () => {
     { data: statuses = [], isLoading: isStatusLoading },
   ] = useQueries({
     queries: [
-      { queryKey: ['categories'], queryFn: getAllCategories },
-      { queryKey: ['status'], queryFn: getAllStatuses },
+      {
+        queryKey: ['categories'],
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllCategories(signal),
+      },
+      {
+        queryKey: ['status'],
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllStatuses(signal),
+      },
     ],
   });
 
@@ -332,8 +340,16 @@ const SelectValueFilterScreen = () => {
     { data: statuses = [], isLoading: isStatusLoading },
   ] = useQueries({
     queries: [
-      { queryKey: ['categories'], queryFn: getAllCategories },
-      { queryKey: ['status'], queryFn: getAllStatuses },
+      {
+        queryKey: ['categories'],
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllCategories(signal),
+      },
+      {
+        queryKey: ['status'],
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getAllStatuses(signal),
+      },
     ],
   });
 
