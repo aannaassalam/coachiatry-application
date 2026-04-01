@@ -65,7 +65,7 @@ export default function ForgotPassword() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[
         styles.container,
         { paddingBottom: insets.bottom, paddingTop: insets.top },

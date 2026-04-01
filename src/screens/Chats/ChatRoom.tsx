@@ -61,7 +61,7 @@ import {
 } from '../../utils';
 import { KeyboardAvoidingView, Platform } from 'react-native';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { randomUUID } from 'react-native-quick-crypto';
 import AttachmentMenu from '../../components/Chat/AttachmentMenu';
 import AttachmentFullPreview from '../../components/Chat/AttachmentPreview';
@@ -440,7 +440,7 @@ const ChatScreen = () => {
   const [reactorVisibleFor, setReactorVisibleFor] = useState<{
     id: string;
   } | null>(null);
-  const insets = useSafeAreaInsets();
+
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const socket = useSocket();
   const { profile } = useAuth();
@@ -734,7 +734,10 @@ const ChatScreen = () => {
           return {
             ...old,
             pages: [
-              { ...old.pages[0], data: allItems.slice(0, old.pages[0].meta.limit || 20) },
+              {
+                ...old.pages[0],
+                data: allItems.slice(0, old.pages[0].meta.limit || 20),
+              },
               ...old.pages.slice(1),
             ],
           };
@@ -1332,7 +1335,7 @@ const ChatScreen = () => {
     <KeyboardAvoidingView
       behavior="padding"
       keyboardVerticalOffset={Platform.OS === 'ios' ? spacing(70) : spacing(25)}
-      style={[styles.container, { paddingBottom: insets.bottom }]}
+      style={styles.container}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -1605,7 +1608,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
     padding: spacing(20),
     paddingTop: spacing(10),
-    paddingBottom: isAndroid ? spacing(20) : spacing(5),
+    paddingBottom: isAndroid ? spacing(5) : spacing(5),
     borderTopWidth: 1,
     borderTopColor: theme.colors.gray[200],
   },

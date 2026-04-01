@@ -30,7 +30,7 @@ import {
 // import { , scheduleOnRN } from 'react-native-worklets';
 import { KeyboardAvoidingView, Platform } from 'react-native';
 import { randomUUID } from 'react-native-quick-crypto';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import AttachmentViewer from '../../components/Chat/AttachementViewer';
 import { FileMessage } from '../../components/Chat/FileMessage';
 import { ImageMessage } from '../../components/Chat/ImageMessage';
@@ -193,7 +193,6 @@ const RenderMessage = ({
 };
 
 const CoachChatScreen = () => {
-  const insets = useSafeAreaInsets();
   const activeRoomRef = useRef<string | null>(null);
   const navigation = useNavigation<ChatRoomTaskNavigationProp>();
   const route = useRoute<RouteProp<AppStackParamList, 'CoachChatRoom'>>();
@@ -283,7 +282,7 @@ const CoachChatScreen = () => {
     <KeyboardAvoidingView
       behavior="padding"
       keyboardVerticalOffset={Platform.OS === 'ios' ? spacing(70) : spacing(25)}
-      style={[styles.container, { paddingBottom: insets.bottom }]}
+      style={styles.container}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -426,7 +425,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
     padding: spacing(20),
     paddingTop: spacing(10),
-    paddingBottom: isAndroid ? spacing(20) : spacing(5),
+    paddingBottom: isAndroid ? spacing(5) : spacing(5),
     borderTopWidth: 1,
     borderTopColor: theme.colors.gray[200],
   },

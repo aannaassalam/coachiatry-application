@@ -9,6 +9,10 @@ export const getToken = async () => {
 };
 
 export const setToken = async (token: string) => {
+  if (!token) {
+    await removeToken();
+    return;
+  }
   await Keychain.setGenericPassword('token', token, {
     service: 'auth-token',
     storage: Keychain.STORAGE_TYPE.AES_GCM_NO_AUTH,
