@@ -5,13 +5,12 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import AvatarListSkeleton from '../../components/skeletons/AvatarListSkeleton';
 
 import AppHeader from '../../components/ui/AppHeader';
 import UserSearch from '../../components/UserSearch';
@@ -19,6 +18,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { fontSize, scale, spacing } from '../../utils';
+import { FLOATING_BAR_FOOTPRINT } from '../../components/Chat/FloatingChatHost';
 import { Image } from 'react-native';
 import AppButton from '../../components/ui/AppButton';
 import { Modal } from 'react-native';
@@ -40,9 +40,11 @@ export default function Users() {
   const {
     data,
     isLoading,
+    isFetching,
     isFetchingNextPage,
     fetchNextPage,
     hasNextPage,
+    refetch,
     error,
   } = useInfiniteQuery({
     queryKey: ['all-users'],
@@ -64,12 +66,7 @@ export default function Users() {
       onPress={() => navigation.navigate('UserDetails', { id: item._id })}
     >
       <View style={styles.userInfo}>
-        <SmartAvatar
-          src={item.photo}
-          size={scale(48)}
-          name={item.fullName}
-          fontSize={fontSize(22)}
-        />
+        <SmartAvatar src={item.photo} size={scale(48)} name={item.fullName} />
         <View style={{ flex: 1 }}>
           <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
             {item.fullName}
@@ -86,11 +83,7 @@ export default function Users() {
     <View style={styles.container}>
       <AppHeader heading="Users & Permissions" showSearch />
       {isLoading ? (
-        <View
-          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <ActivityIndicator size="large" />
-        </View>
+        <AvatarListSkeleton />
       ) : (
         <FlatList
           data={users}
@@ -98,9 +91,8 @@ export default function Users() {
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            // marginTop: spacing(6),
             paddingHorizontal: spacing(16),
-            paddingBottom: spacing(4),
+            paddingBottom: FLOATING_BAR_FOOTPRINT,
           }}
           ItemSeparatorComponent={() => (
             <View
@@ -116,6 +108,8 @@ export default function Users() {
             }
           }}
           onEndReachedThreshold={0.6}
+          refreshing={isFetching && !isFetchingNextPage}
+          onRefresh={refetch}
           ListFooterComponent={
             isFetchingNextPage ? (
               <View
@@ -258,7 +252,7 @@ const styles = StyleSheet.create({
   },
   searchBtn: {
     position: 'absolute',
-    bottom: spacing(70),
+    bottom: spacing(35) + FLOATING_BAR_FOOTPRINT,
     right: spacing(16),
     padding: spacing(10),
     backgroundColor: theme.colors.primary,
@@ -266,7 +260,7 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     position: 'absolute',
-    bottom: spacing(16),
+    bottom: spacing(-20) + FLOATING_BAR_FOOTPRINT,
     right: spacing(16),
     padding: spacing(10),
     backgroundColor: theme.colors.primary,

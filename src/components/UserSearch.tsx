@@ -22,6 +22,7 @@ import { User } from '../typescript/interface/user.interface';
 import { fontSize, scale, spacing } from '../utils';
 import { SmartAvatar } from './ui/SmartAvatar';
 import TouchableButton from './TouchableButton';
+import AvatarListSkeleton from './skeletons/AvatarListSkeleton';
 
 type UserSearchNavigationProp = NativeStackNavigationProp<AppStackParamList>;
 
@@ -95,6 +96,7 @@ export default function UserSearch({ visible, onClose }: UserSearchProps) {
       visible={visible}
       onRequestClose={handleClose}
       animationType="slide"
+      statusBarTranslucent
     >
       <View
         style={{
@@ -119,15 +121,7 @@ export default function UserSearch({ visible, onClose }: UserSearchProps) {
           </View>
         </View>
         {isLoading ? (
-          <View
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <ActivityIndicator size="large" />
-          </View>
+          <AvatarListSkeleton />
         ) : (
           <KeyboardAwareFlatList
             data={users}

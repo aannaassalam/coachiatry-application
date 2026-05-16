@@ -3,9 +3,8 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useInfiniteQuery, useQueries, useQuery } from '@tanstack/react-query';
 import moment from 'moment';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   FlatList,
   StyleSheet,
@@ -14,6 +13,8 @@ import {
   View,
   ViewToken,
 } from 'react-native';
+import AvatarListSkeleton from '../../components/skeletons/AvatarListSkeleton';
+import DetailScreenSkeleton from '../../components/skeletons/DetailScreenSkeleton';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -38,6 +39,7 @@ import { PaginatedResponse } from '../../typescript/interface/common.interface';
 import { Document } from '../../typescript/interface/document.interface';
 import { Task } from '../../typescript/interface/task.interface';
 import { fontSize, scale, spacing } from '../../utils';
+import { FLOATING_BAR_FOOTPRINT } from '../../components/Chat/FloatingChatHost';
 import Feather from 'react-native-vector-icons/Feather';
 import {
   getAllConversationsByCoach,
@@ -47,6 +49,7 @@ import { getMessages } from '../../api/functions/message.api';
 import { queryClient } from '../../../App';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
 import ChatMessage from '../../components/Chat/Coach/ChatMessage';
+import { useAuth } from '../../hooks/useAuth';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -95,6 +98,7 @@ export default function ClientDetailsA1() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<AppStackParamList, 'ClientDetails'>>();
   const { userId, fromUsersScreen } = route.params;
+  const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<'Tasks' | 'Documents' | 'Chats'>(
     'Documents',
   );
@@ -186,6 +190,17 @@ export default function ClientDetailsA1() {
     queryFn: ({ signal }) =>
       getAllConversationsByCoach({ userId: userId as string }, signal),
   });
+
+  const directChatWithClient = useMemo(() => {
+    if (!chats?.data?.length || !profile?._id) return null;
+    return chats.data.find(
+      c =>
+        c.type === 'direct' &&
+        c.members?.length === 2 &&
+        c.members.some(m => m.user._id === profile._id) &&
+        c.members.some(m => m.user._id === userId),
+    );
+  }, [chats, profile?._id, userId]);
 
   // Animated scroll driver
   const scrollY = useSharedValue(0);
@@ -315,7 +330,10 @@ export default function ClientDetailsA1() {
         onScroll={onScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: spacing(30), flexGrow: 1 }}
+        contentContainerStyle={{
+          paddingBottom: FLOATING_BAR_FOOTPRINT,
+          flexGrow: 1,
+        }}
         bounces={false}
         scrollEnabled={!isAllLoading}
         style={{ backgroundColor: theme.colors.white }}
@@ -343,7 +361,6 @@ export default function ClientDetailsA1() {
                 name={data?.fullName}
                 size={scale(70)}
                 style={{ marginBottom: spacing(12) }}
-                fontSize={fontSize(36)}
               />
               <Text style={styles.bigName}>{data?.fullName}</Text>
               <Text style={styles.bigEmail}>{data?.email}</Text>
@@ -367,7 +384,14 @@ export default function ClientDetailsA1() {
                 {!fromUsersScreen && (
                   <AppButton
                     text="Chat Now"
-                    onPress={() => navigation.navigate('Chats')}
+                    disabled={isChatLoading || !directChatWithClient?._id}
+                    onPress={() => {
+                      if (directChatWithClient?._id) {
+                        navigation.navigate('ChatRoom', {
+                          roomId: directChatWithClient._id,
+                        });
+                      }
+                    }}
                     variant="secondary-outline"
                     style={{
                       flex: 1,
@@ -394,11 +418,7 @@ export default function ClientDetailsA1() {
 
         {/* main profile block (centered) */}
         {isAllLoading ? (
-          <View
-            style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <ActivityIndicator size="large" />
-          </View>
+          <DetailScreenSkeleton showAvatar rows={4} showSections={2} />
         ) : (
           <>
             {/* TABS in normal (expanded) state - sits right under big header in scroll flow */}
@@ -536,20 +556,21 @@ export default function ClientDetailsA1() {
               ) : (
                 <View>
                   {isChatLoading ? (
-                    <View
-                      style={{
-                        flex: 1,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <ActivityIndicator size="large" />
-                    </View>
+                    <AvatarListSkeleton trailing paddingHorizontal={16} />
                   ) : (
                     <FlatList
                       data={chats?.data}
                       renderItem={({ item }) => (
-                        <ChatMessage item={item} userId={userId} />
+                        <ChatMessage
+                          item={item}
+                          userId={userId}
+                          onPress={() =>
+                            navigation.navigate('CoachChatRoom', {
+                              roomId: item._id!,
+                              userId,
+                            })
+                          }
+                        />
                       )}
                       keyExtractor={item => item._id ?? item.createdAt}
                       refreshing={isFetching}
@@ -559,6 +580,7 @@ export default function ClientDetailsA1() {
                       viewabilityConfig={{
                         itemVisiblePercentThreshold: 60, // triggers when 60% visible
                       }}
+                      scrollEnabled={false}
                       contentContainerStyle={{ paddingHorizontal: spacing(10) }}
                     />
                   )}

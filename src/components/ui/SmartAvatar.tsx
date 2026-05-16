@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   ImageStyle,
   StyleProp,
   StyleSheet,
@@ -8,14 +7,14 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { createStyleSheet } from 'react-native-unistyles';
-import { fontSize as fSize, spacing } from '../../utils';
+import { spacing } from '../../utils';
 
-/**
- * Extract initials from a name.
- * e.g. "Anas Alam" -> "AA"
- */
 function getInitials(name?: string) {
   if (!name) return 'U';
   const parts = name.trim().split(' ');
@@ -24,43 +23,35 @@ function getInitials(name?: string) {
 }
 
 interface SmartAvatarProps {
-  /** Image source URL */
   src?: string | null;
-  /** Fallback name for initials */
   name?: string;
-  /** Size of the avatar in px */
   size?: number;
-  /** Font size for initials */
   fontSize?: number;
-  /** Custom style for outer container */
   style?: StyleProp<ViewStyle>;
-  /** Custom image style */
   imageStyle?: StyleProp<ImageStyle>;
-  /** Background + text colors for fallback */
   backgroundColor?: string;
   textColor?: string;
 }
 
-/**
- * A React Native SmartAvatar that:
- * - shows an image when available,
- * - shows shimmer / spinner while loading,
- * - falls back to initials if image fails or missing.
- */
 export const SmartAvatar: React.FC<SmartAvatarProps> = ({
   src,
   name,
   size = spacing(48),
-  fontSize = fSize(18),
+  fontSize,
   style,
   imageStyle,
-  backgroundColor = '#FFE8D6', // light orange
-  textColor = '#DD6B20', // orange-600
+  backgroundColor = '#FFE8D6',
+  textColor = '#DD6B20',
 }) => {
-  const [loaded, setLoaded] = useState(false);
+  const resolvedFontSize = fontSize ?? Math.round(size * 0.4);
   const [error, setError] = useState(false);
+  const opacity = useSharedValue(0);
 
   const borderRadius = size / 2;
+
+  const animatedImageStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
   return (
     <View
@@ -70,14 +61,26 @@ export const SmartAvatar: React.FC<SmartAvatarProps> = ({
         style,
       ]}
     >
-      {/* Loader shimmer */}
-      {src && !loaded && !error && (
-        <View style={[styles.loaderOverlay, { borderRadius }]}>
-          <ActivityIndicator size="small" color="#999" />
-        </View>
-      )}
+      {/* Initials always render — act as the placeholder until the image fades in. */}
+      <View
+        style={[
+          styles.fallback,
+          { backgroundColor, borderRadius },
+          StyleSheet.absoluteFillObject,
+        ]}
+      >
+        <Text
+          style={[
+            styles.initials,
+            { color: textColor, fontSize: resolvedFontSize },
+          ]}
+          numberOfLines={1}
+        >
+          {getInitials(name)}
+        </Text>
+      </View>
 
-      {/* Actual Image */}
+      {/* Image fades in on top of the initials when it loads. */}
       {src && !error && (
         <Animated.Image
           source={{ uri: src }}
@@ -85,29 +88,14 @@ export const SmartAvatar: React.FC<SmartAvatarProps> = ({
             StyleSheet.absoluteFillObject,
             { borderRadius },
             styles.image,
+            animatedImageStyle,
             imageStyle,
           ]}
-          onLoad={() => setLoaded(true)}
+          onLoad={() => {
+            opacity.value = withTiming(1, { duration: 220 });
+          }}
           onError={() => setError(true)}
         />
-      )}
-
-      {/* Fallback initials */}
-      {(!src || error) && (
-        <View
-          style={[
-            styles.fallback,
-            { backgroundColor, borderRadius },
-            StyleSheet.absoluteFillObject,
-          ]}
-        >
-          <Text
-            style={[styles.initials, { color: textColor, fontSize }]}
-            numberOfLines={1}
-          >
-            {getInitials(name)}
-          </Text>
-        </View>
       )}
     </View>
   );
@@ -118,13 +106,6 @@ const styles = createStyleSheet({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    backgroundColor: '#f5f5f5',
-  },
-  loaderOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
   },
   image: {
     resizeMode: 'cover',

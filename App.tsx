@@ -1,6 +1,4 @@
 // App.tsx
-import notifee, { AndroidImportance } from '@notifee/react-native';
-import messaging from '@react-native-firebase/messaging';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { NavigationContainer } from '@react-navigation/native';
 import {
@@ -13,7 +11,6 @@ import { AxiosResponse } from 'axios';
 import { useEffect, useState } from 'react';
 import {
   AppState,
-  Platform,
   StyleSheet as RNStyleSheet,
   StatusBar,
   useColorScheme,
@@ -26,9 +23,16 @@ import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import { MenuProvider } from 'react-native-popup-menu';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { UnistylesProvider } from 'react-native-unistyles';
-import { updateFCMToken } from './src/api/functions/auth.api';
 import AuthSwitchingLoader from './src/components/AuthSwithcingLoader';
-import { hapticOptions, storage } from './src/helpers/utils';
+import {
+  flushPendingDeepLink,
+  handleColdStart,
+  initNotifications,
+  subscribeForegroundListeners,
+  tearDownNotifications,
+} from './src/notifications';
+import { hapticOptions } from './src/helpers/utils';
+import { FloatingChatProvider } from './src/contexts/FloatingChatContext';
 import AuthProvider, { useAuth } from './src/hooks/useAuth';
 import { SocketProvider } from './src/hooks/useSocket';
 import AppNavigator from './src/navigators/AppNavigator';
@@ -36,7 +40,7 @@ import AuthNavigator from './src/navigators/AuthNavigator';
 import './src/sheets';
 import { theme } from './src/theme';
 import './src/unistyles';
-import { navigate, navigationRef } from './src/navigators/navigationService';
+import { navigationRef } from './src/navigators/navigationService';
 
 interface ErrorData {
   response: {
@@ -50,91 +54,55 @@ function AppContent() {
   const { token } = useAuth();
   const [showLoader, setShowLoader] = useState(true);
 
+  // Register / refresh the FCM token + permission whenever the user is signed
+  // in. The hook is idempotent so re-running on token change is safe.
   useEffect(() => {
-    // This triggers whenever a new token is generated
-    const unsubscribe = messaging().onTokenRefresh(async token => {
-      console.log('NEW FCM TOKEN:', token);
-
-      // If user is logged in, send to backend
-      if (token) {
-        await updateFCMToken(token);
-      }
-    });
-
-    return unsubscribe;
+    if (!token) {
+      tearDownNotifications();
+      return;
+    }
+    initNotifications();
+    return () => tearDownNotifications();
   }, [token]);
 
+  // Foreground listeners (FCM onMessage, notifee press events,
+  // onNotificationOpenedApp). All routing flows through DeepLinkHandler.
+  useEffect(() => {
+    return subscribeForegroundListeners();
+  }, []);
+
+  // Drain any pending deep-link intent whenever the app comes back to the
+  // foreground. Only flush MMKV-parked intents here — never re-call
+  // getInitialNotification, since on iOS it can keep returning the same
+  // notification across background→foreground transitions, which would
+  // double-route on top of onNotificationOpenedApp.
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (nextAppState === 'active') {
-        // The app has come to the foreground!
-        checkPendingNavigation();
+        flushPendingDeepLink();
       }
     });
-
-    return () => {
-      subscription.remove();
-    };
+    return () => subscription.remove();
   }, []);
 
-  const checkPendingNavigation = () => {
-    const saved = storage.getString('pendingChatNavigation');
-
-    if (saved) {
-      const data = JSON.parse(saved);
-      storage.remove('pendingChatNavigation'); // Clear it immediately so we don't navigate twice
-
-      // Small timeout to ensure navigation container is ready/rendered
-      setTimeout(() => {
-        navigate('ChatRoom', {
-          roomId: data.chatId,
-        });
-      }, 500);
-    }
-  };
-
+  // Cold-start: drain any notification that launched the app.
   useEffect(() => {
-    const init = async () => {
-      notifee.createChannel({
-        id: 'chat-messages',
-        name: 'Chat Messages',
-        importance: AndroidImportance.HIGH,
-      });
+    handleColdStart();
 
-      const initialNotification = await notifee.getInitialNotification();
-      if (initialNotification) {
-        const { pressAction, notification } = initialNotification;
-        if (
-          pressAction?.id === 'open-chat' &&
-          notification?.data &&
-          notification.id
-        ) {
-          // Add a small delay to ensure navigation container is ready
-          setTimeout(() => {
-            navigate('ChatRoom', {
-              roomId: notification?.data?.chatId as string,
-            });
-          }, 500);
-          await notifee.cancelNotification(notification?.id);
-        }
-      }
-
-      GoogleSignin.configure({
-        scopes: ['profile', 'email'], // what info you want
-        webClientId:
-          '281907580585-0t8555ivr673q6rhj6b20qnfjrnfut1b.apps.googleusercontent.com', // from Google Cloud Console (Web client)
-        iosClientId:
-          '281907580585-9akd8qfkn3unc37ta3k6q3fk84g129d1.apps.googleusercontent.com',
-        offlineAccess: true,
-        forceCodeForRefreshToken: false,
-      });
-    };
-    init();
+    GoogleSignin.configure({
+      scopes: ['profile', 'email'],
+      webClientId:
+        '281907580585-0t8555ivr673q6rhj6b20qnfjrnfut1b.apps.googleusercontent.com',
+      iosClientId:
+        '281907580585-9akd8qfkn3unc37ta3k6q3fk84g129d1.apps.googleusercontent.com',
+      offlineAccess: true,
+      forceCodeForRefreshToken: false,
+    });
   }, []);
 
   return (
     <View style={styles.container}>
-      {token ? <AppNavigator /> : <AuthNavigator />}
+      {token ? <AppNavigator hideFloatingChat={showLoader} /> : <AuthNavigator />}
       {showLoader && (
         <AuthSwitchingLoader
           onFinish={() => {
@@ -203,29 +171,11 @@ export const queryClient = new QueryClient({
 });
 
 export default function App() {
-  const { token } = useAuth();
   useColorScheme();
 
-  useEffect(() => {
-    if (!token) return;
-
-    const interval = setInterval(() => {
-      if (navigationRef.isReady()) {
-        const saved = storage.getString('pendingChatNavigation');
-        if (saved) {
-          const data = JSON.parse(saved);
-          storage.remove('pendingChatNavigation');
-
-          navigationRef.navigate('ChatRoom', {
-            roomId: data.chatId,
-          });
-        }
-        clearInterval(interval);
-      }
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [token]);
+  // Pending-deep-link flushing + onNotificationOpenedApp wiring is now
+  // centralized in `subscribeForegroundListeners` and `handleColdStart`
+  // inside `AppContent`. Nothing notification-related to do at this layer.
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -237,9 +187,11 @@ export default function App() {
               <MenuProvider>
                 <AuthProvider>
                   <SocketProvider>
-                    <NavigationContainer ref={navigationRef}>
-                      <AppContent />
-                    </NavigationContainer>
+                    <FloatingChatProvider>
+                      <NavigationContainer ref={navigationRef}>
+                        <AppContent />
+                      </NavigationContainer>
+                    </FloatingChatProvider>
                   </SocketProvider>
                 </AuthProvider>
               </MenuProvider>

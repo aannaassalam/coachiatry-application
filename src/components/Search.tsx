@@ -21,6 +21,7 @@ import {
 import { createStyleSheet } from 'react-native-unistyles';
 import { getSearch } from '../api/functions/common.api';
 import { CoachAi, HeaderSearchIcon } from '../assets';
+import AvatarListSkeleton from './skeletons/AvatarListSkeleton';
 import { useDebounce } from '../hooks/useDebounce';
 import { theme } from '../theme';
 import { AppStackParamList } from '../types/navigation';
@@ -91,6 +92,7 @@ export default function Search() {
         visible={searchModal}
         onRequestClose={() => setSearchModal(false)}
         animationType="slide"
+        statusBarTranslucent
       >
         <View
           style={{
@@ -186,15 +188,7 @@ export default function Search() {
             </View>
           </View>
           {isLoading ? (
-            <View
-              style={{
-                flex: 1,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ActivityIndicator size="large" />
-            </View>
+            <AvatarListSkeleton />
           ) : (
             <KeyboardAwareFlatList
               data={data.filter(_data => _data.type !== 'transcript')}

@@ -116,7 +116,7 @@ export default function Login() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.select({ ios: 'padding', android: 'height' })}
       style={[
         styles.container,
         { paddingBottom: insets.bottom, paddingTop: insets.top },

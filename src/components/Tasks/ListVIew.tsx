@@ -3,12 +3,14 @@ import React from 'react';
 import { getAllTasks, getTask } from '../../api/functions/task.api';
 import { Task } from '../../typescript/interface/task.interface';
 import { getAllStatuses } from '../../api/functions/status.api';
-import { ActivityIndicator, FlatList, InteractionManager, Text, View } from 'react-native';
+import { FlatList, InteractionManager, Text, View } from 'react-native';
+import { FLOATING_BAR_FOOTPRINT } from '../Chat/FloatingChatHost';
 import TaskCard from './TaskCard';
 import { Filter } from '../../typescript/interface/common.interface';
 import { createStyleSheet } from 'react-native-unistyles';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
+import TaskListSkeleton from '../skeletons/TaskListSkeleton';
 
 export default function ListView({
   sort,
@@ -87,12 +89,7 @@ export default function ListView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskIds, queryClient]);
 
-  if (isLoading || isStatusLoading)
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+  if (isLoading || isStatusLoading) return <TaskListSkeleton />;
 
   return (
     <FlatList
@@ -116,6 +113,7 @@ export default function ListView({
           <Text style={styles.emptyText}>No tasks found.</Text>
         </View>
       }
+      contentContainerStyle={{ paddingBottom: FLOATING_BAR_FOOTPRINT }}
     />
   );
 }

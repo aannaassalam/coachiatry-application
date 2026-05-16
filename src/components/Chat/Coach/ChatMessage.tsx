@@ -16,90 +16,100 @@ type ChatScreenNavigationProp = NativeStackNavigationProp<
   'CoachChatRoom'
 >;
 
-export default function ChatMessage({ item,userId }: { item: ChatConversation,userId:string }) {
-      const navigation = useNavigation<ChatScreenNavigationProp>();
+export default function ChatMessage({
+  item,
+  userId,
+  onPress,
+}: {
+  item: ChatConversation;
+  userId: string;
+  onPress?: () => void;
+}) {
+  const navigation = useNavigation<ChatScreenNavigationProp>();
 
   const chatUser = item.members.find(
-                _member => _member.user._id !== userId,
-              );
-              const details: { photo?: string; name?: string } = {
-                photo: chatUser?.user.photo,
-                name: chatUser?.user.fullName,
-              };
+    _member => _member.user._id !== userId,
+  );
+  const details: { photo?: string; name?: string } = {
+    photo: chatUser?.user.photo,
+    name: chatUser?.user.fullName,
+  };
 
-              if (item && item.type === 'group') {
-                details.photo = item.groupPhoto;
-                details.name = item.name;
-              }
+  if (item && item.type === 'group') {
+    details.photo = item.groupPhoto;
+    details.name = item.name;
+  }
 
-              return (
-                <TouchableButton
-                  onPress={() => {
-                    // handle onPress
-                    navigation.navigate('CoachChatRoom', { roomId: item._id!,userId });
-                  }}
-                  style={styles.card}
-                >
-                  <SmartAvatar
-                    src={details.photo}
-                    name={details.name}
-                    size={scale(40)}
-                    fontSize={fontSize(18)}
-                  />
+  return (
+    <TouchableButton
+      onPress={() => {
+        if (onPress) {
+          onPress();
+          return;
+        }
+        navigation.navigate('CoachChatRoom', { roomId: item._id!, userId });
+      }}
+      style={styles.card}
+    >
+      <SmartAvatar
+        src={details.photo}
+        name={details.name}
+        size={scale(40)}
+        fontSize={fontSize(18)}
+      />
 
-                  <View style={styles.cardBody}>
-                    <Text style={styles.cardTitle}>{details.name}</Text>
+      <View style={styles.cardBody}>
+        <Text style={styles.cardTitle}>{details.name}</Text>
 
-                    <Text
-                      ellipsizeMode="tail"
-                      numberOfLines={1}
-                      style={[
-                        styles.cardContent,
-                        item.unreadCount > 0 && {
-                          fontFamily: theme.fonts.archivo.semiBold,
-                          color: theme.colors.gray[600],
-                        },
-                      ]}
-                    >
-                      {item.lastMessage?.sender?._id === userId &&
-                      item.isDeletable
-                        ? 'You: '
-                        : null}
-                      {item.lastMessage?.content ||
-                        (item.lastMessage?.type === 'image'
-                          ? '📷 Images'
-                          : item.lastMessage?.type === 'video'
-                            ? '🎥 Videos'
-                            : item.lastMessage?.type === 'file'
-                              ? '📁 Files'
-                              : undefined)}
-                    </Text>
-                  </View>
+        <Text
+          ellipsizeMode="tail"
+          numberOfLines={1}
+          style={[
+            styles.cardContent,
+            item.unreadCount > 0 && {
+              fontFamily: theme.fonts.archivo.semiBold,
+              color: theme.colors.gray[600],
+            },
+          ]}
+        >
+          {item.lastMessage?.sender?._id === userId && item.isDeletable
+            ? 'You: '
+            : null}
+          {item.lastMessage?.content ||
+            (item.lastMessage?.type === 'image'
+              ? '📷 Images'
+              : item.lastMessage?.type === 'video'
+                ? '🎥 Videos'
+                : item.lastMessage?.type === 'file'
+                  ? '📁 Files'
+                  : undefined)}
+        </Text>
+      </View>
 
-                  <View style={styles.meta}>
-                    <Text
-                      style={[
-                        styles.time,
-                        item.unreadCount > 0 && {
-                          fontFamily: theme.fonts.archivo.semiBold,
-                        },
-                      ]}
-                    >
-                      {item.lastMessage?.createdAt
-                        ? moment(item.lastMessage?.createdAt).fromNow(true)
-                        : null}
-                    </Text>
+      <View style={styles.meta}>
+        <Text
+          style={[
+            styles.time,
+            item.unreadCount > 0 && {
+              fontFamily: theme.fonts.archivo.semiBold,
+            },
+          ]}
+        >
+          {item.lastMessage?.createdAt
+            ? moment(item.lastMessage?.createdAt).fromNow(true)
+            : null}
+        </Text>
 
-                    {item.unreadCount > 0 && (
-                      <View style={styles.unreadCount}>
-                        <Text style={styles.unreadCountText}>
-                          {item.unreadCount > 99 ? '99+' : item.unreadCount}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </TouchableButton>
-              );
+        {item.unreadCount > 0 && (
+          <View style={styles.unreadCount}>
+            <Text style={styles.unreadCountText}>
+              {item.unreadCount > 99 ? '99+' : item.unreadCount}
+            </Text>
+          </View>
+        )}
+      </View>
+    </TouchableButton>
+  );
 }
 
 const styles = createStyleSheet({

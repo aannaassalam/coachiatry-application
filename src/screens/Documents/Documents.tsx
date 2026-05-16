@@ -8,7 +8,6 @@ import {
 import moment from 'moment';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Dimensions,
   FlatList,
@@ -17,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import DocumentListSkeleton from '../../components/skeletons/DocumentListSkeleton';
 import { showMessage } from 'react-native-flash-message';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import {
@@ -45,6 +45,7 @@ import { PaginatedResponse } from '../../typescript/interface/common.interface';
 import { Document } from '../../typescript/interface/document.interface';
 import { fontSize, scale, spacing } from '../../utils';
 import { useAuth } from '../../hooks/useAuth';
+import { FLOATING_BAR_FOOTPRINT } from '../../components/Chat/FloatingChatHost';
 import { Pencil } from 'lucide-react-native';
 import {
   getAllCategories,
@@ -201,12 +202,7 @@ const RenderContent = ({ activeTab }: { activeTab: string }) => {
     staleTime: 60 * 1000,
   });
 
-  if (isLoading)
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+  if (isLoading) return <DocumentListSkeleton />;
 
   const documents = data?.pages.flatMap(page => page.data) ?? [];
   const isRefreshing =
@@ -250,6 +246,7 @@ const RenderContent = ({ activeTab }: { activeTab: string }) => {
           <Text style={styles.emptyText}>No documents found.</Text>
         </View>
       }
+      contentContainerStyle={{ paddingBottom: FLOATING_BAR_FOOTPRINT }}
     />
   );
 };
@@ -342,7 +339,7 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     position: 'absolute',
-    bottom: spacing(16),
+    bottom: spacing(-15) + FLOATING_BAR_FOOTPRINT,
     right: spacing(16),
     padding: spacing(10),
     backgroundColor: theme.colors.primary,

@@ -1,18 +1,21 @@
 import { pick, types } from '@react-native-documents/picker';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   findNodeHandle,
   FlatList,
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   UIManager,
   View,
+  ViewToken,
 } from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
+import ChatRoomSkeleton from '../../components/skeletons/ChatRoomSkeleton';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Feather from 'react-native-vector-icons/Feather';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -59,23 +62,29 @@ import {
   spacing,
   verticalScale,
 } from '../../utils';
-import { KeyboardAvoidingView, Platform } from 'react-native';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 import { randomUUID } from 'react-native-quick-crypto';
+import {
+  clearChatNotifications,
+  setFocusedChat,
+} from '../../notifications';
 import AttachmentMenu from '../../components/Chat/AttachmentMenu';
 import AttachmentFullPreview from '../../components/Chat/AttachmentPreview';
 import EmojiKeyboard from '../../components/Chat/EmojiKeyboard';
 import { ImageMessage } from '../../components/Chat/ImageMessage';
+import TypingIndicator from '../../components/Chat/TypingIndicator';
 import CoachAiSheet from '../../components/CoachAi';
 import TouchableButton from '../../components/TouchableButton';
 import { uploadManager } from '../../helpers/uploadManager';
-import { hapticOptions } from '../../helpers/utils';
+import { formatChatDateSeparator, hapticOptions } from '../../helpers/utils';
 import { useChatUpload } from '../../hooks/useChatHook';
+import { useAndroidKeyboardInset } from '../../hooks/useAndroidKeyboardInset';
 import AttachmentViewer from '../../components/Chat/AttachementViewer';
 import { VideoMessage } from '../../components/Chat/VideoMessage';
 import { FileMessage } from '../../components/Chat/FileMessage';
 import { Reply, X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const MAX_SWIPE = 60; // how far message can move, just like WhatsApp
 const SWIPE_REPLY_THRESHOLD = 40;
@@ -85,6 +94,20 @@ type ChatRoomTaskNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
   'ChatRoom'
 >;
+
+type DateSeparatorItem = { __type: 'date'; id: string; label: string };
+type ChatItem = Message | DateSeparatorItem;
+
+const isDateSeparator = (item: ChatItem): item is DateSeparatorItem =>
+  (item as DateSeparatorItem).__type === 'date';
+
+const DateSeparator = ({ label }: { label: string }) => (
+  <View style={styles.dateSeparatorRow}>
+    <View style={styles.dateSeparatorPill}>
+      <Text style={styles.dateSeparatorText}>{label}</Text>
+    </View>
+  </View>
+);
 
 const RenderMessage = ({
   item,
@@ -102,6 +125,8 @@ const RenderMessage = ({
   const isMe = conversation?.isDeletable
     ? item.sender?._id === profile?._id
     : false;
+
+  const time = item.createdAt ? moment(item.createdAt).format('h:mm A') : '';
 
   const [attachmentIndex, setAttachmentIndex] = useState<number | null>(null);
 
@@ -257,6 +282,7 @@ const RenderMessage = ({
                   <Text
                     style={[
                       styles.messageText,
+                      styles.messageTextFlex,
                       {
                         color: isMe
                           ? theme.colors.white
@@ -265,18 +291,10 @@ const RenderMessage = ({
                     ]}
                   >
                     {item.content}
-                    {/* Invisible spacer to reserve room for the timestamp */}
-                    <Text style={styles.timeSpacer}>
-                      {'      ' +
-                        (item.createdAt
-                          ? moment(item.createdAt).format('h:mm A')
-                          : '')}
-                    </Text>
                   </Text>
-                  {/* Real timestamp positioned at bottom-right */}
                   <Text
                     style={[
-                      styles.timestamp,
+                      styles.bubbleTimestamp,
                       {
                         color: isMe
                           ? 'rgba(255,255,255,0.6)'
@@ -284,13 +302,11 @@ const RenderMessage = ({
                       },
                     ]}
                   >
-                    {item.createdAt
-                      ? moment(item.createdAt).format('h:mm A')
-                      : ''}
+                    {time}
                   </Text>
                 </View>
               ) : item.type === 'image' ? (
-                <View style={{ paddingHorizontal: 0 }}>
+                <View>
                   <ImageMessage
                     message={item}
                     setSelected={index => setAttachmentIndex(index)}
@@ -305,9 +321,7 @@ const RenderMessage = ({
                       },
                     ]}
                   >
-                    {item.createdAt
-                      ? moment(item.createdAt).format('h:mm A')
-                      : ''}
+                    {time}
                   </Text>
                 </View>
               ) : item.type === 'video' ? (
@@ -326,9 +340,7 @@ const RenderMessage = ({
                       },
                     ]}
                   >
-                    {item.createdAt
-                      ? moment(item.createdAt).format('h:mm A')
-                      : ''}
+                    {time}
                   </Text>
                 </View>
               ) : (
@@ -344,9 +356,7 @@ const RenderMessage = ({
                       },
                     ]}
                   >
-                    {item.createdAt
-                      ? moment(item.createdAt).format('h:mm A')
-                      : ''}
+                    {time}
                   </Text>
                 </View>
               )}
@@ -444,11 +454,13 @@ const ChatScreen = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const socket = useSocket();
   const { profile } = useAuth();
+  const insets = useSafeAreaInsets();
+  const androidKeyboardInset = useAndroidKeyboardInset();
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRoomRef = useRef<string | null>(null);
   const navigation = useNavigation<ChatRoomTaskNavigationProp>();
   const route = useRoute<RouteProp<AppStackParamList, 'ChatRoom'>>();
-  const { roomId: room } = route.params;
+  const { roomId: room, fromFloating = false } = route.params;
 
   const [reactorPos, setReactorPos] = useState({ top: 0, left: 0 });
   const [message, setMessage] = useState('');
@@ -528,10 +540,89 @@ const ChatScreen = () => {
     [messagesData],
   );
 
+  const typingMembers = useMemo(() => {
+    if (!conversation || typingUsers.length === 0) return [];
+    return typingUsers
+      .map(uid => conversation.members?.find(m => m.user._id === uid)?.user)
+      .filter((u): u is NonNullable<typeof u> => Boolean(u));
+  }, [typingUsers, conversation]);
+
+  const [floatingDate, setFloatingDate] = useState<string | null>(null);
+  const floatingOpacity = useSharedValue(0);
+  const hideFloatingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  const handleMessagesScroll = () => {
+    floatingOpacity.value = withTiming(1, { duration: 150 });
+    if (hideFloatingTimerRef.current)
+      clearTimeout(hideFloatingTimerRef.current);
+    hideFloatingTimerRef.current = setTimeout(() => {
+      floatingOpacity.value = withTiming(0, { duration: 300 });
+    }, 1500);
+  };
+
+  const onViewableItemsChangedRef = useRef(
+    ({ viewableItems }: { viewableItems: ViewToken<ChatItem>[] }) => {
+      let topmostIndex = -1;
+      let topmostMessage: Message | null = null;
+      for (const v of viewableItems) {
+        if (!v.item || isDateSeparator(v.item) || !v.item.createdAt) continue;
+        const idx = v.index ?? -1;
+        if (idx > topmostIndex) {
+          topmostIndex = idx;
+          topmostMessage = v.item;
+        }
+      }
+      if (topmostMessage?.createdAt) {
+        setFloatingDate(formatChatDateSeparator(topmostMessage.createdAt));
+      }
+    },
+  ).current;
+
+  useEffect(() => {
+    return () => {
+      if (hideFloatingTimerRef.current)
+        clearTimeout(hideFloatingTimerRef.current);
+    };
+  }, []);
+
+  const floatingDateStyle = useAnimatedStyle(() => ({
+    opacity: floatingOpacity.value,
+  }));
+
+  const chatItems = useMemo<ChatItem[]>(() => {
+    const result: ChatItem[] = [];
+    for (let i = 0; i < allMessages.length; i++) {
+      const msg = allMessages[i];
+      result.push(msg);
+      const next = allMessages[i + 1];
+      const currentDay = msg.createdAt
+        ? moment(msg.createdAt).format('YYYY-MM-DD')
+        : null;
+      const nextDay = next?.createdAt
+        ? moment(next.createdAt).format('YYYY-MM-DD')
+        : null;
+      if (currentDay && (!next || currentDay !== nextDay)) {
+        result.push({
+          __type: 'date',
+          id: `date-${currentDay}`,
+          label: formatChatDateSeparator(msg.createdAt!),
+        });
+      }
+    }
+    return result;
+  }, [allMessages]);
+
   useEffect(() => {
     activeRoomRef.current = room; // current chat ID
+    if (room) {
+      setFocusedChat(room);
+      clearChatNotifications(room);
+    }
     return () => {
       activeRoomRef.current = null; // user left chat
+      setFocusedChat(undefined);
     };
   }, [room]);
 
@@ -1161,12 +1252,29 @@ const ChatScreen = () => {
     setShowEmojiPicker(prev => !prev);
   };
 
-  if (isLoading || isConversationLoading)
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+  if (isLoading || isConversationLoading) return <ChatRoomSkeleton />;
+
+  const handleOpenCamera = async () => {
+    const res = await launchCamera({
+      mediaType: 'photo',
+      includeBase64: false,
+      saveToPhotos: true,
+      quality: 0.6,
+      cameraType: 'back',
+    });
+
+    if (res.didCancel || !res.assets) return;
+
+    const mapped = res.assets.map(asset => ({
+      uri: asset.uri!,
+      type: 'image' as const,
+      name: asset.fileName || `IMG_${Date.now()}.jpg`,
+      size: asset.fileSize || 0,
+      mimeType: asset.type || 'image/jpeg',
+    }));
+
+    setAttachments(prev => [...prev, ...mapped]);
+  };
 
   const handlePickImage = async () => {
     const res = await launchImageLibrary({
@@ -1264,9 +1372,12 @@ const ChatScreen = () => {
     }
   };
 
-  const handleAttachmentSelect = (type: 'image' | 'video' | 'file') => {
+  const handleAttachmentSelect = (
+    type: 'camera' | 'image' | 'video' | 'file',
+  ) => {
     Keyboard.dismiss();
 
+    if (type === 'camera') handleOpenCamera();
     if (type === 'image') handlePickImage();
     if (type === 'video') handlePickVideo();
     if (type === 'file') handlePickDocument();
@@ -1333,46 +1444,58 @@ const ChatScreen = () => {
 
   return (
     <KeyboardAvoidingView
-      behavior="padding"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing(70) : spacing(25)}
-      style={styles.container}
+      behavior={
+        Platform.OS === 'ios' ? 'padding' : fromFloating ? 'height' : undefined
+      }
+      keyboardVerticalOffset={
+        Platform.OS === 'ios'
+          ? fromFloating
+            ? insets.top + spacing(52)
+            : insets.top
+          : 0
+      }
+      style={[styles.container, { paddingBottom: androidKeyboardInset }]}
     >
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableButton
-          style={{
-            paddingVertical: spacing(4),
-            paddingHorizontal: spacing(8),
-            borderRadius: 100,
-          }}
-          onPress={() => navigation.goBack()}
-        >
-          <ChevronLeft />
-        </TouchableButton>
-        <View style={styles.userInfo}>
-          <SmartAvatar
-            src={details.photo}
-            name={details.name}
-            size={scale(28)}
-          />
-          <Text style={styles.userName} numberOfLines={1}>
-            {details.name}
-          </Text>
-          {conversation?.type === 'direct' && friendStatus === 'online' && (
-            <View style={styles.dot} />
+      {!fromFloating && (
+        <View style={styles.header}>
+          <TouchableButton
+            style={{
+              paddingVertical: spacing(4),
+              paddingHorizontal: spacing(8),
+              borderRadius: 100,
+            }}
+            onPress={() => navigation.goBack()}
+          >
+            <ChevronLeft />
+          </TouchableButton>
+          <View style={styles.userInfo}>
+            <SmartAvatar
+              src={details.photo}
+              name={details.name}
+              size={scale(28)}
+            />
+            <Text style={styles.userName} numberOfLines={1}>
+              {details.name}
+            </Text>
+            {conversation?.type === 'direct' && friendStatus === 'online' && (
+              <View style={styles.dot} />
+            )}
+          </View>
+          {conversation?.type === 'direct' ? (
+            <View style={{ width: 24 }} />
+          ) : (
+            <TouchableButton
+              style={{ padding: 4, borderRadius: 100 }}
+              onPress={() =>
+                navigation.navigate('GroupScreen', { roomId: room })
+              }
+            >
+              <Feather name="info" color="#333" size={fontSize(18)} />
+            </TouchableButton>
           )}
         </View>
-        {conversation?.type === 'direct' ? (
-          <View style={{ width: 24 }} />
-        ) : (
-          <TouchableButton
-            style={{ padding: 4, borderRadius: 100 }}
-            onPress={() => navigation.navigate('GroupScreen', { roomId: room })}
-          >
-            <Feather name="info" color="#333" size={fontSize(18)} />
-          </TouchableButton>
-        )}
-      </View>
+      )}
 
       {/* Messages */}
       <View style={{ flex: 1 }}>
@@ -1386,21 +1509,56 @@ const ChatScreen = () => {
           />
         ) : (
           <FlatList
-            data={allMessages}
-            renderItem={({ item }) => (
-              <RenderMessage
-                item={item}
-                conversation={conversation}
-                onReply={() => setReplyingTo(item)}
-                onOpenReactor={(msg, pos) => {
-                  setReactorVisibleFor({ id: msg._id! });
-                  setReactorPos({ top: pos.y, left: pos.x }); // store coordinates
-                }}
-              />
-            )}
-            keyExtractor={item => getStableKey(item)}
+            data={chatItems}
+            onScroll={handleMessagesScroll}
+            scrollEventThrottle={16}
+            onViewableItemsChanged={onViewableItemsChangedRef}
+            viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+            renderItem={({ item }) => {
+              if (isDateSeparator(item)) {
+                return <DateSeparator label={item.label} />;
+              }
+              return (
+                <RenderMessage
+                  item={item}
+                  conversation={conversation}
+                  onReply={() => setReplyingTo(item)}
+                  onOpenReactor={(msg, pos) => {
+                    setReactorVisibleFor({ id: msg._id! });
+                    setReactorPos({ top: pos.y, left: pos.x }); // store coordinates
+                  }}
+                />
+              );
+            }}
+            keyExtractor={item =>
+              isDateSeparator(item) ? item.id : getStableKey(item)
+            }
             inverted
             showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              typingMembers.length > 0 ? (
+                <View style={styles.typingStack}>
+                  {typingMembers.map(member => (
+                    <View key={member._id} style={styles.typingRow}>
+                      <SmartAvatar
+                        src={member.photo}
+                        name={member.fullName}
+                        size={scale(28)}
+                        style={styles.typingAvatar}
+                      />
+                      <View style={styles.typingBubbleColumn}>
+                        {conversation?.type === 'group' && (
+                          <Text style={styles.typingName}>
+                            {member.fullName?.split(' ')[0]}
+                          </Text>
+                        )}
+                        <TypingIndicator style={styles.typingBubble} />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ) : null
+            }
             onEndReached={() => {
               if (hasNextPage && !isFetchingNextPage) fetchNextPage();
             }}
@@ -1427,6 +1585,16 @@ const ChatScreen = () => {
             }}
           />
         )}
+        {floatingDate && attachments.length === 0 && (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.floatingDateContainer, floatingDateStyle]}
+          >
+            <View style={styles.dateSeparatorPill}>
+              <Text style={styles.dateSeparatorText}>{floatingDate}</Text>
+            </View>
+          </Animated.View>
+        )}
       </View>
       {/* Message Input */}
       {replyingTo && (
@@ -1435,7 +1603,7 @@ const ChatScreen = () => {
           onClose={() => setReplyingTo(null)}
         />
       )}
-      <View style={{ ...styles.inputBar, borderTopWidth: replyingTo ? 0 : 1 }}>
+      <View style={[styles.inputBar, { borderTopWidth: replyingTo ? 0 : 1 }]}>
         <View style={[styles.inputWrapper]}>
           <TouchableOpacity onPress={toggleEmojiKeyboard}>
             <Ionicons
@@ -1582,25 +1750,25 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.lato.regular,
   },
   textWithTime: {
-    position: 'relative' as const,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-end',
   },
-  timeSpacer: {
-    fontSize: fontSize(10),
-    opacity: 0,
+  messageTextFlex: {
+    flexShrink: 1,
   },
-  timestamp: {
-    position: 'absolute' as const,
-    bottom: -2,
-    right: 0,
+  bubbleTimestamp: {
     fontSize: fontSize(10),
     lineHeight: fontSize(14),
     fontFamily: theme.fonts.lato.regular,
+    marginLeft: 'auto',
+    paddingLeft: spacing(8),
   },
   mediaTimestamp: {
     fontSize: fontSize(10),
+    lineHeight: fontSize(14),
     fontFamily: theme.fonts.lato.regular,
     alignSelf: 'flex-end' as const,
-    marginTop: spacing(2),
   },
   inputBar: {
     flexDirection: 'row',
@@ -1700,5 +1868,52 @@ const styles = StyleSheet.create({
 
   replyCloseBtn: {
     padding: 6,
+  },
+  dateSeparatorRow: {
+    alignItems: 'center',
+    marginVertical: spacing(8),
+  },
+  dateSeparatorPill: {
+    backgroundColor: theme.colors.gray[100],
+    paddingHorizontal: spacing(12),
+    paddingVertical: spacing(4),
+    borderRadius: 100,
+  },
+  dateSeparatorText: {
+    fontSize: fontSize(11),
+    fontFamily: theme.fonts.archivo.medium,
+    color: theme.colors.gray[700],
+  },
+  typingStack: {
+    gap: spacing(8),
+    marginBottom: spacing(8),
+  },
+  typingRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  typingAvatar: {
+    marginRight: spacing(8),
+  },
+  typingBubbleColumn: {
+    alignItems: 'flex-start',
+  },
+  typingBubble: {
+    marginBottom: 0,
+  },
+  typingName: {
+    fontSize: fontSize(11),
+    fontFamily: theme.fonts.archivo.medium,
+    color: theme.colors.gray[600],
+    marginBottom: spacing(4),
+    paddingLeft: spacing(4),
+  },
+  floatingDateContainer: {
+    position: 'absolute',
+    top: spacing(8),
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
   },
 });

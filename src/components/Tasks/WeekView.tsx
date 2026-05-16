@@ -2,19 +2,15 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
 import { getAllTasks, getTask } from '../../api/functions/task.api';
 import { Filter } from '../../typescript/interface/common.interface';
-import {
-  ActivityIndicator,
-  FlatList,
-  Text,
-  View,
-  ViewToken,
-} from 'react-native';
+import { FlatList, Text, View, ViewToken } from 'react-native';
 import WeekTaskCard from './WeekTaskCard';
+import WeekViewSkeleton from '../skeletons/WeekViewSkeleton';
 import moment from 'moment';
 import { createStyleSheet } from 'react-native-unistyles';
 import { fontSize, spacing } from '../../utils';
 import { theme } from '../../theme';
 import { Task } from '../../typescript/interface/task.interface';
+import { FLOATING_BAR_FOOTPRINT } from '../Chat/FloatingChatHost';
 
 const days = [
   {
@@ -107,12 +103,7 @@ export default function WeekView({
     [data, dates.start, queryClient],
   );
 
-  if (isLoading)
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+  if (isLoading) return <WeekViewSkeleton />;
 
   return (
     <FlatList
@@ -146,6 +137,7 @@ export default function WeekView({
       }}
       contentContainerStyle={{
         padding: spacing(20),
+        paddingBottom: FLOATING_BAR_FOOTPRINT,
       }}
     />
   );

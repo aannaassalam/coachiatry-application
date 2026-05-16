@@ -146,7 +146,6 @@ const EditProfile = () => {
             src={photo}
             name={profile?.fullName}
             imageStyle={styles.avatar}
-            fontSize={fontSize(22)}
             size={scale(100)}
             key={new Date().toDateString()}
           />

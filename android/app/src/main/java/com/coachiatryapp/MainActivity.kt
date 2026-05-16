@@ -1,5 +1,6 @@
 package com.coachiatryapp
 
+import android.os.Bundle
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -12,6 +13,17 @@ class MainActivity : ReactActivity() {
    * rendering of the component.
    */
   override fun getMainComponentName(): String = "CoachiatryApp"
+
+  /**
+   * Passing `null` to `super.onCreate` discards the system-saved Activity
+   * state on recreation (config change, process death). React Native rebuilds
+   * the JS state from scratch anyway, and on some Pixel devices restoring the
+   * Android-side state on top of a fresh JS tree causes a crash in the
+   * Fragment-restoration path. Recommended by the RN core team for new apps.
+   */
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(null)
+  }
 
   /**
    * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]

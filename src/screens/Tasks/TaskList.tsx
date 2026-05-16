@@ -16,6 +16,7 @@ import { sanitizeFilters } from '../../helpers/utils';
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { fontSize, scale, spacing } from '../../utils';
+import { FLOATING_BAR_FOOTPRINT } from '../../components/Chat/FloatingChatHost';
 
 type TaskListNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -161,7 +162,7 @@ const styles = createStyleSheet({
   },
   addBtn: {
     position: 'absolute',
-    bottom: spacing(16),
+    bottom: spacing(-15) + FLOATING_BAR_FOOTPRINT,
     right: spacing(16),
     padding: spacing(10),
     backgroundColor: theme.colors.primary,

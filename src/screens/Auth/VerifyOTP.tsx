@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   Image,
   Pressable,
-  KeyboardAvoidingView,
   ImageBackground,
   TouchableWithoutFeedback,
   Keyboard,
+  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
@@ -67,7 +67,7 @@ export default function VerifyOTP() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.select({ ios: 'padding', android: 'height' })}
       style={[
         styles.container,
         { paddingBottom: insets.bottom, paddingTop: insets.top },

@@ -21,6 +21,8 @@ import {
   View,
 } from 'react-native';
 import TouchableButton from '../../components/TouchableButton';
+import AvatarListSkeleton from '../../components/skeletons/AvatarListSkeleton';
+import GroupFormSkeleton from '../../components/skeletons/GroupFormSkeleton';
 import { fontSize, scale, spacing, verticalScale } from '../../utils';
 import { ChevronLeft } from '../../assets';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
@@ -61,7 +63,6 @@ const RenderMember = ({
           src={item.photo}
           name={item.fullName}
           size={fontSize(40)}
-          fontSize={fontSize(16)}
         />
         <View>
           <Text style={styles.watcherName}>{item.fullName}</Text>
@@ -269,21 +270,7 @@ export default function GroupScreen() {
       </View>
 
       {isLoading ? (
-        <View
-          style={{
-            flex: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: spacing(10),
-          }}
-        >
-          <ActivityIndicator size="small" color={theme.colors.black} />
-          <Text
-            style={{ fontSize: fontSize(14), color: theme.colors.gray[700] }}
-          >
-            Fetching details
-          </Text>
-        </View>
+        <GroupFormSkeleton />
       ) : (
         <>
           {/* Avatar Section */}
@@ -298,7 +285,6 @@ export default function GroupScreen() {
                 src={photo}
                 name="C"
                 imageStyle={styles.avatar}
-                fontSize={fontSize(34)}
                 size={scale(100)}
                 key={new Date().toDateString()}
               />
@@ -394,6 +380,7 @@ export default function GroupScreen() {
         visible={addPersonModal}
         onRequestClose={() => setAddPersonModal(false)}
         animationType="slide"
+        statusBarTranslucent
       >
         <View
           style={{
@@ -421,15 +408,7 @@ export default function GroupScreen() {
             </View>
           </View>
           {isPeopleLoading ? (
-            <View
-              style={{
-                flex: 1,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ActivityIndicator size="large" />
-            </View>
+            <AvatarListSkeleton />
           ) : (
             <>
               <KeyboardAwareFlatList
@@ -460,7 +439,6 @@ export default function GroupScreen() {
                         src={item.photo}
                         name={item.fullName}
                         size={fontSize(40)}
-                        fontSize={fontSize(16)}
                       />
                       <View>
                         <Text style={styles.watcherName}>{item.fullName}</Text>

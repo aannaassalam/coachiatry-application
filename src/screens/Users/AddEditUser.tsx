@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { fontSize, spacing, verticalScale } from '../../utils';
 import { ChevronLeft } from '../../assets';
+import AvatarListSkeleton from '../../components/skeletons/AvatarListSkeleton';
+import FormSkeleton from '../../components/skeletons/FormSkeleton';
 import { Controller, FormProvider, useForm } from 'react-hook-form';
 import { theme } from '../../theme';
 import { User } from '../../typescript/interface/user.interface';
@@ -178,12 +180,7 @@ const RenderMember = ({
   return (
     <View style={styles.watcherRow}>
       <View style={styles.watcherLeft}>
-        <SmartAvatar
-          src={item.image}
-          name={item.label}
-          size={fontSize(40)}
-          fontSize={fontSize(16)}
-        />
+        <SmartAvatar src={item.image} name={item.label} size={fontSize(40)} />
         <View style={{ flex: 1 }}>
           <Text style={styles.watcherName}>{item.label}</Text>
           <Text style={styles.watcherEmail}>{item.role}</Text>
@@ -337,7 +334,7 @@ export default function AddEditUser() {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.select({ ios: 'padding', android: 'height' })}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
         <View style={styles.headerRow}>
@@ -354,13 +351,15 @@ export default function AddEditUser() {
           <View style={{ width: 24 }} />
         </View>
         {isUserLoading ? (
-          <View
-            style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <ActivityIndicator size="large" />
-          </View>
+          <FormSkeleton fields={6} />
         ) : (
           <>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ flexGrow: 1, paddingBottom: spacing(16) }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
             <FormProvider {...form}>
               <View style={{ gap: spacing(12) }}>
                 <AppInput
@@ -525,7 +524,7 @@ export default function AddEditUser() {
 
                     <View style={styles.bottomButtons}>
                       <AppButton
-                        text={`+ ${id ? 'Edit' : 'Add'} Member`}
+                        text="+ Add Member"
                         onPress={() => setAddPersonModal(true)}
                         variant="primary"
                         style={{
@@ -539,10 +538,10 @@ export default function AddEditUser() {
                 )}
               </View>
             </FormProvider>
+            </ScrollView>
             <AppButton
               text={id ? 'Save' : 'Submit'}
               onPress={form.handleSubmit(id ? onEdit : onSubmit, onError)}
-              style={{ marginTop: 'auto' }}
               isLoading={isPending || isEditing}
             />
           </>
@@ -552,6 +551,7 @@ export default function AddEditUser() {
           visible={addPersonModal}
           onRequestClose={() => setAddPersonModal(false)}
           animationType="slide"
+          statusBarTranslucent
         >
           <View
             style={{
@@ -579,15 +579,7 @@ export default function AddEditUser() {
               </View>
             </View>
             {isLoading ? (
-              <View
-                style={{
-                  flex: 1,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <ActivityIndicator size="large" />
-              </View>
+              <AvatarListSkeleton />
             ) : (
               <>
                 <KeyboardAwareFlatList
@@ -622,7 +614,6 @@ export default function AddEditUser() {
                           src={item.image}
                           name={item.label}
                           size={fontSize(40)}
-                          fontSize={fontSize(16)}
                         />
                         <View style={{ flex: 1 }}>
                           <Text style={styles.watcherName}>{item.label}</Text>
@@ -665,6 +656,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
     paddingTop: spacing(8),
     paddingHorizontal: spacing(20),
+    paddingBottom: spacing(12),
   },
 
   headerRow: {

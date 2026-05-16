@@ -18,7 +18,6 @@ import {
   View,
 } from 'react-native';
 import ActionSheet, { ActionSheetRef } from 'react-native-actions-sheet';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -379,6 +378,23 @@ function CoachAiSheet({
   };
 
   React.useEffect(() => {
+    if (!isModalOpen) {
+      setChats([]);
+      setValue('');
+      setTaskInfo({
+        isTaskRendered: false,
+        isTaskAdded: false,
+        selectedTasks: [],
+      });
+      setDocumentInfo({
+        isDocumentRendered: false,
+        isDocumentAdded: false,
+        document_id: '',
+      });
+    }
+  }, [isModalOpen]);
+
+  React.useEffect(() => {
     dot1.value = withRepeat(withTiming(1, { duration: 600 }), -1, true);
     dot2.value = withDelay(
       200,
@@ -480,10 +496,11 @@ function CoachAiSheet({
         onRequestClose={() => setIsModalOpen(false)}
         animationType="slide"
         presentationStyle="pageSheet"
+        statusBarTranslucent
       >
         <SafeAreaView style={{ flex: 1 }}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.select({ ios: 'padding', android: 'height' })}
             keyboardVerticalOffset={Platform.OS === 'ios' ? spacing(60) : 0}
             style={{
               flex: 1,
@@ -557,6 +574,34 @@ function CoachAiSheet({
                       <Animated.Text style={[styles.dot, style3]}>
                         .
                       </Animated.Text>
+                    </View>
+                  ) : page === 'chat' &&
+                    chats.length > 0 &&
+                    chats[0]?.role === 'system' &&
+                    (chats[0] as any)?.type !== 'tasks' ? (
+                    <View style={styles.chatOptionsBlock}>
+                      <Text style={styles.suggestedTitle}>
+                        Choose a chat window
+                      </Text>
+                      <View style={styles.suggestedGrid}>
+                        {chatWindows.map(range => (
+                          <TouchableButton
+                            key={range}
+                            style={[styles.suggestedCard, styles.gridCell]}
+                            onPress={() =>
+                              mutate({
+                                query: range,
+                                id,
+                                session_id: session,
+                                page,
+                              })
+                            }
+                            disabled={isPending}
+                          >
+                            <Text style={styles.suggestedText}>{range}</Text>
+                          </TouchableButton>
+                        ))}
+                      </View>
                     </View>
                   ) : null
                 }
@@ -632,19 +677,11 @@ function CoachAiSheet({
                         <Text style={styles.suggestedTitle}>
                           Choose a chat window
                         </Text>
-                        <View
-                          style={[
-                            styles.suggestedList,
-                            { flexDirection: 'row', flexWrap: 'wrap' },
-                          ]}
-                        >
+                        <View style={styles.suggestedGrid}>
                           {chatWindows.map(range => (
                             <TouchableButton
                               key={range}
-                              style={[
-                                styles.suggestedCard,
-                                { flex: 1, minWidth: '46%' },
-                              ]}
+                              style={[styles.suggestedCard, styles.gridCell]}
                               onPress={() =>
                                 mutate({
                                   query: range,
@@ -816,6 +853,25 @@ const styles = StyleSheet.create({
   suggestedList: {
     gap: spacing(10),
     marginTop: spacing(10),
+  },
+  suggestedGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing(10),
+    marginTop: spacing(10),
+  },
+  chatOptionsBlock: {
+    paddingHorizontal: spacing(16),
+    paddingBottom: spacing(20),
+  },
+  gridCell: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: spacing(22),
+    paddingHorizontal: spacing(10),
   },
   suggestedCard: {
     flexDirection: 'row',

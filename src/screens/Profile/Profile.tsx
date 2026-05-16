@@ -12,6 +12,8 @@ import {
   View,
 } from 'react-native';
 import AppButton from '../../components/ui/AppButton';
+import AvatarListSkeleton from '../../components/skeletons/AvatarListSkeleton';
+import DetailScreenSkeleton from '../../components/skeletons/DetailScreenSkeleton';
 import { theme } from '../../theme';
 import { fontSize, scale, spacing, verticalScale } from '../../utils';
 // or 'react-native-vector-icons/Octicons'
@@ -71,7 +73,6 @@ const RenderWatcher = ({ item }: { item: User }) => {
           src={item.photo}
           name={item.fullName}
           size={fontSize(40)}
-          fontSize={fontSize(16)}
         />
         <View>
           <Text style={styles.watcherName}>{item.fullName}</Text>
@@ -150,7 +151,11 @@ export default function Profile() {
     ],
   });
 
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
   const signOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
     try {
       queryClient.clear();
       const token = await getToken();
@@ -162,15 +167,10 @@ export default function Profile() {
       await removeToken();
 
       setAuthData({ token: '', user: null });
-      // queryClient.removeQueries();
-      // const token = await getToken();
-      // await removeFCMToken(token as string);
-      // await GoogleSignin.signOut();
-      // setAuthData({ token: '', user: null });
-      // await removeToken();
-      // await messaging().deleteToken();
     } catch (err) {
       console.log(err);
+    } finally {
+      setIsSigningOut(false);
     }
   };
 
@@ -224,7 +224,6 @@ export default function Profile() {
               src={profile?.photo}
               name={profile?.fullName}
               imageStyle={styles.profilePic}
-              fontSize={fontSize(22)}
               style={{ marginBottom: spacing(20) }}
               size={scale(70)}
               key={new Date().toDateString()}
@@ -270,11 +269,7 @@ export default function Profile() {
         )}
       </View>
       {isLoading ? (
-        <View
-          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <ActivityIndicator size="large" />
-        </View>
+        <DetailScreenSkeleton showAvatar rows={4} showSections={1} />
       ) : (
         <View style={styles.watchersSection}>
           <Text style={styles.sectionTitle}>Watchers</Text>
@@ -344,6 +339,7 @@ export default function Profile() {
         visible={addPersonModal}
         onRequestClose={() => setAddPersonModal(false)}
         animationType="slide"
+        statusBarTranslucent
       >
         <View
           style={{
@@ -371,15 +367,7 @@ export default function Profile() {
             </View>
           </View>
           {isPeopleLoading ? (
-            <View
-              style={{
-                flex: 1,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ActivityIndicator size="large" />
-            </View>
+            <AvatarListSkeleton />
           ) : (
             <>
               <KeyboardAwareFlatList
@@ -415,7 +403,6 @@ export default function Profile() {
                         src={item.photo}
                         name={item.fullName}
                         size={fontSize(40)}
-                        fontSize={fontSize(16)}
                       />
                       <View>
                         <Text style={styles.watcherName}>{item.fullName}</Text>
@@ -444,6 +431,21 @@ export default function Profile() {
           )}
         </View>
       </Modal>
+
+      <Modal
+        visible={isSigningOut}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => {}}
+      >
+        <View style={styles.signOutBackdrop}>
+          <View style={styles.signOutCard}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={styles.signOutText}>Logging out…</Text>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -452,6 +454,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.gray[50],
+  },
+  signOutBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signOutCard: {
+    backgroundColor: theme.colors.white,
+    paddingVertical: spacing(20),
+    paddingHorizontal: spacing(28),
+    borderRadius: fontSize(12),
+    alignItems: 'center',
+    minWidth: scale(160),
+    gap: spacing(12),
+  },
+  signOutText: {
+    fontSize: fontSize(14),
+    fontFamily: theme.fonts.archivo.medium,
+    color: theme.colors.gray[900],
   },
   header: {
     flexDirection: 'row',

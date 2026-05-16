@@ -1,10 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import {
-  InfiniteData,
-  useInfiniteQuery,
-} from '@tanstack/react-query';
-import moment from 'moment';
+import { InfiniteData, useInfiniteQuery } from '@tanstack/react-query';
 import {
   ActivityIndicator,
   FlatList,
@@ -14,6 +10,7 @@ import {
   ViewToken,
 } from 'react-native';
 import TouchableButton from '../../components/TouchableButton';
+import AvatarListSkeleton from '../../components/skeletons/AvatarListSkeleton';
 import AppHeader from '../../components/ui/AppHeader';
 import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
@@ -21,10 +18,7 @@ import { AppStackParamList } from '../../types/navigation';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
 import { PaginatedResponse } from '../../typescript/interface/common.interface';
 import { fontSize, spacing } from '../../utils';
-import {
-  getAllConversations,
-  getConversation,
-} from '../../api/functions/chat.api';
+import { getAllConversations, getConversation } from '../../api/functions/chat.api';
 import { Message } from '../../typescript/interface/message.interface';
 import { useSocket } from '../../hooks/useSocket';
 import { useEffect, useRef, useState } from 'react';
@@ -34,6 +28,7 @@ import ChatMessage from '../../components/Chat/ChatMessage';
 import Entypo from 'react-native-vector-icons/Entypo';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import ChatSearch from '../../components/Chat/ChatSearch';
+import { FLOATING_BAR_FOOTPRINT } from '../../components/Chat/FloatingChatHost';
 
 type ChatScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -97,15 +92,11 @@ export default function ChatList() {
       lastMessage: Message;
       updatedAt: string;
     }) => {
-      console.log(update);
-
-      // Update conversations list (infinite query shape)
       queryClient.setQueryData<
         InfiniteData<PaginatedResponse<ChatConversation[]>, number>
       >(['conversations'], old => {
         if (!old || !old.pages.length) return old;
 
-        // Flatten all pages to find the conversation
         const allConvs = old.pages.flatMap(p => p.data);
         const idx = allConvs.findIndex(c => c._id === update.chatId);
         if (idx === -1) return old;
@@ -124,10 +115,7 @@ export default function ChatList() {
           updatedConv.unreadCount = (current.unreadCount || 0) + 1;
         }
 
-        // Move updated conversation to top of first page
-        const withoutUpdated = allConvs.filter(
-          (_, i) => i !== idx,
-        );
+        const withoutUpdated = allConvs.filter((_, i) => i !== idx);
         const newFirstPageData = [updatedConv, ...withoutUpdated].slice(
           0,
           old.pages[0].meta.limit || 20,
@@ -142,7 +130,6 @@ export default function ChatList() {
         };
       });
 
-      // Also upsert the message into that chat's messages cache
       if (update.lastMessage) {
         queryClient.setQueryData<
           InfiniteData<PaginatedResponse<Message[]>, number>
@@ -184,25 +171,12 @@ export default function ChatList() {
       <AppHeader heading="Chats" showSearch />
 
       {isLoading ? (
-        <View
-          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <ActivityIndicator size="large" />
-        </View>
+        <AvatarListSkeleton trailing paddingHorizontal={20} />
       ) : (
         <View style={{ flex: 1 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              paddingHorizontal: spacing(20),
-              marginTop: spacing(5),
-              marginBottom: spacing(10),
-            }}
-          >
-            <Text style={{ color: theme.colors.gray[800] }}>All message</Text>
-            <View style={{ flexDirection: 'row', gap: spacing(12), alignItems: 'center' }}>
+          <View style={styles.listHeader}>
+            <Text style={styles.listHeaderTitle}>Messages</Text>
+            <View style={styles.headerActions}>
               <TouchableButton onPress={() => setSearchVisible(true)}>
                 <Ionicons
                   name="search"
@@ -238,17 +212,15 @@ export default function ChatList() {
             onEndReachedThreshold={0.3}
             ListFooterComponent={
               isFetchingNextPage ? (
-                <View
-                  style={{
-                    paddingVertical: spacing(10),
-                    alignItems: 'center',
-                  }}
-                >
+                <View style={styles.listFooter}>
                   <ActivityIndicator size="small" />
                 </View>
               ) : null
             }
-            contentContainerStyle={{ paddingHorizontal: spacing(10) }}
+            contentContainerStyle={{
+              paddingHorizontal: spacing(10),
+              paddingBottom: FLOATING_BAR_FOOTPRINT,
+            }}
           />
         </View>
       )}
@@ -261,11 +233,31 @@ export default function ChatList() {
 }
 
 const styles = StyleSheet.create({
-  /** Header */
   container: {
     backgroundColor: theme.colors.white,
     flex: 1,
     position: 'relative',
   },
-  /** Card */
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing(20),
+    marginTop: spacing(5),
+    marginBottom: spacing(10),
+  },
+  listHeaderTitle: {
+    color: theme.colors.gray[800],
+    fontFamily: theme.fonts.archivo.semiBold,
+    fontSize: fontSize(14),
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: spacing(12),
+    alignItems: 'center',
+  },
+  listFooter: {
+    paddingVertical: spacing(10),
+    alignItems: 'center',
+  },
 });

@@ -1,3 +1,6 @@
+import { NavigatorScreenParams } from '@react-navigation/native';
+import type { AppTabParamList } from '../navigators/BottomNavigator';
+
 export type AuthStackParamList = {
   Login: undefined;
   Signup: undefined;
@@ -18,7 +21,7 @@ export type AppStackParamList = {
     content?: string;
   };
   Profile: undefined;
-  BottomTabs: undefined;
+  BottomTabs: NavigatorScreenParams<AppTabParamList> | undefined;
   TaskDetails: { taskId: string; userId?: string };
   AddEditTask: {
     taskId?: string;
@@ -28,7 +31,7 @@ export type AppStackParamList = {
   };
   EditProfile: undefined;
   ClientDetails: { userId: string; fromUsersScreen?: boolean };
-  ChatRoom: { roomId: string };
+  ChatRoom: { roomId: string; fromFloating?: boolean };
   GroupScreen: { roomId?: string; byCoach?: boolean };
   CoachChatRoom: { roomId: string; userId: string };
   UserDetails: { id: string };

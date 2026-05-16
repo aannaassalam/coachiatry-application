@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   ScrollView,
@@ -12,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AvatarListSkeleton from '../../components/skeletons/AvatarListSkeleton';
 
 import { assets, Calendar } from '../../assets';
 
@@ -20,6 +20,7 @@ import AppHeader from '../../components/ui/AppHeader';
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { fontSize, scale, spacing } from '../../utils';
+import { FLOATING_BAR_FOOTPRINT } from '../../components/Chat/FloatingChatHost';
 import { Image } from 'react-native';
 import AppButton from '../../components/ui/AppButton';
 import { Modal } from 'react-native';
@@ -37,7 +38,7 @@ function MyClients() {
   const [modalVisible, setModalVisible] = useState(false);
   const navigation = useNavigation<ClientScreenNavigationProp>();
 
-  const { data = [], isLoading } = useQuery({
+  const { data = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ['clients'],
     queryFn: ({ signal }) => getClients(signal),
   });
@@ -56,7 +57,6 @@ function MyClients() {
           src={item.photo}
           size={scale(48)}
           name={item.fullName}
-          fontSize={fontSize(22)}
         />
         <View style={{ flex: 1 }}>
           <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
@@ -96,22 +96,21 @@ function MyClients() {
       </View> */}
       {/* <ScrollView showsVerticalScrollIndicator={false}> */}
       {isLoading ? (
-        <View
-          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <ActivityIndicator size="large" />
-        </View>
+        <AvatarListSkeleton />
       ) : (
         <FlatList
           contentContainerStyle={{
             marginTop: spacing(6),
             paddingHorizontal: spacing(16),
             paddingVertical: spacing(4),
+            paddingBottom: FLOATING_BAR_FOOTPRINT,
           }}
           data={data}
           showsVerticalScrollIndicator={false}
           renderItem={renderItem}
           keyExtractor={item => item._id}
+          refreshing={isFetching}
+          onRefresh={refetch}
           // scrollEnabled={false}
           ItemSeparatorComponent={() => (
             <View
@@ -140,7 +139,6 @@ function MyClients() {
                   size={scale(86)}
                   style={{ marginVertical: spacing(12) }}
                   name={selectedClient.fullName}
-                  fontSize={fontSize(36)}
                 />
                 <Text style={styles.modalName}>{selectedClient.fullName}</Text>
                 <Text style={styles.modalEmail}>{selectedClient.email}</Text>

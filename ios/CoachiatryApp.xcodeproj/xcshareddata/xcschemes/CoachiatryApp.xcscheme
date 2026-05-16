@@ -20,6 +20,20 @@
                ReferencedContainer = "container:CoachiatryApp.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "C13EBE772FB7214200A11626"
+               BuildableName = "CoachiatryNotificationService.appex"
+               BlueprintName = "CoachiatryNotificationService"
+               ReferencedContainer = "container:CoachiatryApp.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

@@ -5,7 +5,6 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import moment from 'moment';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Dimensions,
   RefreshControl,
@@ -14,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import DetailScreenSkeleton from '../../components/skeletons/DetailScreenSkeleton';
 import { showMessage } from 'react-native-flash-message';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import {
@@ -42,6 +42,7 @@ import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { Subtask, Task } from '../../typescript/interface/task.interface';
 import { fontSize, scale, spacing, verticalScale } from '../../utils';
+import { FLOATING_BAR_FOOTPRINT } from '../../components/Chat/FloatingChatHost';
 import { Pencil } from 'lucide-react-native';
 
 type AddEditTaskNavigationProp = NativeStackNavigationProp<
@@ -131,7 +132,9 @@ const Subtasks = ({
             style={styles.subtaskItem}
             onPress={() => handleToggle(item._id)}
           >
-            <CheckBox checked={localCompleted[item._id]} />
+            <View pointerEvents="none">
+              <CheckBox checked={localCompleted[item._id]} />
+            </View>
             <Text
               style={[
                 styles.subtaskText,
@@ -261,11 +264,7 @@ const TaskDetailsScreen = () => {
       </View>
 
       {isLoading ? (
-        <View
-          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <ActivityIndicator size="large" />
-        </View>
+        <DetailScreenSkeleton rows={6} showSections={3} />
       ) : !data ? (
         <View
           style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
@@ -305,7 +304,6 @@ const TaskDetailsScreen = () => {
                 src={data?.assignedTo.photo}
                 size={scale(20)}
                 name={data?.assignedTo.fullName}
-                fontSize={fontSize(14)}
               />
               <Text>{data?.assignedTo?.fullName}</Text>
             </View>
@@ -439,7 +437,7 @@ const styles = createStyleSheet({
   },
   scrollContent: {
     padding: spacing(20),
-    // paddingBottom: spacing(80),
+    paddingBottom: FLOATING_BAR_FOOTPRINT,
   },
   title: {
     fontSize: fontSize(18),

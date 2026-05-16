@@ -19,14 +19,29 @@
       "Bash(xcodebuild clean:*)",
       "Bash(grep -E \"\\\\.\\(tsx|ts|jsx|js\\)$\")",
       "Bash(npx tsc:*)",
-      "Bash(ls /Volumes/2.0/Applications/coachiatry-application/tsconfig*.json)"
+      "Bash(ls /Volumes/2.0/Applications/coachiatry-application/tsconfig*.json)",
+      "Bash(node -e \"const k = require\\('/Volumes/2.0/Applications/coachiatry-application/node_modules/react-native-keyboard-controller'\\); console.log\\(Object.keys\\(k\\).filter\\(k => k.toLowerCase\\(\\).includes\\('aware'\\) || k.toLowerCase\\(\\).includes\\('scroll'\\) || k.toLowerCase\\(\\).includes\\('flat'\\)\\)\\)\")",
+      "Bash(grep -n \"^import.*{.*FlatList\\\\|  FlatList,\" /Volumes/2.0/Applications/coachiatry-application/src/screens/Users/AddEditUser.tsx)",
+      "Bash(grep -n \"KCKeyboardAwareScrollView\\\\|<View style={{ flex: 1 }}>\\\\|</View>\\\\s*$\\\\|return \\(\" /Volumes/2.0/Applications/coachiatry-application/src/screens/Documents/DocumentEditor.tsx)",
+      "Bash(npm uninstall *)",
+      "Bash(grep -n \"^const styles\\\\|^}\\);$\" /Volumes/2.0/Applications/coachiatry-application/src/screens/Chats/CoachChatRoom.tsx)",
+      "Bash(python3 -c \"import json,sys;d=json.load\\(sys.stdin\\);print\\('\\\\n'.join\\(f'{k}: {v}' for k,v in d.get\\('scripts',{}\\).items\\(\\)\\)\\)\")",
+      "Bash(gem list *)",
+      "Bash(/Users/aannaassalam/.gem/ruby/3.3.0/bin/gem list *)",
+      "Bash(./android/gradlew -p android :app:processReleaseMainManifest --stacktrace)",
+      "Bash(rm drawable/ic_notification.xml)",
+      "Bash([ -f \"$dir/ic_notifications.png\" ])",
+      "Bash(mv __TRACKED_VAR__/ic_notifications.png __TRACKED_VAR__/ic_notification.png)",
+      "Bash(ls CoachiatryApp.xcodeproj/xcshareddata/xcschemes/)",
+      "Bash(ls CoachiatryApp.xcodeproj/xcuserdata/*/xcschemes/)"
     ],
     "additionalDirectories": [
       "/Users/aannaassalam/Documents/Github/coachiatry-backend/src/sockets",
       "/Users/aannaassalam/Documents/Github/coachiatry/components/Chats",
       "/Users/aannaassalam/Documents/Github/coachiatry/hooks",
       "/Users/aannaassalam/Documents/Github/coachiatry/lib",
-      "/Users/aannaassalam/Library/Application Support/Code/User"
+      "/Users/aannaassalam/Library/Application Support/Code/User",
+      "/Users/aannaassalam/Documents/Github/coachiatry-backend/src/utils"
     ]
   }
 }

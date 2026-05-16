@@ -11,7 +11,6 @@ import {
   useFormContext,
 } from 'react-hook-form';
 import {
-  ActivityIndicator,
   Alert,
   Dimensions,
   Pressable,
@@ -21,6 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import FormSkeleton from '../../components/skeletons/FormSkeleton';
 import { SheetManager } from 'react-native-actions-sheet';
 import DatePicker from 'react-native-date-picker';
 import { showMessage } from 'react-native-flash-message';
@@ -80,11 +80,11 @@ const resetDuration = () => {
 
 const schema = yup.object().shape({
   title: yup.string().required('Title is required'),
-  description: yup.string().required('Description is required'),
-  priority: yup.string().required('Priority is required'),
-  category: yup.string().required('Category is required'),
-  dueDate: yup.date().required('Due date is required'),
-  status: yup.string().required('Status is required'),
+  description: yup.string().default(''),
+  priority: yup.string().default('low'),
+  category: yup.string().default(''),
+  dueDate: yup.date().nullable().default(undefined),
+  status: yup.string().default(''),
   frequency: yup.string().default(''),
   duration: yup.date().default(resetDuration()),
   remindBefore: yup.string().default(''),
@@ -341,20 +341,39 @@ export default function AddEditTask() {
     disabled: isPending || isEditPending,
   });
 
+  const activeStatuses = userId ? userStatuses : statuses;
+  const activeCategories = userId ? userCategories : categories;
+
   useEffect(() => {
+    if (taskId) return; // editing — don't overwrite loaded task data
+
+    const todoStatus = activeStatuses?.find(
+      s => s.title?.toLowerCase().trim() === 'to do',
+    );
+    const healthCategory = activeCategories?.find(
+      c => c.title?.toLowerCase().trim() === 'health',
+    );
+
     form.reset({
       title: '',
       description: '',
       priority: 'low',
-      category: '',
+      category: healthCategory?._id ?? '',
       dueDate: predefinedDueDate ? new Date(predefinedDueDate) : undefined,
-      status: predefinedStatus ?? '',
+      status: predefinedStatus ?? todoStatus?._id ?? '',
       frequency: '',
       duration: resetDuration(),
       remindBefore: '',
       subtasks: [],
     });
-  }, [predefinedStatus, predefinedDueDate, form]);
+  }, [
+    predefinedStatus,
+    predefinedDueDate,
+    form,
+    taskId,
+    activeStatuses,
+    activeCategories,
+  ]);
 
   const onSubmit = (data: yup.InferType<typeof schema>) => {
     const h = data.duration?.getHours() ?? 0;
@@ -480,11 +499,7 @@ export default function AddEditTask() {
         </View>
       </View>
       {isLoading ? (
-        <View
-          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <ActivityIndicator size="large" />
-        </View>
+        <FormSkeleton fields={8} />
       ) : (
         <>
           <KeyboardAwareScrollView
@@ -890,7 +905,6 @@ const styles = createStyleSheet({
   scrollContent: {
     padding: spacing(20),
     flex: 1,
-    // paddingBottom: spacing(80),
   },
   transparentInput: {
     fontSize: fontSize(20),

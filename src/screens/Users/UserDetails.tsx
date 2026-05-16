@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import Animated from 'react-native-reanimated';
 import { fontSize, scale, spacing, verticalScale } from '../../utils';
+import { FLOATING_BAR_FOOTPRINT } from '../../components/Chat/FloatingChatHost';
 import { theme } from '../../theme';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   RefreshControl,
@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { ChevronLeft } from '../../assets';
+import DetailScreenSkeleton from '../../components/skeletons/DetailScreenSkeleton';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
 import AppButton from '../../components/ui/AppButton';
 import { useMutation, useQueries } from '@tanstack/react-query';
@@ -51,7 +52,6 @@ const RenderWatcher = ({ item }: { item: User }) => {
           src={item.photo}
           name={item.fullName}
           size={fontSize(40)}
-          fontSize={fontSize(16)}
         />
         <View>
           <Text style={styles.watcherName}>{item.fullName}</Text>
@@ -240,7 +240,11 @@ export default function UserDetails() {
       <ScrollView
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingVertical: spacing(30), flexGrow: 1 }}
+        contentContainerStyle={{
+          paddingTop: spacing(30),
+          paddingBottom: FLOATING_BAR_FOOTPRINT,
+          flexGrow: 1,
+        }}
         // bounces={false}
         scrollEnabled={!isAllLoading}
         style={{ backgroundColor: theme.colors.white }}
@@ -248,11 +252,7 @@ export default function UserDetails() {
         {/* BIG HEADER (part of scroll content) */}
         {/* top row: back arrow centered title uses spacing to match small header layout */}
         {isAllLoading ? (
-          <View
-            style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <ActivityIndicator size="large" />
-          </View>
+          <DetailScreenSkeleton showAvatar rows={4} showSections={2} />
         ) : (
           <>
             <View style={styles.profileCenter}>
@@ -261,7 +261,6 @@ export default function UserDetails() {
                 name={data?.fullName}
                 size={scale(70)}
                 style={{ marginBottom: spacing(12) }}
-                fontSize={fontSize(36)}
               />
               <View style={{ flex: 1, gap: spacing(8) }}>
                 <Text style={styles.bigName}>{data?.fullName}</Text>

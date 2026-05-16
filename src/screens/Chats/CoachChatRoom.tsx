@@ -1,19 +1,32 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  ViewToken,
 } from 'react-native';
+import ChatRoomSkeleton from '../../components/skeletons/ChatRoomSkeleton';
 
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import Animated, { FadeInUp, LinearTransition } from 'react-native-reanimated';
+import moment from 'moment';
+import Animated, {
+  FadeInUp,
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { getConversation } from '../../api/functions/chat.api';
 import { getMessages } from '../../api/functions/message.api';
+import { formatChatDateSeparator } from '../../helpers/utils';
+import {
+  clearChatNotifications,
+  setFocusedChat,
+} from '../../notifications';
 import { ChevronLeft } from '../../assets';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
 import { theme } from '../../theme';
@@ -30,6 +43,8 @@ import {
 // import { , scheduleOnRN } from 'react-native-worklets';
 import { KeyboardAvoidingView, Platform } from 'react-native';
 import { randomUUID } from 'react-native-quick-crypto';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAndroidKeyboardInset } from '../../hooks/useAndroidKeyboardInset';
 
 import AttachmentViewer from '../../components/Chat/AttachementViewer';
 import { FileMessage } from '../../components/Chat/FileMessage';
@@ -42,6 +57,20 @@ type ChatRoomTaskNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
   'CoachChatRoom'
 >;
+
+type DateSeparatorItem = { __type: 'date'; id: string; label: string };
+type ChatItem = Message | DateSeparatorItem;
+
+const isDateSeparator = (item: ChatItem): item is DateSeparatorItem =>
+  (item as DateSeparatorItem).__type === 'date';
+
+const DateSeparator = ({ label }: { label: string }) => (
+  <View style={styles.dateSeparatorRow}>
+    <View style={styles.dateSeparatorPill}>
+      <Text style={styles.dateSeparatorText}>{label}</Text>
+    </View>
+  </View>
+);
 
 const RenderMessage = ({
   item,
@@ -193,6 +222,8 @@ const RenderMessage = ({
 };
 
 const CoachChatScreen = () => {
+  const insets = useSafeAreaInsets();
+  const androidKeyboardInset = useAndroidKeyboardInset();
   const activeRoomRef = useRef<string | null>(null);
   const navigation = useNavigation<ChatRoomTaskNavigationProp>();
   const route = useRoute<RouteProp<AppStackParamList, 'CoachChatRoom'>>();
@@ -264,25 +295,91 @@ const CoachChatScreen = () => {
     [messagesData],
   );
 
+  const [floatingDate, setFloatingDate] = useState<string | null>(null);
+  const floatingOpacity = useSharedValue(0);
+  const hideFloatingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  const handleMessagesScroll = () => {
+    floatingOpacity.value = withTiming(1, { duration: 150 });
+    if (hideFloatingTimerRef.current) clearTimeout(hideFloatingTimerRef.current);
+    hideFloatingTimerRef.current = setTimeout(() => {
+      floatingOpacity.value = withTiming(0, { duration: 300 });
+    }, 1500);
+  };
+
+  const onViewableItemsChangedRef = useRef(
+    ({ viewableItems }: { viewableItems: ViewToken<ChatItem>[] }) => {
+      let topmostIndex = -1;
+      let topmostMessage: Message | null = null;
+      for (const v of viewableItems) {
+        if (!v.item || isDateSeparator(v.item) || !v.item.createdAt) continue;
+        const idx = v.index ?? -1;
+        if (idx > topmostIndex) {
+          topmostIndex = idx;
+          topmostMessage = v.item;
+        }
+      }
+      if (topmostMessage?.createdAt) {
+        setFloatingDate(formatChatDateSeparator(topmostMessage.createdAt));
+      }
+    },
+  ).current;
+
+  useEffect(() => {
+    return () => {
+      if (hideFloatingTimerRef.current)
+        clearTimeout(hideFloatingTimerRef.current);
+    };
+  }, []);
+
+  const floatingDateStyle = useAnimatedStyle(() => ({
+    opacity: floatingOpacity.value,
+  }));
+
+  const chatItems = useMemo<ChatItem[]>(() => {
+    const result: ChatItem[] = [];
+    for (let i = 0; i < allMessages.length; i++) {
+      const msg = allMessages[i];
+      result.push(msg);
+      const next = allMessages[i + 1];
+      const currentDay = msg.createdAt
+        ? moment(msg.createdAt).format('YYYY-MM-DD')
+        : null;
+      const nextDay = next?.createdAt
+        ? moment(next.createdAt).format('YYYY-MM-DD')
+        : null;
+      if (currentDay && (!next || currentDay !== nextDay)) {
+        result.push({
+          __type: 'date',
+          id: `date-${currentDay}`,
+          label: formatChatDateSeparator(msg.createdAt!),
+        });
+      }
+    }
+    return result;
+  }, [allMessages]);
+
   useEffect(() => {
     activeRoomRef.current = room; // current chat ID
+    if (room) {
+      setFocusedChat(room);
+      clearChatNotifications(room);
+    }
     return () => {
       activeRoomRef.current = null; // user left chat
+      setFocusedChat(undefined);
     };
   }, [room]);
 
-  if (isLoading || isConversationLoading)
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+  if (isLoading || isConversationLoading) return <ChatRoomSkeleton />;
 
   return (
     <KeyboardAvoidingView
-      behavior="padding"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing(70) : spacing(25)}
-      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+      style={[styles.container, { paddingBottom: androidKeyboardInset }]}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -320,15 +417,26 @@ const CoachChatScreen = () => {
       {/* Messages */}
       <View style={{ flex: 1 }}>
         <FlatList
-          data={allMessages}
-          renderItem={({ item }) => (
-            <RenderMessage
-              item={item}
-              conversation={conversation}
-              userId={userId}
-            />
-          )}
-          keyExtractor={item => getStableKey(item)}
+          data={chatItems}
+          onScroll={handleMessagesScroll}
+          scrollEventThrottle={16}
+          onViewableItemsChanged={onViewableItemsChangedRef}
+          viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+          renderItem={({ item }) => {
+            if (isDateSeparator(item)) {
+              return <DateSeparator label={item.label} />;
+            }
+            return (
+              <RenderMessage
+                item={item}
+                conversation={conversation}
+                userId={userId}
+              />
+            );
+          }}
+          keyExtractor={item =>
+            isDateSeparator(item) ? item.id : getStableKey(item)
+          }
           inverted
           showsVerticalScrollIndicator={false}
           onEndReached={() => {
@@ -356,6 +464,16 @@ const CoachChatScreen = () => {
             flexGrow: 1,
           }}
         />
+        {floatingDate && (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.floatingDateContainer, floatingDateStyle]}
+          >
+            <View style={styles.dateSeparatorPill}>
+              <Text style={styles.dateSeparatorText}>{floatingDate}</Text>
+            </View>
+          </Animated.View>
+        )}
       </View>
       {/* Message Input */}
     </KeyboardAvoidingView>
@@ -517,5 +635,28 @@ const styles = StyleSheet.create({
 
   replyCloseBtn: {
     padding: 6,
+  },
+  dateSeparatorRow: {
+    alignItems: 'center',
+    marginVertical: spacing(8),
+  },
+  dateSeparatorPill: {
+    backgroundColor: theme.colors.gray[100],
+    paddingHorizontal: spacing(12),
+    paddingVertical: spacing(4),
+    borderRadius: 100,
+  },
+  dateSeparatorText: {
+    fontSize: fontSize(11),
+    fontFamily: theme.fonts.archivo.medium,
+    color: theme.colors.gray[700],
+  },
+  floatingDateContainer: {
+    position: 'absolute',
+    top: spacing(8),
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
   },
 });

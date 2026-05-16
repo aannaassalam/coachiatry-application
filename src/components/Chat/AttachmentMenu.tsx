@@ -14,7 +14,7 @@ import { theme } from '../../theme';
 import { ChatAttachment } from '../../assets';
 
 interface AttachmentMenuProps {
-  onSelect: (type: 'image' | 'video' | 'file') => void;
+  onSelect: (type: 'camera' | 'image' | 'video' | 'file') => void;
   onOpen?: () => void;
 }
 
@@ -29,7 +29,7 @@ const AttachmentMenu: React.FC<AttachmentMenuProps> = ({
     setVisible(prev => !prev);
   };
 
-  const handleSelect = (type: 'image' | 'video' | 'file') => {
+  const handleSelect = (type: 'camera' | 'image' | 'video' | 'file') => {
     setVisible(false);
     onSelect(type);
   };
@@ -49,6 +49,15 @@ const AttachmentMenu: React.FC<AttachmentMenuProps> = ({
             exiting={FadeOut.duration(100)}
             style={styles.menuContainer}
           >
+            <TouchableOpacity
+              style={styles.item}
+              onPress={() => handleSelect('camera')}
+              activeOpacity={0.6}
+            >
+              <Ionicons name="camera-outline" size={20} color="#6B7280" />
+              <Text style={styles.label}>Camera</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.item}
               onPress={() => handleSelect('image')}

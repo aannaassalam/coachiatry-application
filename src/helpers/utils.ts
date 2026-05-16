@@ -1,5 +1,6 @@
 import ImageResizer from '@bam.tech/react-native-image-resizer';
 import messaging from '@react-native-firebase/messaging';
+import moment from 'moment';
 import { showMessage } from 'react-native-flash-message';
 import RNFS from 'react-native-fs';
 import { createMMKV } from 'react-native-mmkv';
@@ -47,6 +48,16 @@ export const hapticOptions = {
   enableVibrateFallback: true,
   ignoreAndroidSystemSettings: false,
 };
+
+export function formatChatDateSeparator(date: string | Date) {
+  const m = moment(date).startOf('day');
+  const today = moment().startOf('day');
+  const diff = today.diff(m, 'days');
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff > 1 && diff < 7) return m.format('dddd');
+  return m.format('D MMMM, YYYY');
+}
 
 export async function getLocalProfileImage(remoteUrl: string) {
   const filename = remoteUrl.split('/').pop();

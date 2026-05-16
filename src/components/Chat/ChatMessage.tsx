@@ -11,21 +11,21 @@ import { fontSize, scale, spacing } from '../../utils';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../types/navigation';
 import { useNavigation } from '@react-navigation/native';
-import { useQueryClient } from '@tanstack/react-query';
-import { getConversation } from '../../api/functions/chat.api';
-import { getMessages } from '../../api/functions/message.api';
-import { Message } from '../../typescript/interface/message.interface';
-import { PaginatedResponse } from '../../typescript/interface/common.interface';
 
 type ChatScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
   'ChatRoom'
 >;
 
-export default function ChatMessage({ item }: { item: ChatConversation }) {
+export default function ChatMessage({
+  item,
+  fromFloating = false,
+}: {
+  item: ChatConversation;
+  fromFloating?: boolean;
+}) {
   const { profile } = useAuth();
   const navigation = useNavigation<ChatScreenNavigationProp>();
-  const queryClient = useQueryClient();
 
   const chatUser = item.members.find(
     _member => _member.user._id !== profile?._id,
@@ -43,8 +43,10 @@ export default function ChatMessage({ item }: { item: ChatConversation }) {
   return (
     <TouchableButton
       onPress={() => {
-        // handle onPress
-        navigation.navigate('ChatRoom', { roomId: item._id! });
+        navigation.navigate('ChatRoom', {
+          roomId: item._id!,
+          fromFloating,
+        });
       }}
       style={styles.card}
     >
@@ -52,7 +54,6 @@ export default function ChatMessage({ item }: { item: ChatConversation }) {
         src={details.photo}
         name={details.name}
         size={scale(40)}
-        fontSize={fontSize(18)}
       />
 
       <View style={styles.cardBody}>

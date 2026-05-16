@@ -198,6 +198,7 @@ export default function ChatSearch({ visible, onClose }: ChatSearchProps) {
       visible={visible}
       onRequestClose={handleClose}
       animationType="slide"
+      statusBarTranslucent
     >
       <View
         style={{

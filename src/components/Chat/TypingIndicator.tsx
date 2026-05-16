@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -15,7 +15,11 @@ import { createStyleSheet } from 'react-native-unistyles';
 const DOT_SIZE = 4;
 const DURATION = 600;
 
-export default function TypingIndicator() {
+export default function TypingIndicator({
+  style,
+}: {
+  style?: StyleProp<ViewStyle>;
+}) {
   const dot1 = useSharedValue(0);
   const dot2 = useSharedValue(0);
   const dot3 = useSharedValue(0);
@@ -51,7 +55,7 @@ export default function TypingIndicator() {
   });
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       <Animated.View style={[styles.dot, dot1Style]} />
       <Animated.View style={[styles.dot, dot2Style]} />
       <Animated.View style={[styles.dot, dot3Style]} />

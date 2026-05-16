@@ -1,11 +1,12 @@
 import Feather from 'react-native-vector-icons/Feather';
 import moment from 'moment';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { SheetManager } from 'react-native-actions-sheet';
 import DatePicker from 'react-native-date-picker';
 import { createStyleSheet } from 'react-native-unistyles';
 import { theme } from '../theme';
-import { fontSize, spacing, verticalScale } from '../utils';
+import { fontSize, spacing } from '../utils';
+import { Skeleton } from './ui/Skeleton';
 
 type Option = {
   label: string;
@@ -29,14 +30,12 @@ export const GeneralPickerSheet = ({
     <View>
       <Text style={styles.heading}>{heading}</Text>
       {isLoading ? (
-        <View
-          style={{
-            height: verticalScale(150),
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <ActivityIndicator size="small" />
+        <View style={styles.skeletonList}>
+          {[0, 1, 2, 3, 4].map(i => (
+            <View key={i} style={styles.skeletonRow}>
+              <Skeleton width="60%" height={14} borderRadius={4} />
+            </View>
+          ))}
         </View>
       ) : (
         options.map(option => (
@@ -99,5 +98,14 @@ const styles = createStyleSheet({
     fontFamily: theme.fonts.lato.regular,
     color: theme.colors.black,
     fontSize: fontSize(14),
+  },
+  skeletonList: {
+    gap: spacing(8),
+  },
+  skeletonRow: {
+    paddingHorizontal: spacing(14),
+    paddingVertical: spacing(14),
+    backgroundColor: theme.colors.white,
+    borderRadius: 8,
   },
 });

@@ -4,7 +4,6 @@ import { useQueries } from '@tanstack/react-query';
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   InteractionManager,
   Pressable,
@@ -13,6 +12,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import DashboardSkeleton from '../../components/skeletons/DashboardSkeleton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { getAllConversations } from '../../api/functions/chat.api';
 import { getAllDocuments } from '../../api/functions/document.api';
@@ -33,6 +33,7 @@ import { Status } from '../../typescript/interface/status.interface';
 import { Task } from '../../typescript/interface/task.interface';
 import { fontSize, scale, spacing } from '../../utils';
 import { storage } from '../../helpers/utils';
+import { FLOATING_BAR_FOOTPRINT } from '../../components/Chat/FloatingChatHost';
 
 moment.updateLocale('en', {
   relativeTime: {
@@ -99,7 +100,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
               <View style={{ flex: 1 }}>
                 <Text style={styles.taskTitle}>{task.title}</Text>
                 <Text style={styles.taskDate}>
-                  {moment(task.dueDate).format('D MMM, YYYY')}
+                  {task.dueDate
+                    ? moment(task.dueDate).format('D MMM, YYYY')
+                    : 'No due date available'}
                 </Text>
               </View>
               {(task.subtasks ?? [])?.length > 0 && (
@@ -406,19 +409,22 @@ function Dashboard() {
   });
 
   const isAllLoading =
-    !ready || isLoading || isStatusLoading || isChatsLoading || isDocumentsLoading;
+    !ready ||
+    isLoading ||
+    isStatusLoading ||
+    isChatsLoading ||
+    isDocumentsLoading;
 
   return (
     <View style={styles.container}>
       <AppHeader heading="Dashboard" showSearch />
       {isAllLoading ? (
-        <View style={styles.sectionLoader}>
-          <ActivityIndicator size="large" />
-        </View>
+        <DashboardSkeleton />
       ) : (
         <ScrollView
           contentContainerStyle={{
             padding: spacing(16),
+            paddingBottom: FLOATING_BAR_FOOTPRINT,
           }}
           style={{ backgroundColor: theme.colors.gray[50] }}
           showsVerticalScrollIndicator={false}

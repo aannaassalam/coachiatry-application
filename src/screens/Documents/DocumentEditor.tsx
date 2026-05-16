@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import DocumentEditorSkeleton from '../../components/skeletons/DocumentEditorSkeleton';
 import Feather from 'react-native-vector-icons/Feather';
 import Fontisto from 'react-native-vector-icons/Fontisto';
 import Foundation from 'react-native-vector-icons/Foundation';
@@ -18,7 +19,6 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import Octicons from 'react-native-vector-icons/Octicons';
 
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useHeaderHeight } from '@react-navigation/elements';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMutation, useQueries, useQuery } from '@tanstack/react-query';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
@@ -148,7 +148,6 @@ export default function DocumentEditor() {
   } = route.params || {};
   const editor = useRef<RichEditor | null>(null);
   const scrollRef = useRef<KeyboardAwareScrollView>(null);
-  const headerHeight = useHeaderHeight();
   const [editorValue, setEditorValue] = useState(content);
   const [localMode, setLocalMode] = useState(mode);
   const [downloading, setDownloading] = useState(false);
@@ -368,8 +367,7 @@ export default function DocumentEditor() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+      behavior={Platform.select({ ios: 'padding', android: 'height' })}
       style={{ flex: 1 }}
     >
       <View style={styles.container}>
@@ -498,18 +496,14 @@ export default function DocumentEditor() {
         </View>
 
         {isLoading || isCategoriesLoading || isUserCategoriesLoading ? (
-          <View
-            style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <ActivityIndicator size="large" />
-          </View>
+          <DocumentEditorSkeleton />
         ) : (
           <>
             <KeyboardAwareScrollView
               ref={scrollRef}
               enableOnAndroid
               enableAutomaticScroll
-              extraScrollHeight={20} // ⬆ increase this from 24 → 100
+              extraScrollHeight={20}
               extraHeight={Platform.OS === 'ios' ? 120 : 200}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={{ paddingBottom: spacing(150) }}
@@ -521,7 +515,6 @@ export default function DocumentEditor() {
                   src={data?.user.photo || profile?.photo}
                   name={data?.user.fullName || profile?.fullName}
                   size={scale(22)}
-                  fontSize={fontSize(14)}
                   style={styles.avatar}
                 />
                 <Text style={styles.authorName}>
