@@ -123,3 +123,39 @@ export const leaveGroup = async (chatId: string) => {
   const res = await axiosInstance.delete(endpoints.chat.leaveGroup(chatId));
   return res;
 };
+
+// Invite people to a group by email. The backend skips anyone already a member
+// and, for everyone else, emails an invite link (existing users → join link,
+// new users → signup-then-join link). Auto-join also happens on signup/login.
+export const inviteToGroupByEmail = async (body: {
+  chatId: string;
+  emails: string[];
+}) => {
+  const res = await axiosInstance.post(endpoints.chat.inviteToGroup, body);
+  return res.data;
+};
+
+export interface GroupInvitePreview {
+  token: string;
+  email: string;
+  accepted: boolean;
+  chat: { _id: string; name?: string; groupPhoto?: string; type: string } | null;
+  invitedBy: { _id: string; fullName: string; photo?: string } | null;
+}
+
+export const getGroupInvite = async (
+  token: string,
+  signal?: AbortSignal,
+): Promise<GroupInvitePreview> => {
+  const res = await axiosInstance.get(endpoints.chat.getGroupInvite(token), {
+    signal,
+  });
+  return res.data;
+};
+
+export const acceptGroupInvite = async (
+  token: string,
+): Promise<{ chatId: string }> => {
+  const res = await axiosInstance.post(endpoints.chat.acceptGroupInvite(token));
+  return res.data;
+};

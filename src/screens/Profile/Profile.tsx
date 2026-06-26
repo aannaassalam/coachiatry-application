@@ -200,6 +200,8 @@ export default function Profile() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={{ flexGrow: 1 }}
+      bounces={false}
+      overScrollMode="never"
     >
       <View style={{ backgroundColor: theme.colors.white }}>
         {/* Header */}
@@ -268,6 +270,38 @@ export default function Profile() {
           </View>
         )}
       </View>
+
+      {!isLoading && (
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>Settings</Text>
+          <TouchableButton
+            style={styles.menuRow}
+            onPress={() => navigation.navigate('CategoryStatusSettings')}
+          >
+            <View style={styles.menuLeft}>
+              <View style={styles.menuIcon}>
+                <Ionicons
+                  name="pricetags-outline"
+                  size={fontSize(18)}
+                  color={theme.colors.primary}
+                />
+              </View>
+              <View>
+                <Text style={styles.menuLabel}>Categories & Statuses</Text>
+                <Text style={styles.menuSubLabel}>
+                  Manage your task categories and statuses
+                </Text>
+              </View>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={fontSize(18)}
+              color={theme.colors.gray[400]}
+            />
+          </TouchableButton>
+        </View>
+      )}
+
       {isLoading ? (
         <DetailScreenSkeleton showAvatar rows={4} showSections={1} />
       ) : (
@@ -513,6 +547,48 @@ const styles = StyleSheet.create({
     gap: spacing(10),
     width: '100%',
     marginTop: spacing(12),
+  },
+  menuSection: {
+    paddingHorizontal: spacing(16),
+    paddingTop: spacing(16),
+    paddingBottom: spacing(6),
+    marginTop: spacing(10),
+    backgroundColor: theme.colors.white,
+  },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing(12),
+    paddingHorizontal: spacing(14),
+    borderRadius: fontSize(12),
+    backgroundColor: theme.colors.secondary,
+    marginTop: spacing(10),
+  },
+  menuLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(12),
+    flex: 1,
+  },
+  menuIcon: {
+    width: spacing(38),
+    height: spacing(38),
+    borderRadius: spacing(19),
+    backgroundColor: theme.colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuLabel: {
+    fontSize: fontSize(14),
+    fontFamily: theme.fonts.archivo.medium,
+    color: theme.colors.gray[900],
+  },
+  menuSubLabel: {
+    fontSize: fontSize(12),
+    fontFamily: theme.fonts.lato.regular,
+    color: theme.colors.gray[500],
+    marginTop: spacing(2),
   },
   watchersSection: {
     paddingHorizontal: spacing(16),

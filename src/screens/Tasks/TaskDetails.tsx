@@ -7,12 +7,15 @@ import { useEffect, useState } from 'react';
 import {
   Alert,
   Dimensions,
+  Pressable,
   RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SheetManager } from 'react-native-actions-sheet';
+import Feather from 'react-native-vector-icons/Feather';
 import DetailScreenSkeleton from '../../components/skeletons/DetailScreenSkeleton';
 import { showMessage } from 'react-native-flash-message';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
@@ -38,6 +41,7 @@ import CheckBox from '../../components/ui/CheckBox';
 import Priority from '../../components/ui/Priority';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
 import { hapticOptions } from '../../helpers/utils';
+import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { Subtask, Task } from '../../typescript/interface/task.interface';
@@ -153,12 +157,26 @@ const Subtasks = ({
 const TaskDetailsScreen = () => {
   const navigation = useNavigation<AddEditTaskNavigationProp>();
   const route = useRoute<RouteProp<AppStackParamList, 'TaskDetails'>>();
+  const { profile } = useAuth();
   const { taskId, userId } = route.params;
 
-  const { data, isLoading, isFetching, refetch } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['task', taskId],
     queryFn: ({ signal }) => getTask(taskId as string, signal),
   });
+
+  // Drive the pull-to-refresh spinner only from an actual user pull — not from
+  // background refetches (e.g. autosave invalidation), which would otherwise
+  // leave the RefreshControl stuck spinning when returning to this screen.
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const { mutate } = useMutation({
     mutationFn: deleteTask,
@@ -285,7 +303,7 @@ const TaskDetailsScreen = () => {
           contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={isFetching} onRefresh={refetch} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
           {/* Task Title */}
@@ -296,18 +314,90 @@ const TaskDetailsScreen = () => {
 
           <View style={styles.divider} />
 
-          {/* Creator */}
+          {/* Owner */}
           <View style={styles.row}>
-            <Text style={styles.label}>Assigned to</Text>
+            <Text style={styles.label}>Owner</Text>
             <View style={styles.creatorInfo}>
               <SmartAvatar
-                src={data?.assignedTo.photo}
+                src={data?.user?.photo}
                 size={scale(20)}
-                name={data?.assignedTo.fullName}
+                name={data?.user?.fullName}
               />
-              <Text>{data?.assignedTo?.fullName}</Text>
+              <Text style={styles.value}>
+                {data?.user?._id === profile?._id
+                  ? 'Me'
+                  : (data?.user?.fullName ?? '-')}
+              </Text>
             </View>
           </View>
+
+          {/* Assigned to (inline editable) */}
+          {(() => {
+            const assignees = data?.assignedTo ?? [];
+            const isOwner = data?.user?._id === profile?._id;
+            const isAssignee = assignees.some(u => u._id === profile?._id);
+            const canEdit = isOwner || isAssignee;
+
+            return (
+              <View style={styles.row}>
+                <Text style={styles.label}>Assigned to</Text>
+                <Pressable
+                  style={styles.assigneeValue}
+                  disabled={!canEdit}
+                  onPress={() =>
+                    SheetManager.show('assignee-sheet', {
+                      payload: { taskId },
+                    })
+                  }
+                >
+                  {assignees.length === 0 ? (
+                    <Text style={styles.unassigned}>Unassigned</Text>
+                  ) : assignees.length === 1 ? (
+                    <View style={styles.creatorInfo}>
+                      <SmartAvatar
+                        src={assignees[0].photo}
+                        size={scale(20)}
+                        name={assignees[0].fullName}
+                      />
+                      <Text style={styles.value}>
+                        {assignees[0]._id === profile?._id
+                          ? 'Me'
+                          : assignees[0].fullName}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.creatorInfo}>
+                      <View style={styles.avatarStack}>
+                        {assignees.slice(0, 3).map((u, i) => (
+                          <View
+                            key={u._id}
+                            style={i > 0 ? styles.stackedAvatar : undefined}
+                          >
+                            <SmartAvatar
+                              src={u.photo}
+                              size={scale(20)}
+                              name={u.fullName}
+                              style={styles.avatarRing}
+                            />
+                          </View>
+                        ))}
+                      </View>
+                      <Text style={styles.value}>
+                        {assignees.length} people
+                      </Text>
+                    </View>
+                  )}
+                  {canEdit && (
+                    <Feather
+                      name="chevron-down"
+                      size={fontSize(16)}
+                      color="#7F7D83"
+                    />
+                  )}
+                </Pressable>
+              </View>
+            );
+          })()}
 
           {/* Due Date */}
           <View style={styles.row}>
@@ -498,6 +588,28 @@ const styles = createStyleSheet({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing(4),
+  },
+  assigneeValue: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(6),
+  },
+  unassigned: {
+    fontSize: fontSize(14),
+    fontFamily: theme.fonts.lato.regular,
+    color: theme.colors.gray[400],
+  },
+  avatarStack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stackedAvatar: {
+    marginLeft: -scale(8),
+  },
+  avatarRing: {
+    borderWidth: 1.5,
+    borderColor: '#fff',
   },
   statusTag: (bgColor: string) => ({
     backgroundColor: bgColor,

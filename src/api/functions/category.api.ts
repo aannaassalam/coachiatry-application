@@ -44,3 +44,17 @@ export const addCategoryByCoach = async (body: {
   );
   return res;
 };
+
+export type DeleteTaxonomyResponse =
+  | { status: 'requires_replacement'; taskCount: number; message: string }
+  | { message: string; data: null };
+
+export const deleteCategory = async (
+  id: string,
+  replacementCategoryId?: string,
+): Promise<DeleteTaxonomyResponse> => {
+  const res = await axiosInstance.delete(endpoints.category.delete(id), {
+    data: replacementCategoryId ? { replacementCategoryId } : undefined,
+  });
+  return res.data;
+};

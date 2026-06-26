@@ -19,16 +19,35 @@ export const GeneralPickerSheet = ({
   onChange,
   heading,
   isLoading,
+  onCreateNew,
+  createNewLabel = 'Create new',
 }: {
   options: Option[];
   value: string;
   onChange: (value: string) => void;
   heading: string;
   isLoading?: boolean;
+  /** When provided, renders a "Create new" action below the options */
+  onCreateNew?: () => void;
+  createNewLabel?: string;
 }) => {
   return (
     <View>
-      <Text style={styles.heading}>{heading}</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.heading}>{heading}</Text>
+        {onCreateNew && (
+          <Pressable style={styles.createNew} onPress={onCreateNew}>
+            <Feather
+              name="plus-circle"
+              size={fontSize(14)}
+              color={theme.colors.primary}
+            />
+            <Text style={styles.createNewText} numberOfLines={1}>
+              {createNewLabel}
+            </Text>
+          </Pressable>
+        )}
+      </View>
       {isLoading ? (
         <View style={styles.skeletonList}>
           {[0, 1, 2, 3, 4].map(i => (
@@ -78,11 +97,18 @@ export const DateTimePicker = ({
 };
 
 const styles = createStyleSheet({
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing(10),
+    marginBottom: spacing(20),
+  },
   heading: {
     fontFamily: theme.fonts.archivo.medium,
     fontSize: fontSize(18),
     color: theme.colors.black,
-    marginBottom: spacing(20),
+    flexShrink: 1,
   },
   box: {
     paddingHorizontal: spacing(14),
@@ -107,5 +133,20 @@ const styles = createStyleSheet({
     paddingVertical: spacing(14),
     backgroundColor: theme.colors.white,
     borderRadius: 8,
+  },
+  createNew: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(6),
+    paddingHorizontal: spacing(10),
+    paddingVertical: spacing(7),
+    borderRadius: 999,
+    backgroundColor: theme.colors.gray[100],
+    flexShrink: 0,
+  },
+  createNewText: {
+    fontFamily: theme.fonts.archivo.semiBold,
+    color: theme.colors.primary,
+    fontSize: fontSize(13),
   },
 });

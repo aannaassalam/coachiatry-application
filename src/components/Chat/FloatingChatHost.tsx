@@ -55,6 +55,7 @@ const HIDDEN_STACK_ROUTES = new Set([
   'Profile',
   'EditProfile',
   'DocumentEditor',
+  'CategoryStatusSettings',
 ]);
 
 // Bottom-tab routes where the floating bar must stay hidden.

@@ -2,7 +2,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useMutation, useQueries } from '@tanstack/react-query';
 import moment from 'moment';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Controller,
   FormProvider,
@@ -106,6 +106,25 @@ const schema = yup.object().shape({
     .default([]),
 });
 
+// Transform raw form values into the payload the API expects. Shared by the
+// explicit submit (create) and the autosave (edit) paths.
+const buildTaskPayload = (values: yup.InferType<typeof schema>) => {
+  const h = values.duration?.getHours() ?? 0;
+  const m = values.duration?.getMinutes() ?? 0;
+  const taskDuration = h * 60 + m;
+  return {
+    ...values,
+    remindBefore: values.remindBefore
+      ? parseInt(values.remindBefore, 10)
+      : undefined,
+    taskDuration,
+    frequency:
+      values.frequency === '' || !values.frequency
+        ? undefined
+        : values.frequency,
+  };
+};
+
 const AddSubtasks = ({ disabled }: { disabled?: boolean }) => {
   const inputRefs = useRef<Array<TextInput | null>>([]);
 
@@ -201,6 +220,18 @@ export default function AddEditTask() {
 
   const [dateTimePicker, setDateTimePicker] = useState(false);
   const [durationPicker, setDurationPicker] = useState(false);
+
+  // --- Autosave (edit mode) state ---
+  const [autosaveStatus, setAutosaveStatus] = useState<
+    'idle' | 'saving' | 'saved'
+  >('idle');
+  const taskLoaded = useRef(false);
+  const lastSavedRef = useRef<string>('');
+  const latestPayloadRef = useRef<ReturnType<typeof buildTaskPayload> | null>(
+    null,
+  );
+  const pendingSaveRef = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { mutate: deleteItem } = useMutation({
     mutationFn: deleteTask,
@@ -324,6 +355,17 @@ export default function AddEditTask() {
     },
   });
 
+  // Silent autosave used while editing — no toast, no navigation.
+  const { mutate: autosaveMutate } = useMutation({
+    mutationFn: editTask,
+    meta: { showToast: false, invalidateQueries: ['tasks'] },
+    onSuccess: () => {
+      setAutosaveStatus('saved');
+      queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+    },
+    onError: () => setAutosaveStatus('idle'),
+  });
+
   const form = useForm<yup.InferType<typeof schema>>({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -344,23 +386,37 @@ export default function AddEditTask() {
   const activeStatuses = userId ? userStatuses : statuses;
   const activeCategories = userId ? userCategories : categories;
 
+  // Apply the default category/status only once, after the lists have first
+  // loaded. Re-running on every refetch (e.g. after creating a new category or
+  // status) would otherwise wipe the user's selection and any typed input.
+  const defaultsApplied = useRef(false);
+
   useEffect(() => {
     if (taskId) return; // editing — don't overwrite loaded task data
+    if (defaultsApplied.current) return;
+    if (!activeStatuses || !activeCategories) return; // wait for data
 
-    const todoStatus = activeStatuses?.find(
+    // Prefer the conventional defaults, but always fall back to the first
+    // available option so category & status are prefilled for everyone
+    // (own tasks, client tasks, custom setups) — not only when items named
+    // exactly "Health"/"To Do" exist.
+    const todoStatus = activeStatuses.find(
       s => s.title?.toLowerCase().trim() === 'to do',
     );
-    const healthCategory = activeCategories?.find(
+    const healthCategory = activeCategories.find(
       c => c.title?.toLowerCase().trim() === 'health',
     );
+
+    defaultsApplied.current = true;
 
     form.reset({
       title: '',
       description: '',
       priority: 'low',
-      category: healthCategory?._id ?? '',
+      category: healthCategory?._id ?? activeCategories[0]?._id ?? '',
       dueDate: predefinedDueDate ? new Date(predefinedDueDate) : undefined,
-      status: predefinedStatus ?? todoStatus?._id ?? '',
+      status:
+        predefinedStatus ?? todoStatus?._id ?? activeStatuses[0]?._id ?? '',
       frequency: '',
       duration: resetDuration(),
       remindBefore: '',
@@ -376,16 +432,7 @@ export default function AddEditTask() {
   ]);
 
   const onSubmit = (data: yup.InferType<typeof schema>) => {
-    const h = data.duration?.getHours() ?? 0;
-    const m = data.duration?.getMinutes() ?? 0;
-    const taskDuration = h * 60 + m;
-    const finalData = {
-      ...data,
-      remindBefore: data.remindBefore ? parseInt(data.remindBefore) : undefined,
-      taskDuration,
-      frequency:
-        data.frequency === '' || !data.frequency ? undefined : data.frequency,
-    };
+    const finalData = buildTaskPayload(data);
     if (taskId) {
       editMutate({ task_id: taskId, data: finalData });
     } else if (profile?.role === 'coach' && !!userId) {
@@ -396,7 +443,10 @@ export default function AddEditTask() {
   };
 
   useEffect(() => {
-    if (data && taskId) {
+    // Load the task into the form once. Re-running on every refetch (e.g. an
+    // autosave invalidation) would clobber in-progress edits.
+    if (data && taskId && !taskLoaded.current) {
+      taskLoaded.current = true;
       let date = new Date();
       date.setHours(0);
       date.setMinutes(0);
@@ -407,7 +457,7 @@ export default function AddEditTask() {
         date.setHours(hours);
         date.setMinutes(mins);
       }
-      form.reset({
+      const loadedValues = {
         title: data?.title,
         description: data?.description,
         priority: data?.priority,
@@ -420,17 +470,96 @@ export default function AddEditTask() {
           ? data?.remindBefore.toString().padStart(2, '0')
           : '',
         subtasks: data?.subtasks as Subtask[],
-      });
+      };
+      // Seed the autosave baseline BEFORE reset so the reset's own change event
+      // is recognised as a no-op and doesn't trigger a redundant save on load.
+      lastSavedRef.current = JSON.stringify(buildTaskPayload(loadedValues));
+      form.reset(loadedValues);
     }
   }, [data, form, taskId]);
+
+  // Debounced autosave while editing. Fires on any change (typing, pickers,
+  // subtask edits), skips no-op changes, and won't save while a required field
+  // (title, or a half-typed subtask) is empty.
+  useEffect(() => {
+    if (!taskId) return;
+    const subscription = form.watch(values => {
+      if (!taskLoaded.current) return;
+      const v = values as yup.InferType<typeof schema>;
+      if (!v.title?.trim()) return;
+      if ((v.subtasks ?? []).some(s => !s?.title?.trim())) return;
+
+      const payload = buildTaskPayload(v);
+      const serialized = JSON.stringify(payload);
+      if (serialized === lastSavedRef.current) return;
+
+      latestPayloadRef.current = payload;
+      pendingSaveRef.current = true;
+      setAutosaveStatus('saving');
+
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        lastSavedRef.current = serialized;
+        pendingSaveRef.current = false;
+        autosaveMutate({ task_id: taskId, data: payload });
+      }, 800);
+    });
+    return () => subscription.unsubscribe();
+  }, [taskId, form, autosaveMutate]);
+
+  // Flush any pending (debounced) save immediately. Idempotent — guarded by
+  // pendingSaveRef so it can be called from multiple exit paths without
+  // double-saving.
+  const flushPendingSave = useCallback(() => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    if (taskId && pendingSaveRef.current && latestPayloadRef.current) {
+      pendingSaveRef.current = false;
+      lastSavedRef.current = JSON.stringify(latestPayloadRef.current);
+      autosaveMutate({ task_id: taskId, data: latestPayloadRef.current });
+    }
+  }, [taskId, autosaveMutate]);
+
+  // Guarantee the flush before the screen is removed by ANY back path — the
+  // header button, the Android hardware back, or the iOS swipe-back gesture.
+  // This fires while the screen is still mounted, so the hook mutation runs
+  // normally.
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', () => {
+      flushPendingSave();
+    });
+    return unsubscribe;
+  }, [navigation, flushPendingSave]);
+
+  // Last-resort safety net: if the screen ever unmounts with a save still
+  // pending, fire it with the raw API call so it survives unmount.
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (taskId && pendingSaveRef.current && latestPayloadRef.current) {
+        pendingSaveRef.current = false;
+        editTask({ task_id: taskId, data: latestPayloadRef.current })
+          .then(() => {
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+          })
+          .catch(() => {});
+      }
+    };
+  }, [taskId]);
+
+  // Save immediately (skip the debounce) and leave.
+  const handleClose = () => {
+    flushPendingSave();
+    navigation.goBack();
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableButton
-          style={styles.iconButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableButton style={styles.iconButton} onPress={handleClose}>
           <ChevronLeft />
         </TouchableButton>
         <Text style={styles.headerTitle}>
@@ -616,6 +745,26 @@ export default function AddEditTask() {
                                   value={field.value}
                                   onChange={field.onChange}
                                   isLoading={isCategoryLoading}
+                                  onCreateNew={() => {
+                                    const cb = field.onChange;
+                                    const uid =
+                                      profile?.role === 'coach' && userId
+                                        ? userId
+                                        : undefined;
+                                    SheetManager.hide('general-sheet');
+                                    setTimeout(() => {
+                                      SheetManager.show(
+                                        'create-taxonomy-sheet',
+                                        {
+                                          payload: {
+                                            type: 'category',
+                                            userId: uid,
+                                            onCreated: cb,
+                                          },
+                                        },
+                                      );
+                                    }, 350);
+                                  }}
                                 />
                               ),
                             },
@@ -711,6 +860,26 @@ export default function AddEditTask() {
                                   value={field.value}
                                   onChange={field.onChange}
                                   isLoading={isStatusLoading}
+                                  onCreateNew={() => {
+                                    const cb = field.onChange;
+                                    const uid =
+                                      profile?.role === 'coach' && userId
+                                        ? userId
+                                        : undefined;
+                                    SheetManager.hide('general-sheet');
+                                    setTimeout(() => {
+                                      SheetManager.show(
+                                        'create-taxonomy-sheet',
+                                        {
+                                          payload: {
+                                            type: 'status',
+                                            userId: uid,
+                                            onCreated: cb,
+                                          },
+                                        },
+                                      );
+                                    }, 350);
+                                  }}
                                 />
                               ),
                             },
@@ -857,23 +1026,44 @@ export default function AddEditTask() {
               </View>
             </View>
           </KeyboardAwareScrollView>
-          <View style={styles.buttonInnerContainer}>
-            <AppButton
-              variant="primary"
-              text="Cancel"
-              style={{ backgroundColor: '#ECECED', flex: 1 }}
-              textStyle={{ color: theme.colors.primary }}
-              onPress={navigation.goBack}
-              disabled={isEditPending || isPending || isCoachPending}
-            />
-            <AppButton
-              variant="primary"
-              text={`${taskId ? 'Save' : 'Create'} Task`}
-              style={{ flex: 1 }}
-              onPress={form.handleSubmit(onSubmit, onError)}
-              isLoading={isEditPending || isPending || isCoachPending}
-            />
-          </View>
+          {taskId ? (
+            <View style={[styles.buttonInnerContainer, styles.editBar]}>
+              <View style={styles.autosaveStatus}>
+                {autosaveStatus === 'saving' ? (
+                  <Text style={styles.autosaveText}>Saving…</Text>
+                ) : autosaveStatus === 'saved' ? (
+                  <>
+                    <Feather name="check" size={fontSize(14)} color="#16A34A" />
+                    <Text style={styles.autosaveText}>All changes saved</Text>
+                  </>
+                ) : null}
+              </View>
+              <AppButton
+                variant="primary"
+                text="Done"
+                style={{ paddingHorizontal: spacing(32) }}
+                onPress={handleClose}
+              />
+            </View>
+          ) : (
+            <View style={styles.buttonInnerContainer}>
+              <AppButton
+                variant="primary"
+                text="Cancel"
+                style={{ backgroundColor: '#ECECED', flex: 1 }}
+                textStyle={{ color: theme.colors.primary }}
+                onPress={handleClose}
+                disabled={isPending || isCoachPending}
+              />
+              <AppButton
+                variant="primary"
+                text="Create Task"
+                style={{ flex: 1 }}
+                onPress={form.handleSubmit(onSubmit, onError)}
+                isLoading={isPending || isCoachPending}
+              />
+            </View>
+          )}
         </>
       )}
     </View>
@@ -983,6 +1173,21 @@ const styles = createStyleSheet({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: spacing(12),
+  },
+  editBar: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  autosaveStatus: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(6),
+  },
+  autosaveText: {
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(12),
+    color: theme.colors.gray[500],
   },
   subtasks: {
     marginVertical: spacing(8),

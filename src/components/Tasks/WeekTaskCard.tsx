@@ -121,13 +121,15 @@ function TaskCard({ task }: { task: Task }) {
             }}
           >
             <SmartAvatar
-              src={task?.assignedTo.photo}
-              name={task?.assignedTo.fullName}
+              src={(task?.assignedTo?.[0] ?? task?.user)?.photo}
+              name={(task?.assignedTo?.[0] ?? task?.user)?.fullName}
               size={scale(16)}
               fontSize={fontSize(14)}
               style={styles.avatar}
             />
-            <Text style={styles.authorName}>{task?.assignedTo.fullName}</Text>
+            <Text style={styles.authorName}>
+              {(task?.assignedTo?.[0] ?? task?.user)?.fullName}
+            </Text>
           </View>
         </View>
         <View style={{ alignSelf: 'flex-start' }}>

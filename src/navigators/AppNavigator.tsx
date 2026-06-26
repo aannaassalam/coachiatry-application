@@ -16,6 +16,7 @@ import CoachChatScreen from '../screens/Chats/CoachChatRoom';
 import GroupScreen from '../screens/Chats/GroupScreen';
 import UserDetails from '../screens/Users/UserDetails';
 import AddEditUser from '../screens/Users/AddEditUser';
+import CategoryStatusSettings from '../screens/Settings/CategoryStatusSettings';
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -45,6 +46,10 @@ const AppNavigator = ({ hideFloatingChat = false }: { hideFloatingChat?: boolean
         <Stack.Screen name="GroupScreen" component={GroupScreen} />
         <Stack.Screen name="CoachChatRoom" component={CoachChatScreen} />
         <Stack.Screen name="AddEditUser" component={AddEditUser} />
+        <Stack.Screen
+          name="CategoryStatusSettings"
+          component={CategoryStatusSettings}
+        />
       </Stack.Navigator>
       {!hideFloatingChat && <FloatingChatHost />}
     </View>

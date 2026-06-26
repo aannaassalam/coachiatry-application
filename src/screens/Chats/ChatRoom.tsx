@@ -4,7 +4,7 @@ import {
   findNodeHandle,
   FlatList,
   Keyboard,
-  KeyboardAvoidingView,
+  KeyboardAvoidingView as RNKeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
@@ -14,6 +14,7 @@ import {
   View,
   ViewToken,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import ChatRoomSkeleton from '../../components/skeletons/ChatRoomSkeleton';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Feather from 'react-native-vector-icons/Feather';
@@ -79,7 +80,6 @@ import TouchableButton from '../../components/TouchableButton';
 import { uploadManager } from '../../helpers/uploadManager';
 import { formatChatDateSeparator, hapticOptions } from '../../helpers/utils';
 import { useChatUpload } from '../../hooks/useChatHook';
-import { useAndroidKeyboardInset } from '../../hooks/useAndroidKeyboardInset';
 import AttachmentViewer from '../../components/Chat/AttachementViewer';
 import { VideoMessage } from '../../components/Chat/VideoMessage';
 import { FileMessage } from '../../components/Chat/FileMessage';
@@ -455,7 +455,6 @@ const ChatScreen = () => {
   const socket = useSocket();
   const { profile } = useAuth();
   const insets = useSafeAreaInsets();
-  const androidKeyboardInset = useAndroidKeyboardInset();
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRoomRef = useRef<string | null>(null);
   const navigation = useNavigation<ChatRoomTaskNavigationProp>();
@@ -1442,19 +1441,19 @@ const ChatScreen = () => {
     setReactorVisibleFor(null);
   };
 
+  // iOS keeps react-native's KeyboardAvoidingView (the original, correct input
+  // layout); Android uses react-native-keyboard-controller's implementation.
+  const KeyboardAvoider = isAndroid
+    ? KeyboardAvoidingView
+    : RNKeyboardAvoidingView;
+
   return (
-    <KeyboardAvoidingView
-      behavior={
-        Platform.OS === 'ios' ? 'padding' : fromFloating ? 'height' : undefined
-      }
+    <KeyboardAvoider
+      behavior="padding"
       keyboardVerticalOffset={
-        Platform.OS === 'ios'
-          ? fromFloating
-            ? insets.top + spacing(52)
-            : insets.top
-          : 0
+        fromFloating ? insets.top + spacing(52) : insets.top
       }
-      style={[styles.container, { paddingBottom: androidKeyboardInset }]}
+      style={styles.container}
     >
       {/* Header */}
       {!fromFloating && (
@@ -1603,7 +1602,13 @@ const ChatScreen = () => {
           onClose={() => setReplyingTo(null)}
         />
       )}
-      <View style={[styles.inputBar, { borderTopWidth: replyingTo ? 0 : 1 }]}>
+      <View
+        style={[
+          styles.inputBar,
+          { borderTopWidth: replyingTo ? 0 : 1 },
+          isAndroid && fromFloating && { paddingBottom: spacing(14) },
+        ]}
+      >
         <View style={[styles.inputWrapper]}>
           <TouchableOpacity onPress={toggleEmojiKeyboard}>
             <Ionicons
@@ -1686,7 +1691,7 @@ const ChatScreen = () => {
         onSelect={handleSelectReaction}
         onDismiss={() => setReactorVisibleFor(null)}
       />
-    </KeyboardAvoidingView>
+    </KeyboardAvoider>
   );
 };
 

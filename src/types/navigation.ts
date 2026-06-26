@@ -36,4 +36,5 @@ export type AppStackParamList = {
   CoachChatRoom: { roomId: string; userId: string };
   UserDetails: { id: string };
   AddEditUser: { id?: string };
+  CategoryStatusSettings: undefined;
 };

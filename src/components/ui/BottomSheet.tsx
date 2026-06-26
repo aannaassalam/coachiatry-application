@@ -1,12 +1,19 @@
-import { View } from 'react-native';
+import { Dimensions, View } from 'react-native';
 import ActionSheet, {
   ScrollView,
   SheetManager,
   SheetProps,
 } from 'react-native-actions-sheet';
 import { createStyleSheet } from 'react-native-unistyles';
+import { theme } from '../../theme';
 import { spacing } from '../../utils';
 import AppButton from './AppButton';
+
+// The sheet sizes itself to its content (capped at the device height by RNAS).
+// Bounding the scrollable area keeps the sheet at a comfortable height instead
+// of filling the screen, which also leaves the backdrop tappable and makes the
+// drag-to-close gesture work even when the inner list is long.
+const MAX_SCROLL_HEIGHT = Dimensions.get('window').height * 0.5;
 
 export default function BottomSheet(props: SheetProps<'general-sheet'>) {
   return (
@@ -14,9 +21,9 @@ export default function BottomSheet(props: SheetProps<'general-sheet'>) {
       useBottomSafeAreaPadding
       backgroundInteractionEnabled={false}
       closeOnTouchBackdrop
-      indicatorStyle={{ display: 'none' }}
+      drawUnderStatusBar={false}
+      indicatorStyle={styles.indicator}
       gestureEnabled
-      drawUnderStatusBar
       containerStyle={{
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
@@ -24,6 +31,7 @@ export default function BottomSheet(props: SheetProps<'general-sheet'>) {
       }}
     >
       <ScrollView
+        style={{ maxHeight: MAX_SCROLL_HEIGHT }}
         contentContainerStyle={[
           styles.contentContainer,
           {
@@ -48,11 +56,16 @@ export default function BottomSheet(props: SheetProps<'general-sheet'>) {
 }
 
 const styles = createStyleSheet({
+  indicator: {
+    width: spacing(40),
+    height: spacing(5),
+    borderRadius: 999,
+    backgroundColor: theme.colors.gray[300],
+    marginTop: spacing(10),
+  },
   contentContainer: {
     padding: spacing(20),
-    paddingTop: spacing(28),
-    // alignItems: 'center',
-    // justifyContent: 'center',
+    paddingTop: spacing(16),
   },
   footerContainer: {
     paddingHorizontal: spacing(20),

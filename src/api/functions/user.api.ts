@@ -68,9 +68,10 @@ export const getUserSuggestions = async (
   search: string,
   type: 'group' | 'watchers' = 'group',
   signal?: AbortSignal,
+  exclude: string[] = [],
 ): Promise<Pick<User, '_id' | 'fullName' | 'email' | 'photo'>[]> => {
   const res = await axiosInstance.get(endpoints.user.suggestUsers, {
-    params: { search, type },
+    params: { search, type, ...(exclude.length ? { exclude } : {}) },
     signal,
   });
   return res.data;

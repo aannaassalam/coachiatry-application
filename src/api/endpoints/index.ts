@@ -39,12 +39,14 @@ export const endpoints = {
     add: '/categories',
     getAllCoach: (userId: string) => `/categories/coach/${userId}`,
     addCoach: (userId: string) => `/categories/coach/${userId}`,
+    delete: (categoryId: string) => `/categories/${categoryId}`,
   },
   status: {
     getAll: '/statuses',
     add: '/statuses',
     getAllCoach: (userId: string) => `/statuses/coach/${userId}`,
     addCoach: (userId: string) => `/statuses/coach/${userId}`,
+    delete: (statusId: string) => `/statuses/${statusId}`,
   },
   transcriptions: {
     getAllTranscriptions: '/transcriptions',
@@ -65,6 +67,8 @@ export const endpoints = {
     moveToStatus: (taskId: string) => `/task/move-to-status/${taskId}`,
     markSubtaskAsComplete: (taskId: string, subtaskId: string) =>
       `/task/completed/${taskId}/${subtaskId}`,
+    assignToggle: '/task/assign-toggle',
+    assignees: (taskId: string) => `/task/${taskId}/assignees`,
     shared: (shareId: string) => `/task/shared/${shareId}`,
   },
   user: {
@@ -92,6 +96,9 @@ export const endpoints = {
     createGroup: '/chat/group',
     editGroup: '/chat/group/edit',
     leaveGroup: (chatId: string) => `/chat/leave-group/${chatId}`,
+    inviteToGroup: '/chat/group/invite',
+    getGroupInvite: (token: string) => `/chat/group/invite/${token}`,
+    acceptGroupInvite: (token: string) => `/chat/group/invite/${token}/accept`,
   },
   messages: {
     getScheduleMessages: '/message/schedule',

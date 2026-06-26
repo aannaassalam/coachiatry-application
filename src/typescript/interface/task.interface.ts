@@ -21,7 +21,7 @@ export interface Task {
   taskDuration?: number;
   frequency?: 'daily' | 'weekly' | 'monthly' | 'yearly';
   remindBefore?: number;
-  assignedTo: User;
+  assignedTo: User[];
   active: boolean;
   createdAt: string;
   updatedAt: string;

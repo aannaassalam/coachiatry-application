@@ -41,10 +41,10 @@ import {
   verticalScale,
 } from '../../utils';
 // import { , scheduleOnRN } from 'react-native-worklets';
-import { KeyboardAvoidingView, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { randomUUID } from 'react-native-quick-crypto';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAndroidKeyboardInset } from '../../hooks/useAndroidKeyboardInset';
 
 import AttachmentViewer from '../../components/Chat/AttachementViewer';
 import { FileMessage } from '../../components/Chat/FileMessage';
@@ -223,7 +223,6 @@ const RenderMessage = ({
 
 const CoachChatScreen = () => {
   const insets = useSafeAreaInsets();
-  const androidKeyboardInset = useAndroidKeyboardInset();
   const activeRoomRef = useRef<string | null>(null);
   const navigation = useNavigation<ChatRoomTaskNavigationProp>();
   const route = useRoute<RouteProp<AppStackParamList, 'CoachChatRoom'>>();
@@ -377,9 +376,9 @@ const CoachChatScreen = () => {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
-      style={[styles.container, { paddingBottom: androidKeyboardInset }]}
+      behavior="padding"
+      keyboardVerticalOffset={insets.top}
+      style={styles.container}
     >
       {/* Header */}
       <View style={styles.header}>

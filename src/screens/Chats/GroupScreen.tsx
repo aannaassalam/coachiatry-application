@@ -42,12 +42,17 @@ import {
   createGroup,
   editGroup,
   getConversation,
+  inviteToGroupByEmail,
   leaveGroup,
 } from '../../api/functions/chat.api';
 import { queryClient } from '../../../App';
 import { AppStackParamList } from '../../types/navigation';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Check } from 'lucide-react-native';
+import { Check, Mail, X } from 'lucide-react-native';
+import { showMessage } from 'react-native-flash-message';
+
+const isValidEmail = (email: string) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 const RenderMember = ({
   item,
@@ -119,8 +124,11 @@ export default function GroupScreen() {
   const [members, setMembers] = useState<
     Pick<User, '_id' | 'fullName' | 'email' | 'photo'>[]
   >([]);
+  const [inviteEmails, setInviteEmails] = useState<string[]>([]);
+  const [emailInput, setEmailInput] = useState('');
 
   const debouncedSearch = useDebounce(search, 300);
+  const excludeIds = members.map(m => m._id);
 
   const [
     { data: groupData, isLoading },
@@ -134,9 +142,9 @@ export default function GroupScreen() {
         enabled: !!roomId,
       },
       {
-        queryKey: ['suggest-users', debouncedSearch, 'group-users'],
+        queryKey: ['suggest-users', debouncedSearch, 'group-users', excludeIds],
         queryFn: ({ signal }: { signal: AbortSignal }) =>
-          getUserSuggestions(debouncedSearch, 'group', signal),
+          getUserSuggestions(debouncedSearch, 'group', signal, excludeIds),
       },
     ],
   });
@@ -145,10 +153,32 @@ export default function GroupScreen() {
     groupData?.members?.find(mem => mem.user._id === profile?._id)?.role ===
     'owner';
 
+  // Fire-and-forget email invites once we have a group id. The backend skips
+  // anyone already a member and emails the rest an invite link.
+  const sendInvitesIfAny = async (chatId?: string) => {
+    if (!chatId || inviteEmails.length === 0) return;
+    try {
+      await inviteToGroupByEmail({ chatId, emails: inviteEmails });
+      showMessage({
+        type: 'success',
+        message: 'Invitations sent',
+        description: `${inviteEmails.length} invitation(s) sent by email`,
+      });
+    } catch {
+      showMessage({
+        type: 'danger',
+        message: 'Invite failed',
+        description: 'Could not send some email invitations',
+      });
+    }
+  };
+
   const { mutate, isPending } = useMutation({
     mutationFn: createGroup,
-    onSuccess: () => {
+    onSuccess: async (group: { _id?: string }) => {
+      await sendInvitesIfAny(group?._id);
       setPhoto('');
+      setInviteEmails([]);
       form.reset({
         name: '',
       });
@@ -161,7 +191,9 @@ export default function GroupScreen() {
 
   const { mutate: editMutate, isPending: isEditing } = useMutation({
     mutationFn: editGroup,
-    onSuccess: () => {
+    onSuccess: async () => {
+      await sendInvitesIfAny(roomId);
+      setInviteEmails([]);
       queryClient.invalidateQueries({ queryKey: ['conversations', roomId] });
       navigation.goBack();
     },
@@ -234,7 +266,7 @@ export default function GroupScreen() {
   };
 
   const handleSubmit = (formData: yup.InferType<typeof schema>) => {
-    if (!roomId && typeof photo !== 'string')
+    if (!roomId)
       mutate({
         ...formData,
         groupPhoto: imageData,
@@ -248,6 +280,27 @@ export default function GroupScreen() {
         members: members.map(m => m._id),
       });
   };
+
+  const addEmail = () => {
+    const email = emailInput.trim().toLowerCase();
+    if (!isValidEmail(email)) {
+      showMessage({ type: 'danger', message: 'Enter a valid email address' });
+      return;
+    }
+    if (
+      inviteEmails.includes(email) ||
+      members.some(m => m.email?.toLowerCase() === email)
+    ) {
+      showMessage({ type: 'info', message: 'That email is already added' });
+      setEmailInput('');
+      return;
+    }
+    setInviteEmails(prev => [...prev, email]);
+    setEmailInput('');
+  };
+
+  const removeEmail = (email: string) =>
+    setInviteEmails(prev => prev.filter(e => e !== email));
 
   return (
     <KeyboardAwareScrollView
@@ -351,6 +404,54 @@ export default function GroupScreen() {
               </View>
             )}
           </View>
+
+          {(!roomId || isAdmin) && (
+            <View style={styles.inviteSection}>
+              <Text style={styles.sectionTitle}>Invite by email</Text>
+              <View style={styles.inviteRow}>
+                <TextInput
+                  placeholder="name@email.com"
+                  placeholderTextColor={theme.colors.gray[500]}
+                  style={styles.inviteInput}
+                  value={emailInput}
+                  onChangeText={setEmailInput}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  returnKeyType="done"
+                  onSubmitEditing={addEmail}
+                />
+                <AppButton
+                  text="Invite"
+                  onPress={addEmail}
+                  style={styles.inviteBtn}
+                  textStyle={{ fontSize: fontSize(13) }}
+                />
+              </View>
+              {inviteEmails.length > 0 && (
+                <View style={styles.chips}>
+                  {inviteEmails.map(email => (
+                    <View key={email} style={styles.chip}>
+                      <Mail size={fontSize(12)} color={theme.colors.primary} />
+                      <Text style={styles.chipText} numberOfLines={1}>
+                        {email}
+                      </Text>
+                      <Pressable onPress={() => removeEmail(email)} hitSlop={8}>
+                        <X size={fontSize(12)} color={theme.colors.gray[500]} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              )}
+              {inviteEmails.length > 0 && (
+                <Text style={styles.inviteHint}>
+                  People not already in the group will get an email invite to
+                  join.
+                </Text>
+              )}
+            </View>
+          )}
+
           <View
             style={{
               marginTop: 'auto',
@@ -563,6 +664,61 @@ const styles = StyleSheet.create({
     paddingTop: spacing(16),
     marginTop: spacing(10),
     backgroundColor: theme.colors.white,
+  },
+  inviteSection: {
+    paddingTop: spacing(20),
+    marginTop: spacing(10),
+    backgroundColor: theme.colors.white,
+  },
+  inviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(10),
+  },
+  inviteInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: theme.colors.gray[300],
+    borderRadius: 10,
+    paddingHorizontal: spacing(14),
+    paddingVertical: Platform.OS === 'ios' ? spacing(12) : spacing(10),
+    fontSize: fontSize(14),
+    fontFamily: theme.fonts.lato.regular,
+    color: theme.colors.gray[900],
+  },
+  inviteBtn: {
+    paddingVertical: spacing(11),
+    paddingHorizontal: spacing(16),
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing(8),
+    marginTop: spacing(12),
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(6),
+    paddingVertical: spacing(6),
+    paddingHorizontal: spacing(10),
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.gray[200],
+    backgroundColor: theme.colors.gray[50],
+    maxWidth: '100%',
+  },
+  chipText: {
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(12),
+    color: theme.colors.gray[800],
+    flexShrink: 1,
+  },
+  inviteHint: {
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(11),
+    color: theme.colors.gray[500],
+    marginTop: spacing(8),
   },
   sectionTitle: {
     fontSize: fontSize(14),

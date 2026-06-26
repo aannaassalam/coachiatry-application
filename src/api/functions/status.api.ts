@@ -45,3 +45,17 @@ export const addStatusByCoach = async (body: {
   );
   return res;
 };
+
+export type DeleteTaxonomyResponse =
+  | { status: 'requires_replacement'; taskCount: number; message: string }
+  | { message: string; data: null };
+
+export const deleteStatus = async (
+  id: string,
+  replacementStatusId?: string,
+): Promise<DeleteTaxonomyResponse> => {
+  const res = await axiosInstance.delete(endpoints.status.delete(id), {
+    data: replacementStatusId ? { replacementStatusId } : undefined,
+  });
+  return res.data;
+};

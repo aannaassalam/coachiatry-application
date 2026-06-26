@@ -1,8 +1,14 @@
 import moment from 'moment';
 import { Filter } from '../../typescript/interface/common.interface';
 import { Task, TaskBody } from '../../typescript/interface/task.interface';
+import { User } from '../../typescript/interface/user.interface';
 import axiosInstance from '../axiosInstance';
 import { endpoints } from '../endpoints';
+
+export type TaskAssignee = Pick<
+  User,
+  '_id' | 'fullName' | 'photo' | 'role' | 'email' | 'updatedAt'
+>;
 
 function getDueDateQuery(value: string) {
   const today = moment().startOf('day');
@@ -100,7 +106,7 @@ export const getAllTasks = async (
   const filterQuery = buildFilterQuery(filter);
   const res = await axiosInstance.get(endpoints.task.getAll, {
     params: {
-      populate: 'category,status,assignedTo',
+      populate: 'category,status,assignedTo,user',
       sort,
       ...filterQuery,
       ...(limit ? { limit } : {}),
@@ -130,7 +136,7 @@ export const getAllTasksByCoach = async (
 
   const res = await axiosInstance.get(endpoints.task.getAll, {
     params: {
-      populate: 'category,status,assignedTo',
+      populate: 'category,status,assignedTo,user',
       sort,
       ...filterQuery,
       user: userId,
@@ -146,7 +152,7 @@ export const getTask = async (
 ): Promise<Task> => {
   const res = await axiosInstance.get(endpoints.task.getOne(id), {
     params: {
-      populate: 'category,status,assignedTo',
+      populate: 'category,status,assignedTo,user',
     },
     signal,
   });
@@ -197,6 +203,24 @@ export const markSubtaskAsCompleted = async (body: {
 
 export const deleteTask = async (task_id: string) => {
   const res = await axiosInstance.delete(endpoints.task.delete(task_id));
+  return res;
+};
+
+export const getTaskAssignees = async (
+  taskId: string,
+  signal?: AbortSignal,
+): Promise<{ canAssign: boolean; assignees: TaskAssignee[] }> => {
+  const res = await axiosInstance.get(endpoints.task.assignees(taskId), {
+    signal,
+  });
+  return res.data;
+};
+
+export const assignToggle = async (body: {
+  taskId: string;
+  coachId: string;
+}) => {
+  const res = await axiosInstance.patch(endpoints.task.assignToggle, body);
   return res;
 };
 

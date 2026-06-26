@@ -19,6 +19,7 @@ import {
 import { SheetProvider } from 'react-native-actions-sheet';
 import FlashMessage, { showMessage } from 'react-native-flash-message';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import { MenuProvider } from 'react-native-popup-menu';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -102,7 +103,11 @@ function AppContent() {
 
   return (
     <View style={styles.container}>
-      {token ? <AppNavigator hideFloatingChat={showLoader} /> : <AuthNavigator />}
+      {token ? (
+        <AppNavigator hideFloatingChat={showLoader} />
+      ) : (
+        <AuthNavigator />
+      )}
       {showLoader && (
         <AuthSwitchingLoader
           onFinish={() => {
@@ -179,26 +184,28 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <UnistylesProvider>
-        <SafeAreaProvider>
-          <StatusBar backgroundColor="#fff" barStyle="dark-content" />
-          <QueryClientProvider client={queryClient}>
-            <SheetProvider>
-              <MenuProvider>
-                <AuthProvider>
-                  <SocketProvider>
-                    <FloatingChatProvider>
-                      <NavigationContainer ref={navigationRef}>
-                        <AppContent />
-                      </NavigationContainer>
-                    </FloatingChatProvider>
-                  </SocketProvider>
-                </AuthProvider>
-              </MenuProvider>
-            </SheetProvider>
-          </QueryClientProvider>
-        </SafeAreaProvider>
-      </UnistylesProvider>
+      <KeyboardProvider>
+        <UnistylesProvider>
+          <SafeAreaProvider>
+            <StatusBar backgroundColor="#fff" barStyle="default" />
+            <QueryClientProvider client={queryClient}>
+              <SheetProvider>
+                <MenuProvider>
+                  <AuthProvider>
+                    <SocketProvider>
+                      <FloatingChatProvider>
+                        <NavigationContainer ref={navigationRef}>
+                          <AppContent />
+                        </NavigationContainer>
+                      </FloatingChatProvider>
+                    </SocketProvider>
+                  </AuthProvider>
+                </MenuProvider>
+              </SheetProvider>
+            </QueryClientProvider>
+          </SafeAreaProvider>
+        </UnistylesProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }
