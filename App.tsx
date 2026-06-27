@@ -150,10 +150,16 @@ export const queryClient = new QueryClient({
     onError: res => {
       const result = res as unknown as ErrorData;
       ReactNativeHapticFeedback.trigger('notificationError', hapticOptions);
-      if (result?.response?.data?.message) {
+      // The backend often carries the human message in the x-message header
+      // rather than the body — check both before falling back.
+      const headerMessage = (
+        result?.response as { headers?: Record<string, string> } | undefined
+      )?.headers?.['x-message'];
+      const description = result?.response?.data?.message || headerMessage;
+      if (description) {
         showMessage({
           message: 'Failed',
-          description: result?.response?.data?.message,
+          description,
           type: 'danger',
         });
       } else {

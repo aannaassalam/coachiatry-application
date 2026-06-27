@@ -186,7 +186,11 @@ export default function ClientDetailsA1() {
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ['conversations'],
+    // Unique key: must NOT collide with the global ['conversations'] infinite
+    // query owned by FloatingChatHost (mixing useQuery + useInfiniteQuery on the
+    // same key breaks this screen's data shape). Still covered by ['conversations']
+    // prefix invalidation.
+    queryKey: ['conversations', 'coach', userId],
     queryFn: ({ signal }) =>
       getAllConversationsByCoach({ userId: userId as string }, signal),
   });

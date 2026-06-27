@@ -3,6 +3,7 @@ import React, {
   ReactNode,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import { User } from '../typescript/interface/user.interface';
@@ -53,11 +54,13 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     await setServerToken(_token);
   };
 
-  return (
-    <AuthContext.Provider
-      value={{ token, profile: data, isProfileLoading: isLoading, setAuthData }}
-    >
-      {children}
-    </AuthContext.Provider>
+  // Memoize the context value so every useAuth() consumer (avatars, chat rows,
+  // dashboard, etc.) doesn't re-render on every AuthProvider render.
+  const value = useMemo(
+    () => ({ token, profile: data, isProfileLoading: isLoading, setAuthData }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [token, data, isLoading],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

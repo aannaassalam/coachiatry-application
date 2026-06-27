@@ -359,7 +359,16 @@ export default function AddEditTask() {
   const { mutate: autosaveMutate } = useMutation({
     mutationFn: editTask,
     meta: { showToast: false, invalidateQueries: ['tasks'] },
-    onSuccess: () => {
+    onSuccess: (_res, variables) => {
+      // Only mark this content as "saved" once the server confirms it — doing
+      // it before the request resolves would make a failed save look saved and
+      // silently drop the change.
+      const saved = JSON.stringify(variables.data);
+      lastSavedRef.current = saved;
+      // Clear the pending flag only if nothing newer was typed since.
+      if (JSON.stringify(latestPayloadRef.current) === saved) {
+        pendingSaveRef.current = false;
+      }
       setAutosaveStatus('saved');
       queryClient.invalidateQueries({ queryKey: ['task', taskId] });
     },
@@ -461,9 +470,11 @@ export default function AddEditTask() {
         title: data?.title,
         description: data?.description,
         priority: data?.priority,
-        category: data?.category._id,
-        dueDate: data?.dueDate ? new Date(data?.dueDate) : resetDuration(),
-        status: data?.status._id,
+        category: data?.category?._id ?? '',
+        // Leave a missing due date unset (undefined) — falling back to a real
+        // date would autosave a bogus due date onto a task that had none.
+        dueDate: data?.dueDate ? new Date(data?.dueDate) : undefined,
+        status: data?.status?._id ?? '',
         frequency: data?.frequency || '',
         duration: date,
         remindBefore: data?.remindBefore
@@ -499,8 +510,8 @@ export default function AddEditTask() {
 
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
-        lastSavedRef.current = serialized;
-        pendingSaveRef.current = false;
+        // Baseline + pending flag are updated in the mutation's onSuccess, so a
+        // failed save isn't mistaken for a completed one.
         autosaveMutate({ task_id: taskId, data: payload });
       }, 800);
     });
@@ -517,7 +528,6 @@ export default function AddEditTask() {
     }
     if (taskId && pendingSaveRef.current && latestPayloadRef.current) {
       pendingSaveRef.current = false;
-      lastSavedRef.current = JSON.stringify(latestPayloadRef.current);
       autosaveMutate({ task_id: taskId, data: latestPayloadRef.current });
     }
   }, [taskId, autosaveMutate]);

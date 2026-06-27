@@ -69,7 +69,7 @@ function buildFilterQuery(values: Filter[]): Record<string, any> {
 
       if (filter.selectedOperator === 'is') {
         query.dueDate = dateRange;
-      } else if (filter.selectedOperator === 'is not') {
+      } else if (filter.selectedOperator === 'isNot') {
         // exclude that range -> tasks before OR after
         query.dueDate = { not: dateRange };
       }

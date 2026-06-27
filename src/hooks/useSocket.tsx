@@ -3,7 +3,6 @@ import {
   ReactNode,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from 'react';
 import { io, Socket } from 'socket.io-client';
@@ -16,46 +15,40 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    // ⚠️ Only connect if user is logged in
+    // Only connect once the user is logged in.
     if (!profile?._id) return;
 
-    // Prevent duplicate sockets
-    if (!socket) {
-      const s = io('https://backend.coachiatry.com', {
-        query: { userId: profile._id },
-        transports: ['websocket'],
-        reconnection: true,
-        reconnectionAttempts: Infinity,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 10000,
-      });
+    const s = io('https://backend.coachiatry.com', {
+      query: { userId: profile._id },
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
+    });
 
-      setSocket(s);
+    setSocket(s);
 
-      s.on('connect', () => {
-        console.log('✅ Connected:', s.id);
-        s.emit('user_online', { userId: profile?._id });
-      });
-
-      s.on('disconnect', () => {
-        console.log('❌ Disconnected');
-      });
-
-      // optional: re-emit online after reconnection
-      s.io.on('reconnect', () => {
-        console.log('🔁 Reconnected');
-        s.emit('user_online', { userId: profile?._id });
-      });
-    }
-
-    // Cleanup on unmount
-    return () => {
-      if (socket) {
-        socket.disconnect();
-        setSocket(null);
-      }
+    const onConnect = () => {
+      s.emit('user_online', { userId: profile._id });
     };
-  }, [profile?._id, socket]);
+    const onReconnect = () => {
+      s.emit('user_online', { userId: profile._id });
+    };
+
+    s.on('connect', onConnect);
+    s.io.on('reconnect', onReconnect);
+
+    // One socket per user; clean up the actual instance + its listeners on
+    // logout/unmount. (Previously `socket` was in the deps, causing the effect
+    // to re-run on its own setSocket and churn the connection.)
+    return () => {
+      s.off('connect', onConnect);
+      s.io.off('reconnect', onReconnect);
+      s.disconnect();
+      setSocket(null);
+    };
+  }, [profile?._id]);
 
   return (
     <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>

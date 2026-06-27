@@ -89,16 +89,32 @@ export default function ListView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskIds, queryClient]);
 
+  // Sort a COPY (never mutate the cached array) and bucket tasks by status once
+  // per data change — instead of re-sorting and re-filtering on every render.
+  const sortedStatuses = React.useMemo(
+    () => [...status].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0)),
+    [status],
+  );
+  const tasksByStatus = React.useMemo(() => {
+    const map: Record<string, Task[]> = {};
+    tasks.forEach(t => {
+      const sid = t.status?._id;
+      if (!sid) return;
+      (map[sid] ??= []).push(t);
+    });
+    return map;
+  }, [tasks]);
+
   if (isLoading || isStatusLoading) return <TaskListSkeleton />;
 
   return (
     <FlatList
-      data={status.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))}
+      data={sortedStatuses}
       renderItem={({ item, index }) => (
         <TaskCard
           status={item}
           defaultExpanded={index === 0}
-          tasks={tasks.filter(_task => _task.status._id === item._id)}
+          tasks={tasksByStatus[item._id] ?? []}
         />
       )}
       keyExtractor={item => item._id}

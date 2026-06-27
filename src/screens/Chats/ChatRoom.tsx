@@ -648,10 +648,16 @@ const ChatScreen = () => {
     };
   }, [socket, friend?.user._id, conversation]);
 
+  const lastSeenSignalRef = useRef<string | null>(null);
   useEffect(() => {
     if (!room || !profile?._id || !socket) return;
-    if (!messagesData?.pages?.[0]?.data?.length) return;
-
+    const latest = messagesData?.pages?.[0]?.data?.[0];
+    if (!latest) return;
+    // Only mark-seen when the newest message actually changes — not on every
+    // optimistic send or older-page fetch (which re-create messagesData).
+    const signal = `${room}:${latest._id ?? latest.tempId ?? ''}`;
+    if (signal === lastSeenSignalRef.current) return;
+    lastSeenSignalRef.current = signal;
     socket.emit('mark_seen', { chatId: room, userId: profile?._id });
   }, [messagesData, profile?._id, room, socket]);
 
@@ -745,43 +751,9 @@ const ChatScreen = () => {
         };
       });
 
-      // Update conversation preview list (infinite query shape)
-      queryClient.setQueryData<
-        InfiniteData<PaginatedResponse<ChatConversation[]>>
-      >(['conversations'], old => {
-        if (!old || !old.pages.length) return old;
-
-        const allConvs = old.pages.flatMap(p => p.data);
-        const idx = allConvs.findIndex(c => c._id === msg.chat);
-        if (idx === -1) return old;
-
-        const updatedConv = {
-          ...allConvs[idx],
-          lastMessage: msg,
-          updatedAt: msg.updatedAt ?? new Date().toISOString(),
-        };
-
-        if (
-          msg.sender?._id !== profile?._id &&
-          activeRoomRef.current !== msg.chat
-        ) {
-          updatedConv.unreadCount = (updatedConv.unreadCount || 0) + 1;
-        }
-
-        const withoutUpdated = allConvs.filter((_, i) => i !== idx);
-        const newFirstPageData = [updatedConv, ...withoutUpdated].slice(
-          0,
-          old.pages[0].meta.limit || 20,
-        );
-
-        return {
-          ...old,
-          pages: [
-            { ...old.pages[0], data: newFirstPageData },
-            ...old.pages.slice(1),
-          ],
-        };
-      });
+      // Conversation list preview/reorder/unread is handled centrally by
+      // useConversationsRealtime() (mounted in FloatingChatHost) via the
+      // 'conversation_updated' event — no need to duplicate it here.
     });
 
     // Delivery, seen, reaction updates (same as before)
@@ -876,8 +848,10 @@ const ChatScreen = () => {
       socket.emit('stop_typing', { chatId: room, userId: profile?._id });
       socket.emit('leave_room', { chatId: room, userId: profile?._id });
       socket.off('new_message');
-      socket.off('message_delivered_update');
-      socket.off('message_seen_update');
+      // The actual listener registered above is 'message_seen_update_bulk' —
+      // the previous two off()s targeted events that were never added, so the
+      // real handler leaked and accumulated across room changes/remounts.
+      socket.off('message_seen_update_bulk');
       socket.off('reaction_updated');
       socket.off('user_typing');
       socket.off('user_stop_typing');
@@ -1062,6 +1036,27 @@ const ChatScreen = () => {
         } catch (err) {
           if (controller.signal.aborted) {
             console.log('Upload cancelled:', file.name);
+            // Don't leave the optimistic message stuck on 'pending' and don't
+            // leak the upload-manager entry when the user cancels.
+            uploadManager.clear(tempId);
+            queryClient.setQueryData(['messages', room], (old: any) => {
+              if (!old) return old;
+              return {
+                ...old,
+                pages: old.pages.map((page: any, pageIndex: number) =>
+                  pageIndex !== 0
+                    ? page
+                    : {
+                        ...page,
+                        data: page.data.map((m: any) =>
+                          m.tempId === tempId
+                            ? { ...m, status: 'failed' }
+                            : m,
+                        ),
+                      },
+                ),
+              };
+            });
             return; // user cancelled — abort entire send
           }
           console.error('Upload failed:', file.name, err);

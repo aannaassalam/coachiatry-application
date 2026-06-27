@@ -175,8 +175,12 @@ export default function Profile() {
   };
 
   const handleCopyShareLink = async () => {
+    // `\`...${shareId}\` || ''` is always truthy, so it would copy a link with
+    // the literal "undefined" when shareId is missing — guard it instead.
     Clipboard.setString(
-      `https://coachiatry.vercel.app/share/user/${profile?.shareId}` || '',
+      profile?.shareId
+        ? `https://coachiatry.vercel.app/share/user/${profile.shareId}`
+        : '',
     );
     showMessage({
       message: 'Success',
@@ -228,7 +232,7 @@ export default function Profile() {
               imageStyle={styles.profilePic}
               style={{ marginBottom: spacing(20) }}
               size={scale(70)}
-              key={new Date().toDateString()}
+              key={profile?.photo}
             />
             {/* <Image source={assets.images.Avatar2} style={styles.profilePic} /> */}
             <Text style={styles.name}>{profile?.fullName}</Text>
@@ -408,7 +412,7 @@ export default function Profile() {
                 data={data.filter(
                   _data =>
                     !profile?.sharedViewers
-                      .map(_sv => _sv._id)
+                      ?.map(_sv => _sv._id)
                       .includes(_data._id),
                 )}
                 contentContainerStyle={[

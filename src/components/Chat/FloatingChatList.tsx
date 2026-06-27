@@ -1,6 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -18,21 +18,17 @@ import {
   getConversation,
 } from '../../api/functions/chat.api';
 import { getMessages } from '../../api/functions/message.api';
-import { useAuth } from '../../hooks/useAuth';
-import { useSocket } from '../../hooks/useSocket';
+import { useDebounce } from '../../hooks/useDebounce';
 import { theme } from '../../theme';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
-import { PaginatedResponse } from '../../typescript/interface/common.interface';
 import AvatarListSkeleton from '../skeletons/AvatarListSkeleton';
-import { Message } from '../../typescript/interface/message.interface';
 import { fontSize, spacing } from '../../utils';
-import { InfiniteData } from '@tanstack/react-query';
 import ChatMessage from './ChatMessage';
 
 export default function FloatingChatList() {
-  const { profile } = useAuth();
-  const socket = useSocket();
   const [query, setQuery] = useState('');
+  const debouncedQuery = useDebounce(query.trim(), 300);
+  const isSearching = debouncedQuery.length > 0;
 
   const viewableItemsChanged = useRef(
     ({
@@ -56,18 +52,10 @@ export default function FloatingChatList() {
     },
   ).current;
 
-  const {
-    data,
-    isLoading,
-    refetch,
-    isFetching,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
+  const mainQuery = useInfiniteQuery({
     queryKey: ['conversations'],
     queryFn: ({ pageParam = 1, signal }) =>
-      getAllConversations({ page: pageParam, sort: '-updatedAt' }, signal),
+      getAllConversations({ page: pageParam }, signal),
     initialPageParam: 1,
     getNextPageParam: lastPage => {
       const { currentPage, totalPages } = lastPage.meta;
@@ -75,74 +63,24 @@ export default function FloatingChatList() {
     },
   });
 
-  const conversations = useMemo(
-    () => data?.pages.flatMap(page => page.data) ?? [],
-    [data],
+  // Server-side search (matches all conversations, not just loaded pages).
+  const searchQuery = useInfiniteQuery({
+    queryKey: ['conversations-search', debouncedQuery],
+    queryFn: ({ pageParam = 1, signal }) =>
+      getAllConversations({ page: pageParam, search: debouncedQuery }, signal),
+    initialPageParam: 1,
+    getNextPageParam: lastPage => {
+      const { currentPage, totalPages } = lastPage.meta;
+      return currentPage < totalPages ? currentPage + 1 : undefined;
+    },
+    enabled: isSearching,
+  });
+
+  const active = isSearching ? searchQuery : mainQuery;
+  const listData = useMemo(
+    () => active.data?.pages.flatMap(page => page.data) ?? [],
+    [active.data],
   );
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return conversations;
-    return conversations.filter(c => {
-      if (c.type === 'group') {
-        return (c.name ?? '').toLowerCase().includes(q);
-      }
-      const friend = c.members?.find(m => m.user._id !== profile?._id);
-      return (friend?.user.fullName ?? '').toLowerCase().includes(q);
-    });
-  }, [conversations, query, profile?._id]);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleConversationUpdated = (update: {
-      chatId: string;
-      lastMessage: Message;
-      updatedAt: string;
-    }) => {
-      queryClient.setQueryData<
-        InfiniteData<PaginatedResponse<ChatConversation[]>, number>
-      >(['conversations'], old => {
-        if (!old || !old.pages.length) return old;
-
-        const allConvs = old.pages.flatMap(p => p.data);
-        const idx = allConvs.findIndex(c => c._id === update.chatId);
-        if (idx === -1) return old;
-
-        const isMyMessage = update.lastMessage?.sender?._id === profile?._id;
-        const current = allConvs[idx];
-        const updatedConv = {
-          ...current,
-          lastMessage: update.lastMessage,
-          updatedAt: update.updatedAt,
-          unreadCount: current.unreadCount || 0,
-        } as ChatConversation;
-
-        if (!isMyMessage) {
-          updatedConv.unreadCount = (current.unreadCount || 0) + 1;
-        }
-
-        const withoutUpdated = allConvs.filter((_, i) => i !== idx);
-        const newFirstPageData = [updatedConv, ...withoutUpdated].slice(
-          0,
-          old.pages[0].meta.limit || 20,
-        );
-
-        return {
-          ...old,
-          pages: [
-            { ...old.pages[0], data: newFirstPageData },
-            ...old.pages.slice(1),
-          ],
-        };
-      });
-    };
-
-    socket.on('conversation_updated', handleConversationUpdated);
-    return () => {
-      socket.off('conversation_updated', handleConversationUpdated);
-    };
-  }, [socket, profile?._id]);
 
   return (
     <KeyboardAvoidingView
@@ -163,31 +101,32 @@ export default function FloatingChatList() {
         </View>
       </View>
 
-      {isLoading ? (
+      {active.isLoading ? (
         <AvatarListSkeleton trailing paddingHorizontal={16} count={6} />
       ) : (
         <FlatList
-          data={filtered}
+          data={listData}
           renderItem={({ item }) => <ChatMessage item={item} fromFloating />}
           keyExtractor={item => item._id ?? item.createdAt}
-          refreshing={isFetching && !isFetchingNextPage}
-          onRefresh={refetch}
+          refreshing={active.isFetching && !active.isFetchingNextPage}
+          onRefresh={active.refetch}
           showsVerticalScrollIndicator={false}
           onViewableItemsChanged={viewableItemsChanged}
           viewabilityConfig={{ itemVisiblePercentThreshold: 60 }}
           onEndReached={() => {
-            if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+            if (active.hasNextPage && !active.isFetchingNextPage)
+              active.fetchNextPage();
           }}
           onEndReachedThreshold={0.3}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyText}>
-                {query ? 'No matching chats' : 'No conversations yet'}
+                {isSearching ? 'No matching chats' : 'No conversations yet'}
               </Text>
             </View>
           }
           ListFooterComponent={
-            isFetchingNextPage ? (
+            active.isFetchingNextPage ? (
               <View style={styles.footer}>
                 <ActivityIndicator size="small" />
               </View>

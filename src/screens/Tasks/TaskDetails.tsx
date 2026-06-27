@@ -73,33 +73,28 @@ const Subtasks = ({
 
   const { mutate } = useMutation({
     mutationFn: markSubtaskAsCompleted,
-    onMutate: async ({ task_id, subtask_id }) => {
+    onMutate: ({ task_id, subtask_id }) => {
       showMessage({
         type: 'info',
         message: 'Updating...',
         description: 'Updating subtask as completed...',
       });
-      // Cancel ongoing queries to avoid overwrite
-      await queryClient.cancelQueries({ queryKey: ['tasks'] });
-
-      const previousResponse = queryClient.getQueryData<Task[]>(['tasks']);
-
-      // Update query cache immediately
-      const updatedTasks = previousResponse?.map(task =>
-        task._id === task_id
-          ? {
-              ...task,
-              subtasks: task?.subtasks?.map(subtask =>
-                subtask._id === subtask_id
-                  ? { ...subtask, completed: !subtask.completed }
-                  : subtask,
-              ),
-            }
-          : task,
+      // Optimistically toggle across every task-list cache (keys are
+      // ['tasks', ...] — getQueryData(['tasks']) would never match them).
+      queryClient.setQueriesData<Task[]>({ queryKey: ['tasks'] }, old =>
+        old?.map(task =>
+          task._id === task_id
+            ? {
+                ...task,
+                subtasks: task?.subtasks?.map(subtask =>
+                  subtask._id === subtask_id
+                    ? { ...subtask, completed: !subtask.completed }
+                    : subtask,
+                ),
+              }
+            : task,
+        ),
       );
-
-      queryClient.setQueryData(['tasks'], updatedTasks);
-      return { previousResponse };
     },
     onSuccess: () => {
       ReactNativeHapticFeedback.trigger('notificationSuccess', hapticOptions);
@@ -108,9 +103,11 @@ const Subtasks = ({
         description: 'Updated subtask progress',
         type: 'success',
       });
+      // Refresh the detail cache this screen reads from.
+      queryClient.invalidateQueries({ queryKey: ['task', taskId] });
     },
     meta: {
-      invalidateQueries: ['tasks', taskId],
+      invalidateQueries: ['tasks'],
     },
   });
 
@@ -451,11 +448,11 @@ const TaskDetailsScreen = () => {
           {/* Category */}
           <View style={styles.row}>
             <Text style={styles.label}>Category</Text>
-            {data?.category && (
+            {data?.category?.color && (
               <Badge
                 title={data?.category.title}
                 color={data?.category.color.text}
-                bgColor={data?.category?.color?.bg}
+                bgColor={data?.category.color.bg}
               />
             )}
           </View>
@@ -475,11 +472,13 @@ const TaskDetailsScreen = () => {
 
           <View style={[styles.row, { marginVertical: 0 }]}>
             <Text style={styles.label}>Status</Text>
-            <View style={styles.statusTag(data?.status?.color.bg)}>
-              <Text style={styles.statusText(data?.status?.color.text)}>
-                {data?.status.title}
-              </Text>
-            </View>
+            {data?.status?.color && (
+              <View style={styles.statusTag(data.status.color.bg)}>
+                <Text style={styles.statusText(data.status.color.text)}>
+                  {data.status.title}
+                </Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.divider} />

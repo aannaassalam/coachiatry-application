@@ -142,7 +142,14 @@
       "Bash(grep -A 20 \"export const getUserSuggestions\" /Users/aannaassalam/Documents/Github/coachiatry/external-api/functions/user.api.ts)",
       "Bash(grep -B 5 -A 20 \"export const inviteToGroupByEmail\" /Users/aannaassalam/Documents/Github/coachiatry/external-api/functions/chat.api.ts)",
       "Bash(find /Users/aannaassalam/Documents/Github/coachiatry -path \"*/node_modules\" -prune -o -type f -name \"*.tsx\" -print | xargs grep -l \"invite.*link\\\\|token.*accept\" 2>/dev/null | grep -v node_modules | head -5)",
-      "Bash(cat /Users/aannaassalam/Documents/Github/coachiatry/package.json | grep -A 5 '\"name\"')"
+      "Bash(cat /Users/aannaassalam/Documents/Github/coachiatry/package.json | grep -A 5 '\"name\"')",
+      "Bash(grep -oE \"@?[a-z-]+/[a-z-]+$|no-[a-z-]+$\")",
+      "Bash(find /Users/aannaassalam/Documents/Github/coachiatry-backend -type f -name \"*.js\" -o -name \"*.ts\" | grep -E \"\\(controller|route|model\\)\" | head -30)",
+      "Bash(ls -la /Users/aannaassalam/Documents/Github/coachiatry-backend/ | head -20)",
+      "Bash(ls -la /Users/aannaassalam/Documents/Github/coachiatry-backend/ | grep -E \"src|source|app\")",
+      "Bash(find /Users/aannaassalam/Documents/Github/coachiatry-backend/src -type f -name \"*chat*\" -o -name \"*Chat*\")",
+      "Read(//Users/aannaassalam/Documents/Github/coachiatry-backend/src/sockets/**)",
+      "Read(//Users/aannaassalam/Documents/Github/coachiatry-backend/src/services/**)"
     ],
     "additionalDirectories": [
       "/Users/aannaassalam/Documents/Github/coachiatry-backend/src/sockets",

@@ -2,7 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQueries } from '@tanstack/react-query';
 import moment from 'moment';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   InteractionManager,
@@ -135,6 +135,21 @@ const TasksSection = ({
 }) => {
   const navigation = useNavigation<ScreenNavigationProp>();
 
+  // Sort a copy (don't mutate the prop array) and bucket tasks by status once.
+  const sortedStatuses = useMemo(
+    () => [...status].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0)),
+    [status],
+  );
+  const tasksByStatus = useMemo(() => {
+    const map: Record<string, Task[]> = {};
+    tasks.forEach(t => {
+      const sid = t.status?._id;
+      if (!sid) return;
+      (map[sid] ??= []).push(t);
+    });
+    return map;
+  }, [tasks]);
+
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
@@ -146,23 +161,19 @@ const TasksSection = ({
 
       {/* Task Sections */}
       <View style={{ gap: spacing(14), paddingHorizontal: spacing(16) }}>
-        {status
-          .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
-          .map(_status => {
-            const tasksForStatus = tasks.filter(
-              _task => _task.status._id === _status._id,
-            );
-            return (
-              <TaskCard
-                key={_status._id}
-                title={_status.title}
-                count={tasksForStatus.length}
-                color={_status.color.bg}
-                labelColor={_status.color.text}
-                tasks={tasksForStatus}
-              />
-            );
-          })}
+        {sortedStatuses.map(_status => {
+          const tasksForStatus = tasksByStatus[_status._id] ?? [];
+          return (
+            <TaskCard
+              key={_status._id}
+              title={_status.title}
+              count={tasksForStatus.length}
+              color={_status.color?.bg}
+              labelColor={_status.color?.text}
+              tasks={tasksForStatus}
+            />
+          );
+        })}
       </View>
       <TouchableButton
         activeOpacity={0.8}

@@ -204,9 +204,7 @@ export default function UserDetails() {
           >
             <MenuOption
               style={styles.option}
-              onSelect={() =>
-                navigation.navigate('AddEditUser', { id: data?._id })
-              }
+              onSelect={() => navigation.navigate('AddEditUser', { id })}
             >
               <Pencil color={theme.colors.gray[900]} size={fontSize(16)} />
               <Text style={styles.optionText}>Edit</Text>
@@ -223,7 +221,7 @@ export default function UserDetails() {
                     {
                       text: 'Delete',
                       style: 'destructive',
-                      onPress: () => userDelete(data?._id as string),
+                      onPress: () => userDelete(id),
                     },
                   ],
                 )

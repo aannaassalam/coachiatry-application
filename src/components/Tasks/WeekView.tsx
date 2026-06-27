@@ -103,6 +103,27 @@ export default function WeekView({
     [data, dates.start, queryClient],
   );
 
+  // Bucket tasks by their due-day and precompute each column's date once per
+  // data/range change — the previous renderItem ran 7 × N moment().format()
+  // filters on every render.
+  const tasksByDay = React.useMemo(() => {
+    const map: Record<string, Task[]> = {};
+    (data ?? []).forEach(task => {
+      const key = moment(task.dueDate).format('DD/MM/YYYY');
+      (map[key] ??= []).push(task);
+    });
+    return map;
+  }, [data]);
+
+  const dayDates = React.useMemo(
+    () =>
+      days.map((_, index) => ({
+        key: moment(dates.start).add(index, 'day').format('DD/MM/YYYY'),
+        date: moment(dates.start).add(index, 'day').format('YYYY-MM-DD'),
+      })),
+    [dates.start],
+  );
+
   if (isLoading) return <WeekViewSkeleton />;
 
   return (
@@ -112,14 +133,8 @@ export default function WeekView({
         <WeekTaskCard
           day={item}
           defaultExpanded={index === 0}
-          tasks={
-            data?.filter(
-              _task =>
-                moment(dates.start).add(index, 'day').format('DD/MM/YYYY') ===
-                moment(_task.dueDate).format('DD/MM/YYYY'),
-            ) ?? []
-          }
-          date={moment(dates.start).add(index, 'day').format('YYYY-MM-DD')}
+          tasks={tasksByDay[dayDates[index].key] ?? []}
+          date={dayDates[index].date}
         />
       )}
       keyExtractor={item => item.title}

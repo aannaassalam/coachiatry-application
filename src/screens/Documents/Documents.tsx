@@ -6,7 +6,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import moment from 'moment';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -68,17 +68,20 @@ const RenderItem = ({
   const width = Dimensions.get('screen').width;
   const queryClient = useQueryClient();
 
-  queryClient.prefetchQuery({
-    queryKey: ['documents', item._id],
-    queryFn: ({ signal }) => getDocument(item._id, signal),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  queryClient.prefetchQuery({
-    queryKey: ['categories'],
-    queryFn: ({ signal }) => getAllCategories(signal),
-    staleTime: 5 * 60 * 1000,
-  });
+  // Prefetch once per row (not in the render body, which re-fired a network
+  // prefetch on every scroll-recycle/re-render).
+  useEffect(() => {
+    queryClient.prefetchQuery({
+      queryKey: ['documents', item._id],
+      queryFn: ({ signal }) => getDocument(item._id, signal),
+      staleTime: 5 * 60 * 1000,
+    });
+    queryClient.prefetchQuery({
+      queryKey: ['categories'],
+      queryFn: ({ signal }) => getAllCategories(signal),
+      staleTime: 5 * 60 * 1000,
+    });
+  }, [item._id, queryClient]);
 
   const { mutate } = useMutation({
     mutationFn: deleteDocument,

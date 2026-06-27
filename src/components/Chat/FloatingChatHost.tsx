@@ -27,6 +27,7 @@ import Animated, {
 import { getAllConversations } from '../../api/functions/chat.api';
 import { useFloatingChat } from '../../contexts/FloatingChatContext';
 import { useAuth } from '../../hooks/useAuth';
+import { useConversationsRealtime } from '../../hooks/useConversationsRealtime';
 import { useSocket } from '../../hooks/useSocket';
 import { navigationRef as rootNavigationRef } from '../../navigators/navigationService';
 import ChatScreen from '../../screens/Chats/ChatRoom';
@@ -71,6 +72,9 @@ export default function FloatingChatHost() {
   const { profile } = useAuth();
   const socket = useSocket();
   const insets = useSafeAreaInsets();
+
+  // Single owner of the realtime conversations-list cache (preview/reorder/unread).
+  useConversationsRealtime();
 
   const [onBottomTabs, setOnBottomTabs] = useState(true);
   const [barHidden, setBarHidden] = useState(false);

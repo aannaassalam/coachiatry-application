@@ -20,7 +20,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { getConversation } from '../../api/functions/chat.api';
+import { getConversationByCoach } from '../../api/functions/chat.api';
 import { getMessages } from '../../api/functions/message.api';
 import { formatChatDateSeparator } from '../../helpers/utils';
 import {
@@ -271,7 +271,9 @@ const CoachChatScreen = () => {
 
   const { data: conversation, isLoading: isConversationLoading } = useQuery({
     queryKey: ['conversations', room],
-    queryFn: ({ signal }) => getConversation(room, signal),
+    // Coach context: use the coach endpoint (matches ClientDetails' prefetch);
+    // the regular getConversation would hit the wrong endpoint on refetch.
+    queryFn: ({ signal }) => getConversationByCoach(room, signal),
     enabled: !!room,
   });
 

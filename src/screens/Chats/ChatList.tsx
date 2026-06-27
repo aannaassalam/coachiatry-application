@@ -74,7 +74,7 @@ export default function ChatList() {
   } = useInfiniteQuery({
     queryKey: ['conversations'],
     queryFn: ({ pageParam = 1, signal }) =>
-      getAllConversations({ page: pageParam, sort: '-updatedAt' }, signal),
+      getAllConversations({ page: pageParam }, signal),
     initialPageParam: 1,
     getNextPageParam: lastPage => {
       const { currentPage, totalPages } = lastPage.meta;
@@ -92,43 +92,9 @@ export default function ChatList() {
       lastMessage: Message;
       updatedAt: string;
     }) => {
-      queryClient.setQueryData<
-        InfiniteData<PaginatedResponse<ChatConversation[]>, number>
-      >(['conversations'], old => {
-        if (!old || !old.pages.length) return old;
-
-        const allConvs = old.pages.flatMap(p => p.data);
-        const idx = allConvs.findIndex(c => c._id === update.chatId);
-        if (idx === -1) return old;
-
-        const isMyMessage = update.lastMessage?.sender?._id === profile?._id;
-
-        const current = allConvs[idx];
-        const updatedConv = {
-          ...current,
-          lastMessage: update.lastMessage,
-          updatedAt: update.updatedAt,
-          unreadCount: current.unreadCount || 0,
-        } as ChatConversation;
-
-        if (!isMyMessage) {
-          updatedConv.unreadCount = (current.unreadCount || 0) + 1;
-        }
-
-        const withoutUpdated = allConvs.filter((_, i) => i !== idx);
-        const newFirstPageData = [updatedConv, ...withoutUpdated].slice(
-          0,
-          old.pages[0].meta.limit || 20,
-        );
-
-        return {
-          ...old,
-          pages: [
-            { ...old.pages[0], data: newFirstPageData },
-            ...old.pages.slice(1),
-          ],
-        };
-      });
+      // The ['conversations'] cache (unread count + reordering) is owned by the
+      // always-mounted FloatingChatList. Updating it here too would
+      // double-count unread whenever the Chats tab is also open.
 
       if (update.lastMessage) {
         queryClient.setQueryData<

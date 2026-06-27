@@ -48,6 +48,9 @@ const EditProfile = () => {
     mutationFn: updateProfile,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
+      // The Profile screen reads ['settings-profile'] (getMyProfile) — without
+      // this it wouldn't refresh name/email/avatar after an edit.
+      queryClient.invalidateQueries({ queryKey: ['settings-profile'] });
       navigation.goBack();
     },
   });
@@ -56,6 +59,7 @@ const EditProfile = () => {
     mutationFn: updateProfilePicture,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['settings-profile'] });
     },
   });
 

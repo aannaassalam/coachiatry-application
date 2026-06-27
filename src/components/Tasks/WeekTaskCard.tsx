@@ -132,13 +132,15 @@ function TaskCard({ task }: { task: Task }) {
             </Text>
           </View>
         </View>
-        <View style={{ alignSelf: 'flex-start' }}>
-          <Badge
-            title={task.category.title}
-            bgColor={task.category.color.bg}
-            color={task.category.color.text}
-          />
-        </View>
+        {task.category?.color && (
+          <View style={{ alignSelf: 'flex-start' }}>
+            <Badge
+              title={task.category.title}
+              bgColor={task.category.color.bg}
+              color={task.category.color.text}
+            />
+          </View>
+        )}
       </MenuTrigger>
       <MenuOptions
         customStyles={{
@@ -200,6 +202,7 @@ export default function WeekTaskCard({
   date: string;
 }) {
   const [taskVisible, setTaskVisible] = useState(defaultExpanded);
+  const navigation = useNavigation<TaskScreenNavigationProp>();
 
   return (
     <View style={styles.card}>
@@ -236,7 +239,7 @@ export default function WeekTaskCard({
             <Text style={styles.addTaskText}>Add Task</Text>
           </TouchableButton>
           {tasks.map(task => {
-            return <TaskCard task={task} />;
+            return <TaskCard key={task._id} task={task} />;
           })}
         </>
       )}

@@ -62,6 +62,7 @@ export default function VerifyOTP() {
   });
 
   const onSubmit = () => {
+    if (isPending) return;
     mutate({ email: email, otp });
   };
 
@@ -97,7 +98,10 @@ export default function VerifyOTP() {
                 blurOnFilled
                 type="numeric"
                 onTextChange={text => setOtp(text)}
-                onFilled={text => mutate({ email, otp: text })}
+                onFilled={text => {
+                  if (isPending) return;
+                  mutate({ email, otp: text });
+                }}
                 disabled={isPending}
               />
             </View>

@@ -46,7 +46,7 @@ const schema = yup.object().shape({
   email: yup.string().email('Invalid email').required('Email is required'),
   password: yup
     .string()
-    .min(8, 'Password must be at least 6 characters')
+    .min(8, 'Password must be at least 8 characters')
     .required('Password is required'),
   rememberMe: yup.boolean().required().default(false),
 });
@@ -94,7 +94,9 @@ export default function Login() {
   });
 
   const onSubmit = (data: yup.InferType<typeof schema>) => {
-    mutate(data);
+    // The "Remember device" checkbox is held in local state — carry it into the
+    // login payload (the form's rememberMe field was never written to).
+    mutate({ ...data, rememberMe: values.isChecked });
   };
 
   const GoogleLogin = async () => {
