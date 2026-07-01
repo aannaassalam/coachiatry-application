@@ -173,7 +173,8 @@
       "Read(//Volumes/2.0/ApplicationDevelopmentData/Android/**)",
       "Bash(node -e \"const l=require\\('lucide-react-native'\\); ['Search','X','ChevronRight','SearchX','FileText','FolderOpen','Calendar'].forEach\\(n=>console.log\\(n, !!l[n]\\)\\)\")",
       "Bash(grep -n \"SystemBars\\\\|</Modal>\\\\|<Modal\\\\|<View$\\\\|styles.modalRoot\" src/components/UserSearch.tsx)",
-      "Bash(npx prettier *)"
+      "Bash(npx prettier *)",
+      "Bash(grep -nA1 \"CFBundleDisplayName\\\\|CFBundleName\" ios/CoachiatryApp/Info.plist)"
     ],
     "additionalDirectories": [
       "/Users/aannaassalam/Documents/Github/coachiatry-backend/src/sockets",
