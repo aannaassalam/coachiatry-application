@@ -1,12 +1,19 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import React, { useState } from 'react';
+import {
+  ChevronRight,
+  Search as SearchIcon,
+  SearchX,
+  X,
+} from 'lucide-react-native';
+import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
   Platform,
   Pressable,
+  StatusBar,
   Text,
   TextInput,
   View,
@@ -20,9 +27,9 @@ import { theme } from '../theme';
 import { AppStackParamList } from '../types/navigation';
 import { User } from '../typescript/interface/user.interface';
 import { fontSize, scale, spacing } from '../utils';
-import { SmartAvatar } from './ui/SmartAvatar';
 import TouchableButton from './TouchableButton';
-import AvatarListSkeleton from './skeletons/AvatarListSkeleton';
+import { Skeleton } from './ui/Skeleton';
+import { SmartAvatar } from './ui/SmartAvatar';
 
 type UserSearchNavigationProp = NativeStackNavigationProp<AppStackParamList>;
 
@@ -31,33 +38,43 @@ interface UserSearchProps {
   onClose: () => void;
 }
 
+const UserResultsSkeleton = () => (
+  <View style={styles.skeletonWrap}>
+    {[0, 1, 2, 3, 4, 5].map(i => (
+      <View key={i} style={styles.userCard}>
+        <Skeleton width={scale(42)} height={scale(42)} borderRadius={999} />
+        <View style={styles.skeletonBody}>
+          <Skeleton width="55%" height={14} borderRadius={5} />
+          <Skeleton width="30%" height={12} borderRadius={5} />
+        </View>
+      </View>
+    ))}
+  </View>
+);
+
 export default function UserSearch({ visible, onClose }: UserSearchProps) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<UserSearchNavigationProp>();
   const [query, setQuery] = useState('');
+  const inputRef = useRef<TextInput>(null);
 
   const debouncedSearch = useDebounce(query, 300);
 
-  const {
-    data,
-    isLoading,
-    isFetchingNextPage,
-    fetchNextPage,
-    hasNextPage,
-    isFetching,
-  } = useInfiniteQuery({
-    queryKey: ['users-search', debouncedSearch],
-    queryFn: ({ pageParam = 1, signal }) =>
-      getUsers({ search: debouncedSearch, page: pageParam }, signal),
-    initialPageParam: 1,
-    getNextPageParam: lastPage => {
-      const { currentPage, totalPages } = lastPage.meta;
-      return currentPage < totalPages ? currentPage + 1 : undefined;
-    },
-    enabled: visible,
-  });
+  const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } =
+    useInfiniteQuery({
+      queryKey: ['users-search', debouncedSearch],
+      queryFn: ({ pageParam = 1, signal }) =>
+        getUsers({ search: debouncedSearch, page: pageParam }, signal),
+      initialPageParam: 1,
+      getNextPageParam: lastPage => {
+        const { currentPage, totalPages } = lastPage.meta;
+        return currentPage < totalPages ? currentPage + 1 : undefined;
+      },
+      enabled: visible,
+    });
 
   const users = data?.pages.flatMap(page => page.data) ?? [];
+  const hasQuery = !!debouncedSearch.trim();
 
   const handleClose = () => {
     setQuery('');
@@ -78,16 +95,19 @@ export default function UserSearch({ visible, onClose }: UserSearchProps) {
         src={item.photo}
         size={scale(42)}
         name={item.fullName}
-        fontSize={fontSize(20)}
+        fontSize={fontSize(18)}
       />
-      <View style={{ flex: 1 }}>
+      <View style={styles.itemBody}>
         <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
           {item.fullName}
         </Text>
-        <Text style={styles.role} numberOfLines={1} ellipsizeMode="tail">
-          {item.role}
-        </Text>
+        {!!item.role && (
+          <Text style={styles.role} numberOfLines={1} ellipsizeMode="tail">
+            {item.role}
+          </Text>
+        )}
       </View>
+      <ChevronRight size={fontSize(18)} color={theme.colors.gray[300]} />
     </TouchableButton>
   );
 
@@ -97,53 +117,91 @@ export default function UserSearch({ visible, onClose }: UserSearchProps) {
       onRequestClose={handleClose}
       animationType="slide"
       statusBarTranslucent
+      navigationBarTranslucent
+      onShow={() => {
+        // Force dark status-bar icons for the light modal (Android only).
+        if (Platform.OS === 'android') {
+          StatusBar.setBarStyle('dark-content');
+        }
+        // autoFocus marks the input focused without raising the keyboard, so
+        // focus explicitly once the open animation has finished.
+        setTimeout(
+          () => inputRef.current?.focus(),
+          Platform.OS === 'android' ? 150 : 50,
+        );
+      }}
     >
+      {visible && Platform.OS === 'android' && (
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor="transparent"
+          translucent
+        />
+      )}
       <View
-        style={{
-          flex: 1,
-          paddingTop: Platform.OS === 'ios' ? insets.top : 0,
-        }}
+        style={[
+          styles.modalRoot,
+          {
+            paddingTop:
+              Platform.OS === 'ios'
+                ? insets.top
+                : Math.max(insets.top, StatusBar.currentHeight ?? 0),
+          },
+        ]}
       >
         <View style={styles.searchHeader}>
-          <Text style={styles.heading}>Search Users</Text>
-          <View style={styles.searchRow}>
-            <TextInput
-              placeholder="Search by name..."
-              style={styles.searchHeaderInput}
-              placeholderTextColor={theme.colors.gray[500]}
-              value={query}
-              onChangeText={setQuery}
-              autoFocus
-            />
-            <Pressable style={styles.cancelBtn} onPress={handleClose}>
-              <Text style={styles.cancelText}>Cancel</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.heading}>Search Users</Text>
+            <Pressable
+              onPress={handleClose}
+              hitSlop={spacing(10)}
+              style={styles.closeBtn}
+            >
+              <X size={fontSize(20)} color={theme.colors.gray[700]} />
             </Pressable>
           </View>
+
+          <View style={styles.searchField}>
+            <SearchIcon size={fontSize(18)} color={theme.colors.gray[400]} />
+            <TextInput
+              ref={inputRef}
+              placeholder="Search by name..."
+              style={styles.searchFieldInput}
+              placeholderTextColor={theme.colors.gray[400]}
+              value={query}
+              onChangeText={setQuery}
+              returnKeyType="search"
+            />
+            {query.length > 0 && (
+              <Pressable
+                onPress={() => setQuery('')}
+                hitSlop={spacing(10)}
+                style={styles.clearBtn}
+              >
+                <X size={fontSize(15)} color={theme.colors.gray[500]} />
+              </Pressable>
+            )}
+          </View>
         </View>
+
         {isLoading ? (
-          <AvatarListSkeleton />
+          <View style={styles.listBg}>
+            <UserResultsSkeleton />
+          </View>
         ) : (
           <KeyboardAwareFlatList
             data={users}
             contentContainerStyle={[
               styles.searchContentContainer,
-              { paddingBottom: insets.bottom },
+              users.length === 0 && styles.searchContentEmpty,
+              { paddingBottom: insets.bottom + spacing(20) },
             ]}
-            style={{
-              backgroundColor: theme.colors.gray[50],
-              flex: 1,
-            }}
+            style={styles.listBg}
             renderItem={renderItem}
             keyExtractor={item => item._id}
             showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={() => (
-              <View
-                style={{
-                  height: 1,
-                  backgroundColor: theme.colors.gray[200],
-                }}
-              />
-            )}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             onEndReached={() => {
               if (hasNextPage && !isFetchingNextPage) {
                 fetchNextPage();
@@ -152,36 +210,37 @@ export default function UserSearch({ visible, onClose }: UserSearchProps) {
             onEndReachedThreshold={0.6}
             ListFooterComponent={
               isFetchingNextPage ? (
-                <View
-                  style={{
-                    marginVertical: spacing(12),
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 10,
-                  }}
-                >
-                  <ActivityIndicator size="small" />
-                  <Text>Loading more...</Text>
+                <View style={styles.footerLoader}>
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.primary}
+                  />
+                  <Text style={styles.footerText}>Loading more...</Text>
                 </View>
               ) : null
             }
             ListEmptyComponent={
-              <View
-                style={{
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingVertical: spacing(40),
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: fontSize(14),
-                    color: theme.colors.gray[500],
-                    fontStyle: 'italic',
-                  }}
-                >
-                  {debouncedSearch ? 'No users found' : 'Start typing to search'}
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconCircle}>
+                  {hasQuery ? (
+                    <SearchX
+                      size={fontSize(26)}
+                      color={theme.colors.gray[400]}
+                    />
+                  ) : (
+                    <SearchIcon
+                      size={fontSize(26)}
+                      color={theme.colors.gray[400]}
+                    />
+                  )}
+                </View>
+                <Text style={styles.emptyTitle}>
+                  {hasQuery ? 'No users found' : 'Search users'}
+                </Text>
+                <Text style={styles.emptySubtitle}>
+                  {hasQuery
+                    ? `We couldn't find anyone for “${debouncedSearch.trim()}”`
+                    : 'Start typing to find people by name'}
                 </Text>
               </View>
             }
@@ -193,56 +252,154 @@ export default function UserSearch({ visible, onClose }: UserSearchProps) {
 }
 
 const styles = createStyleSheet({
-  heading: {
-    fontSize: fontSize(18),
-    fontFamily: theme.fonts.archivo.medium,
-    color: theme.colors.gray[950],
-    textAlign: 'center',
+  modalRoot: {
+    flex: 1,
+    backgroundColor: theme.colors.white,
   },
   searchHeader: {
     paddingHorizontal: spacing(20),
-    paddingVertical: spacing(20),
-    backgroundColor: '#fff',
-    paddingBottom: spacing(10),
-    gap: spacing(15),
+    paddingTop: spacing(14),
+    paddingBottom: spacing(14),
+    backgroundColor: theme.colors.white,
+    gap: spacing(14),
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.gray[100],
   },
-  searchRow: {
+  titleRow: {
     flexDirection: 'row',
-    gap: spacing(10),
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  searchHeaderInput: {
+  heading: {
+    fontSize: fontSize(22),
+    fontFamily: theme.fonts.archivo.semiBold,
+    color: theme.colors.gray[950],
+  },
+  closeBtn: {
+    width: scale(32),
+    height: scale(32),
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.gray[100],
+  },
+  searchField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(10),
+    height: scale(46),
+    paddingHorizontal: spacing(14),
+    borderRadius: fontSize(14),
+    backgroundColor: theme.colors.secondary,
     borderWidth: 1,
-    borderColor: theme.colors.gray[300],
-    borderRadius: 10,
-    paddingHorizontal: spacing(15),
-    paddingVertical: Platform.OS === 'ios' ? spacing(12) : spacing(10),
+    borderColor: theme.colors.gray[200],
+  },
+  searchFieldInput: {
     flex: 1,
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(15),
+    color: theme.colors.gray[900],
+    padding: 0,
   },
-  cancelBtn: {
-    padding: spacing(5),
+  clearBtn: {
+    width: scale(20),
+    height: scale(20),
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.gray[200],
   },
-  cancelText: {},
+  listBg: {
+    flex: 1,
+    backgroundColor: theme.colors.gray[50],
+  },
   searchContentContainer: {
-    padding: spacing(20),
-    paddingTop: spacing(10),
+    padding: spacing(16),
+    paddingTop: spacing(14),
+    gap: spacing(10),
+  },
+  searchContentEmpty: {
+    flexGrow: 1,
+  },
+  skeletonWrap: {
+    padding: spacing(16),
+    paddingTop: spacing(14),
+    gap: spacing(10),
+  },
+  skeletonBody: {
+    flex: 1,
+    gap: spacing(8),
   },
   userCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing(12),
-    paddingVertical: spacing(12),
+    borderWidth: 1,
+    borderColor: theme.colors.gray[200],
+    borderRadius: fontSize(14),
+    backgroundColor: theme.colors.white,
+    padding: spacing(12),
+    shadowColor: theme.colors.gray[900],
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  itemBody: {
+    flex: 1,
+    gap: spacing(4),
   },
   name: {
     fontSize: fontSize(14),
-    fontFamily: theme.fonts.archivo.regular,
+    fontFamily: theme.fonts.archivo.semiBold,
     color: theme.colors.gray[900],
   },
   role: {
-    fontSize: fontSize(13),
+    fontSize: fontSize(12),
     fontFamily: theme.fonts.lato.regular,
     color: theme.colors.gray[500],
-    marginTop: spacing(4),
     textTransform: 'capitalize',
+  },
+  footerLoader: {
+    marginVertical: spacing(12),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing(8),
+  },
+  footerText: {
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(13),
+    color: theme.colors.gray[500],
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing(40),
+    paddingBottom: spacing(60),
+  },
+  emptyIconCircle: {
+    width: scale(72),
+    height: scale(72),
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.gray[100],
+    marginBottom: spacing(16),
+  },
+  emptyTitle: {
+    color: theme.colors.gray[800],
+    fontFamily: theme.fonts.archivo.semiBold,
+    fontSize: fontSize(16),
+    marginBottom: spacing(6),
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    color: theme.colors.gray[500],
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(13),
+    textAlign: 'center',
+    lineHeight: fontSize(19),
   },
 });

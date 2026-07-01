@@ -3,14 +3,14 @@ import React from 'react';
 import { getAllTasks, getTask } from '../../api/functions/task.api';
 import { Task } from '../../typescript/interface/task.interface';
 import { getAllStatuses } from '../../api/functions/status.api';
-import { FlatList, InteractionManager, Text, View } from 'react-native';
+import { InteractionManager, Text, View } from 'react-native';
 import { FLOATING_BAR_FOOTPRINT } from '../Chat/FloatingChatHost';
-import TaskCard from './TaskCard';
 import { Filter } from '../../typescript/interface/common.interface';
 import { createStyleSheet } from 'react-native-unistyles';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
 import TaskListSkeleton from '../skeletons/TaskListSkeleton';
+import TaskSectionList from './TaskSectionList';
 
 export default function ListView({
   sort,
@@ -32,11 +32,13 @@ export default function ListView({
   ] = useQueries({
     queries: [
       {
-        queryKey: ['tasks', sort, filters],
+        // Sort is applied client-side (see TaskSectionList), so it is NOT part
+        // of the query key — changing sort re-orders the cached list instantly
+        // without a refetch.
+        queryKey: ['tasks', filters],
         queryFn: ({ signal }: { signal: AbortSignal }) =>
           getAllTasks(
             {
-              sort: sort,
               filter: filters,
             },
             signal,
@@ -89,47 +91,24 @@ export default function ListView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskIds, queryClient]);
 
-  // Sort a COPY (never mutate the cached array) and bucket tasks by status once
-  // per data change — instead of re-sorting and re-filtering on every render.
-  const sortedStatuses = React.useMemo(
-    () => [...status].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0)),
-    [status],
-  );
-  const tasksByStatus = React.useMemo(() => {
-    const map: Record<string, Task[]> = {};
-    tasks.forEach(t => {
-      const sid = t.status?._id;
-      if (!sid) return;
-      (map[sid] ??= []).push(t);
-    });
-    return map;
-  }, [tasks]);
-
   if (isLoading || isStatusLoading) return <TaskListSkeleton />;
 
   return (
-    <FlatList
-      data={sortedStatuses}
-      renderItem={({ item, index }) => (
-        <TaskCard
-          status={item}
-          defaultExpanded={index === 0}
-          tasks={tasksByStatus[item._id] ?? []}
-        />
-      )}
-      keyExtractor={item => item._id}
+    <TaskSectionList
+      tasks={tasks}
+      statuses={status}
+      sort={sort}
       refreshing={isFetching || isStatusFetching}
       onRefresh={() => {
         refetch();
         statusRefetch();
       }}
-      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: FLOATING_BAR_FOOTPRINT }}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No tasks found.</Text>
         </View>
       }
-      contentContainerStyle={{ paddingBottom: FLOATING_BAR_FOOTPRINT }}
     />
   );
 }

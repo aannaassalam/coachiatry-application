@@ -57,7 +57,7 @@ export const endpoints = {
   },
   task: {
     getAll: '/task',
-    getAllCoach: '/task/coach',
+    getAllCoach: (userId: string) => `/task/coach/${userId}`,
     post: '/task',
     postCoach: '/task/coach',
     importBulkTasks: '/task/import-bulk-tasks',

@@ -1,7 +1,12 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { Pressable, Text, View } from 'react-native';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+} from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import ActionSheet, {
-  ScrollView,
+  FlatList,
   SheetManager,
   SheetProps,
 } from 'react-native-actions-sheet';
@@ -12,8 +17,10 @@ import {
   assignToggle,
   getTask,
   getTaskAssignees,
+  TaskAssignee,
 } from '../api/functions/task.api';
 import { useAuth } from '../hooks/useAuth';
+import { useDebounce } from '../hooks/useDebounce';
 import { theme } from '../theme';
 import { Task } from '../typescript/interface/task.interface';
 import { User } from '../typescript/interface/user.interface';
@@ -23,6 +30,8 @@ import { SmartAvatar } from './ui/SmartAvatar';
 
 const SHEET_ID = 'assignee-sheet';
 
+type AssigneeRow = { user: TaskAssignee; assigned: boolean };
+
 export default function AssigneePickerSheet(
   props: SheetProps<'assignee-sheet'>,
 ) {
@@ -30,28 +39,87 @@ export default function AssigneePickerSheet(
   const { profile } = useAuth();
   const taskId = props.payload?.taskId ?? '';
 
-  // Read the (already cached) task so the checkmarks react to optimistic toggles.
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
+
+  // Keep the skeleton up until the open animation finishes, so the real list
+  // never swaps in mid-slide (which reads as a blink). By the time `onOpen`
+  // fires, the prefetched data (warmed on tap) is usually already there.
+  const [opened, setOpened] = useState(false);
+
+  // Read the (already cached) task so the checkmarks react to optimistic toggles
+  // and the currently-assigned users can be pinned on top.
   const { data: task } = useQuery({
     queryKey: ['task', taskId],
     queryFn: ({ signal }) => getTask(taskId, signal),
     enabled: !!taskId,
   });
 
-  const { data: assigneeData, isLoading } = useQuery({
-    queryKey: ['task-assignees', taskId],
-    queryFn: ({ signal }) => getTaskAssignees(taskId, signal),
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['task-assignees', taskId, debouncedSearch],
+    queryFn: ({ pageParam, signal }) =>
+      getTaskAssignees(
+        { taskId, page: pageParam as number, search: debouncedSearch },
+        signal,
+      ),
+    initialPageParam: 1,
     enabled: !!taskId,
     staleTime: 60 * 1000,
+    getNextPageParam: lastPage =>
+      lastPage.meta && lastPage.meta.currentPage < lastPage.meta.totalPages
+        ? lastPage.meta.currentPage + 1
+        : undefined,
   });
 
-  const assignedIds = new Set((task?.assignedTo ?? []).map(u => u._id));
+  const canAssign = data?.pages?.[0]?.canAssign ?? true;
+
+  const assignees = useMemo(() => task?.assignedTo ?? [], [task?.assignedTo]);
+  const assignedIds = useMemo(
+    () => new Set(assignees.map(u => u._id)),
+    [assignees],
+  );
+
+  // Server already excludes assigned users from candidates, but dedupe
+  // defensively (optimistic adds can momentarily overlap).
+  const candidateList = useMemo(
+    () =>
+      (data?.pages.flatMap(p => p.assignees) ?? []).filter(
+        u => !assignedIds.has(u._id),
+      ),
+    [data, assignedIds],
+  );
+
+  // Pinned-on-top assignees come straight from the task; filter by search too.
+  const assignedFiltered = useMemo(() => {
+    const s = debouncedSearch.trim().toLowerCase();
+    if (!s) return assignees;
+    return assignees.filter(
+      u =>
+        (u.fullName || '').toLowerCase().includes(s) ||
+        (u.email || '').toLowerCase().includes(s),
+    );
+  }, [assignees, debouncedSearch]);
+
+  const rows = useMemo<AssigneeRow[]>(
+    () => [
+      ...assignedFiltered.map(u => ({ user: u as TaskAssignee, assigned: true })),
+      ...candidateList.map(u => ({ user: u, assigned: false })),
+    ],
+    [assignedFiltered, candidateList],
+  );
 
   const { mutate: assign, isPending } = useMutation({
     mutationFn: assignToggle,
     onMutate: async ({ coachId }) => {
       await queryClient.cancelQueries({ queryKey: ['task', taskId] });
       const prev = queryClient.getQueryData<Task>(['task', taskId]);
-      const candidate = assigneeData?.assignees.find(u => u._id === coachId);
+      const candidate = rows.find(r => r.user._id === coachId)?.user;
 
       queryClient.setQueryData<Task>(['task', taskId], old => {
         if (!old) return old;
@@ -78,8 +146,38 @@ export default function AssigneePickerSheet(
       queryClient.invalidateQueries({ queryKey: ['task', taskId] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['status'] });
+      queryClient.invalidateQueries({ queryKey: ['task-assignees', taskId] });
     },
   });
+
+  const renderRow = ({ item }: { item: AssigneeRow }) => {
+    const user = item.user;
+    const checked = assignedIds.has(user._id);
+    const isMe = user._id === profile?._id;
+    return (
+      <Pressable
+        style={styles.row}
+        disabled={isPending}
+        onPress={() => assign({ taskId, coachId: user._id })}
+      >
+        <SmartAvatar src={user.photo} name={user.fullName} size={scale(28)} />
+        <View style={styles.rowText}>
+          <Text style={styles.name} numberOfLines={1}>
+            {isMe ? 'Me' : user.fullName}
+          </Text>
+          {!!user.role && <Text style={styles.role}>{user.role}</Text>}
+        </View>
+        <View style={styles.checkWrap}>
+          {checked && (
+            <Feather name="check" size={fontSize(18)} color="#16A34A" />
+          )}
+        </View>
+      </Pressable>
+    );
+  };
+
+  const nothingToShow =
+    !isLoading && rows.length === 0 && canAssign;
 
   return (
     <ActionSheet
@@ -89,6 +187,7 @@ export default function AssigneePickerSheet(
       indicatorStyle={styles.indicator}
       gestureEnabled
       drawUnderStatusBar={false}
+      onOpen={() => setOpened(true)}
       containerStyle={styles.container}
     >
       <View style={styles.content}>
@@ -99,67 +198,75 @@ export default function AssigneePickerSheet(
             hitSlop={spacing(8)}
             onPress={() => SheetManager.hide(SHEET_ID)}
           >
-            <Feather name="x" size={fontSize(20)} color={theme.colors.gray[500]} />
+            <Feather
+              name="x"
+              size={fontSize(20)}
+              color={theme.colors.gray[500]}
+            />
           </Pressable>
         </View>
 
-        {isLoading ? (
-          <View style={styles.list}>
-            {[0, 1, 2, 3].map(i => (
-              <View key={i} style={styles.row}>
-                <Skeleton width={scale(28)} height={scale(28)} borderRadius={100} />
-                <Skeleton width="50%" height={14} borderRadius={4} />
-              </View>
-            ))}
-          </View>
-        ) : !assigneeData?.canAssign ? (
+        {!canAssign && !isLoading ? (
           <Text style={styles.note}>
             You can’t change this task’s assignees.
           </Text>
-        ) : assigneeData.assignees.length === 0 ? (
-          <Text style={styles.note}>No one available to assign.</Text>
         ) : (
-          <ScrollView
-            style={styles.scroll}
-            nestedScrollEnabled
-            showsVerticalScrollIndicator={false}
-          >
-            {assigneeData.assignees.map(user => {
-              const checked = assignedIds.has(user._id);
-              const isMe = user._id === profile?._id;
-              return (
-                <Pressable
-                  key={user._id}
-                  style={styles.row}
-                  disabled={isPending}
-                  onPress={() => assign({ taskId, coachId: user._id })}
-                >
-                  <SmartAvatar
-                    src={user.photo}
-                    name={user.fullName}
-                    size={scale(28)}
-                  />
-                  <View style={styles.rowText}>
-                    <Text style={styles.name} numberOfLines={1}>
-                      {isMe ? 'Me' : user.fullName}
-                    </Text>
-                    {!!user.role && (
-                      <Text style={styles.role}>{user.role}</Text>
-                    )}
-                  </View>
-                  <View style={styles.checkWrap}>
-                    {checked && (
-                      <Feather
-                        name="check"
-                        size={fontSize(18)}
-                        color="#16A34A"
+          <>
+            <View style={styles.searchBox}>
+              <Feather
+                name="search"
+                size={fontSize(16)}
+                color={theme.colors.gray[400]}
+              />
+              <TextInput
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Search people..."
+                placeholderTextColor={theme.colors.gray[400]}
+                style={styles.searchInput}
+              />
+            </View>
+
+            {/* Fixed-height area so the sheet opens to a stable height and
+                doesn't re-animate (glitch) when the skeleton swaps to the list. */}
+            <View style={styles.listArea}>
+              {!opened || isLoading ? (
+                <View style={styles.list}>
+                  {[0, 1, 2, 3].map(i => (
+                    <View key={i} style={styles.row}>
+                      <Skeleton
+                        width={scale(28)}
+                        height={scale(28)}
+                        borderRadius={100}
                       />
-                    )}
-                  </View>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+                      <Skeleton width="50%" height={14} borderRadius={4} />
+                    </View>
+                  ))}
+                </View>
+              ) : nothingToShow ? (
+                <Text style={styles.note}>No people found.</Text>
+              ) : (
+                <FlatList
+                  data={rows}
+                  keyExtractor={item => item.user._id}
+                  renderItem={renderRow}
+                  style={styles.scroll}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  onEndReachedThreshold={0.3}
+                  onEndReached={() => {
+                    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+                  }}
+                  ListFooterComponent={
+                    isFetchingNextPage ? (
+                      <Text style={styles.footerNote}>Loading…</Text>
+                    ) : null
+                  }
+                />
+              )}
+            </View>
+          </>
         )}
       </View>
     </ActionSheet>
@@ -197,8 +304,29 @@ const stylesheet = createStyleSheet({
   closeButton: {
     padding: spacing(2),
   },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(8),
+    paddingHorizontal: spacing(12),
+    height: scale(40),
+    borderRadius: fontSize(10),
+    backgroundColor: theme.colors.white,
+    borderWidth: 1,
+    borderColor: theme.colors.gray[200],
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(14),
+    color: theme.colors.gray[900],
+    padding: 0,
+  },
+  listArea: {
+    height: scale(320),
+  },
   scroll: {
-    maxHeight: scale(320),
+    flex: 1,
   },
   list: {
     gap: spacing(4),
@@ -235,6 +363,13 @@ const stylesheet = createStyleSheet({
     fontSize: fontSize(13),
     color: theme.colors.gray[500],
     paddingVertical: spacing(16),
+    textAlign: 'center',
+  },
+  footerNote: {
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(13),
+    color: theme.colors.gray[400],
+    paddingVertical: spacing(10),
     textAlign: 'center',
   },
 });

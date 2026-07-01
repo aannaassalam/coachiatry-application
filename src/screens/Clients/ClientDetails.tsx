@@ -28,7 +28,11 @@ import { getAllStatusesByCoach } from '../../api/functions/status.api';
 import { getAllTasksByCoach } from '../../api/functions/task.api';
 import { getUserById } from '../../api/functions/user.api';
 import { Calendar, ChevronLeft } from '../../assets';
-import TaskCard from '../../components/Tasks/TaskCard';
+import TaskSectionList from '../../components/Tasks/TaskSectionList';
+import FilterButton from '../../components/Tasks/Filter';
+import SortButton from '../../components/Tasks/Sort';
+import { sanitizeFilters } from '../../helpers/utils';
+import { Filter } from '../../typescript/interface/common.interface';
 import TouchableButton from '../../components/TouchableButton';
 import AppBadge from '../../components/ui/AppBadge';
 import AppButton from '../../components/ui/AppButton';
@@ -102,6 +106,9 @@ export default function ClientDetailsA1() {
   const [activeTab, setActiveTab] = useState<'Tasks' | 'Documents' | 'Chats'>(
     'Documents',
   );
+  const [sort, setSort] = useState('');
+  const [filters, setFilters] = useState<Filter[]>([]);
+  const validatedFilters = sanitizeFilters(filters);
 
   const [
     { data, isLoading },
@@ -115,11 +122,14 @@ export default function ClientDetailsA1() {
           getUserById(userId as string, signal),
       },
       {
-        queryKey: ['tasks', userId],
+        // Filters refetch (server-side); sort is applied client-side in
+        // TaskSectionList so it is not part of the key.
+        queryKey: ['tasks', userId, validatedFilters],
         queryFn: ({ signal }: { signal: AbortSignal }) =>
           getAllTasksByCoach(
             {
               userId: userId as string,
+              filter: validatedFilters,
             },
             signal,
           ),
@@ -267,6 +277,205 @@ export default function ClientDetailsA1() {
 
   const documents = documentsData?.pages.flatMap(page => page.data) ?? [];
 
+  // Switching tabs swaps the active scroller (the Tasks tab is its own
+  // virtualized FlashList; Documents/Chats stay in the ScrollView). Reset the
+  // shared scroll position so the collapsing header re-expands on each switch.
+  const changeTab = (tab: 'Tasks' | 'Documents' | 'Chats') => {
+    scrollY.value = 0;
+    setActiveTab(tab);
+  };
+
+  const renderBigHeader = () => (
+    <View style={styles.bigHeader}>
+      <View style={styles.headerRow}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{
+            paddingHorizontal: spacing(5),
+            paddingVertical: spacing(3),
+          }}
+        >
+          <ChevronLeft />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Client Details</Text>
+        <View style={{ width: 24 }} />
+      </View>
+      {!isAllLoading && (
+        <View style={styles.profileCenter}>
+          <SmartAvatar
+            src={data?.photo}
+            name={data?.fullName}
+            size={scale(70)}
+            style={{ marginBottom: spacing(12) }}
+          />
+          <Text style={styles.bigName}>{data?.fullName}</Text>
+          <Text style={styles.bigEmail}>{data?.email}</Text>
+
+          <View style={styles.buttonRow}>
+            {!fromUsersScreen && (
+              <AppButton
+                text="Chat Now"
+                disabled={isChatLoading || !directChatWithClient?._id}
+                onPress={() => {
+                  if (directChatWithClient?._id) {
+                    navigation.navigate('ChatRoom', {
+                      roomId: directChatWithClient._id,
+                    });
+                  }
+                }}
+                variant="secondary-outline"
+                style={{
+                  flex: 1,
+                  padding: spacing(9),
+                  borderRadius: fontSize(6),
+                }}
+                textStyle={{ fontSize: fontSize(14) }}
+              />
+            )}
+            <AppButton
+              text="View task"
+              onPress={() => changeTab('Tasks')}
+              style={{
+                flex: 1,
+                padding: spacing(9),
+                borderRadius: fontSize(6),
+              }}
+              textStyle={{ fontSize: fontSize(14) }}
+            />
+          </View>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderTabsBar = () => (
+    <View style={styles.tabsPlaceholder}>
+      <View style={styles.tabsInner}>
+        {(['Documents', 'Tasks', 'Chats'] as const).map(tab => {
+          const isActive = activeTab === tab;
+          return (
+            <TouchableOpacity
+              key={tab}
+              style={styles.tab}
+              onPress={() => changeTab(tab)}
+            >
+              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+                {tab}
+              </Text>
+              {isActive && <View style={styles.activeUnderline} />}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+
+  const renderDocuments = () => (
+    <View>
+      <AppButton
+        text="Add document"
+        leftIcon={
+          <Feather name="plus" color={theme.colors.white} size={fontSize(14)} />
+        }
+        onPress={() =>
+          navigation.navigate('DocumentEditor', {
+            mode: 'add',
+            userId,
+          })
+        }
+        style={{
+          alignSelf: 'flex-end',
+          marginHorizontal: spacing(16),
+          gap: spacing(5),
+        }}
+      />
+      <FlatList
+        data={documents}
+        renderItem={({ item }) => (
+          <RenderDocument
+            item={item}
+            navigate={mode =>
+              navigation.navigate('DocumentEditor', {
+                mode,
+                documentId: item._id,
+                userId,
+              })
+            }
+          />
+        )}
+        keyExtractor={i => i._id}
+        scrollEnabled={false}
+        contentContainerStyle={{
+          padding: spacing(16),
+          paddingBottom: spacing(40),
+        }}
+        showsVerticalScrollIndicator={false}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+        }}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <View
+              style={{
+                paddingVertical: spacing(10),
+                alignItems: 'center',
+              }}
+            >
+              <Text
+                style={{
+                  color: theme.colors.gray[500],
+                  fontSize: fontSize(14),
+                }}
+              >
+                Loading...
+              </Text>
+            </View>
+          ) : null
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No documents found.</Text>
+          </View>
+        }
+      />
+    </View>
+  );
+
+  const renderChats = () => (
+    <View>
+      {isChatLoading ? (
+        <AvatarListSkeleton trailing paddingHorizontal={16} />
+      ) : (
+        <FlatList
+          data={chats?.data}
+          renderItem={({ item }) => (
+            <ChatMessage
+              item={item}
+              userId={userId}
+              onPress={() =>
+                navigation.navigate('CoachChatRoom', {
+                  roomId: item._id!,
+                  userId,
+                })
+              }
+            />
+          )}
+          keyExtractor={item => item._id ?? item.createdAt}
+          refreshing={isFetching}
+          onRefresh={refetch}
+          showsVerticalScrollIndicator={false}
+          onViewableItemsChanged={viewableItemsChanged}
+          viewabilityConfig={{
+            itemVisiblePercentThreshold: 60,
+          }}
+          scrollEnabled={false}
+          contentContainerStyle={{ paddingHorizontal: spacing(10) }}
+        />
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       {/* <StatusBar translucent backgroundColor="transparent" /> */}
@@ -315,7 +524,7 @@ export default function ClientDetailsA1() {
               <TouchableOpacity
                 key={tab}
                 style={styles.tab}
-                onPress={() => setActiveTab(tab)}
+                onPress={() => changeTab(tab)}
               >
                 <Text
                   style={[styles.tabText, isActive && styles.tabTextActive]}
@@ -329,271 +538,72 @@ export default function ClientDetailsA1() {
         </View>
       </Animated.View>
 
-      {/* PARENT SCROLL (drives collapse) */}
-      <Animated.ScrollView
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingBottom: FLOATING_BAR_FOOTPRINT,
-          flexGrow: 1,
-        }}
-        bounces={false}
-        scrollEnabled={!isAllLoading}
-        style={{ backgroundColor: theme.colors.white }}
-      >
-        {/* BIG HEADER (part of scroll content) */}
-        <View style={styles.bigHeader}>
-          {/* top row: back arrow centered title uses spacing to match small header layout */}
-          <View style={styles.headerRow}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{
-                paddingHorizontal: spacing(5),
-                paddingVertical: spacing(3),
-              }}
-            >
-              <ChevronLeft />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Client Details</Text>
-            <View style={{ width: 24 }} />
-          </View>
-          {!isAllLoading && (
-            <View style={styles.profileCenter}>
-              <SmartAvatar
-                src={data?.photo}
-                name={data?.fullName}
-                size={scale(70)}
-                style={{ marginBottom: spacing(12) }}
-              />
-              <Text style={styles.bigName}>{data?.fullName}</Text>
-              <Text style={styles.bigEmail}>{data?.email}</Text>
-
-              {/* <View style={styles.extraRow}>
-              <View style={styles.infoItem}>
-                <User />
-                <Text style={styles.text}>{}</Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Date />
-                <Text style={styles.text}>21 years</Text>
-              </View>
-              <View style={styles.infoItem}>
-                <MapPin />
-                <Text style={styles.text}>New York</Text>
-              </View>
-            </View> */}
-
-              <View style={styles.buttonRow}>
-                {!fromUsersScreen && (
-                  <AppButton
-                    text="Chat Now"
-                    disabled={isChatLoading || !directChatWithClient?._id}
-                    onPress={() => {
-                      if (directChatWithClient?._id) {
-                        navigation.navigate('ChatRoom', {
-                          roomId: directChatWithClient._id,
-                        });
-                      }
-                    }}
-                    variant="secondary-outline"
-                    style={{
-                      flex: 1,
-                      padding: spacing(9),
-                      borderRadius: fontSize(6),
-                    }}
-                    textStyle={{ fontSize: fontSize(14) }}
-                  />
-                )}
-                <AppButton
-                  text="View task"
-                  onPress={() => setActiveTab('Tasks')}
-                  style={{
-                    flex: 1,
-                    padding: spacing(9),
-                    borderRadius: fontSize(6),
-                  }}
-                  textStyle={{ fontSize: fontSize(14) }}
-                />
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* main profile block (centered) */}
-        {isAllLoading ? (
+      {/* PARENT SCROLL (drives collapse).
+          The Tasks tab uses a virtualized FlashList as its own scroller (so the
+          task rows are windowed); Documents/Chats keep the plain ScrollView. */}
+      {isAllLoading ? (
+        <Animated.ScrollView
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingBottom: FLOATING_BAR_FOOTPRINT,
+            flexGrow: 1,
+          }}
+          bounces={false}
+          scrollEnabled={false}
+          style={{ backgroundColor: theme.colors.white }}
+        >
+          {renderBigHeader()}
           <DetailScreenSkeleton showAvatar rows={4} showSections={2} />
-        ) : (
-          <>
-            {/* TABS in normal (expanded) state - sits right under big header in scroll flow */}
-            <View style={styles.tabsPlaceholder}>
-              <View style={styles.tabsInner}>
-                {(['Documents', 'Tasks', 'Chats'] as const).map(tab => {
-                  const isActive = activeTab === tab;
-                  return (
-                    <TouchableOpacity
-                      key={tab}
-                      style={styles.tab}
-                      onPress={() => setActiveTab(tab)}
-                    >
-                      <Text
-                        style={[
-                          styles.tabText,
-                          isActive && styles.tabTextActive,
-                        ]}
-                      >
-                        {tab}
-                      </Text>
-                      {isActive && <View style={styles.activeUnderline} />}
-                    </TouchableOpacity>
-                  );
-                })}
+        </Animated.ScrollView>
+      ) : activeTab === 'Tasks' ? (
+        <TaskSectionList
+          animated
+          onScroll={onScroll}
+          tasks={tasks}
+          statuses={status}
+          sort={sort}
+          userId={userId}
+          contentContainerStyle={{
+            paddingBottom: FLOATING_BAR_FOOTPRINT,
+            backgroundColor: theme.colors.white,
+          }}
+          ListHeaderComponent={
+            <View style={{ backgroundColor: theme.colors.white }}>
+              {renderBigHeader()}
+              {renderTabsBar()}
+              <View style={styles.tasksToolbar}>
+                <FilterButton filters={filters} setFilters={setFilters} />
+                <SortButton sort={sort} setSort={setSort} />
               </View>
             </View>
-
-            {/* TAB CONTENT - lists are NOT scrollable (parent scroll handles it) */}
-            <View style={styles.tabContent}>
-              {activeTab === 'Tasks' ? (
-                <FlatList
-                  data={status.sort(
-                    (a, b) => (a.priority ?? 0) - (b.priority ?? 0),
-                  )}
-                  renderItem={({ item, index }) => (
-                    <TaskCard
-                      status={item}
-                      defaultExpanded={index === 0}
-                      tasks={tasks.filter(
-                        _task => _task.status._id === item._id,
-                      )}
-                      userId={userId}
-                    />
-                  )}
-                  keyExtractor={item => item._id}
-                  showsVerticalScrollIndicator={false}
-                  ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                      <Text style={styles.emptyText}>No tasks found.</Text>
-                    </View>
-                  }
-                  scrollEnabled={false}
-                  contentContainerStyle={{
-                    paddingHorizontal: spacing(5),
-                    paddingBottom: spacing(40),
-                  }}
-                />
-              ) : activeTab === 'Documents' ? (
-                <View>
-                  <AppButton
-                    text="Add document"
-                    leftIcon={
-                      <Feather
-                        name="plus"
-                        color={theme.colors.white}
-                        size={fontSize(14)}
-                      />
-                    }
-                    onPress={() =>
-                      navigation.navigate('DocumentEditor', {
-                        mode: 'add',
-                        userId,
-                      })
-                    }
-                    style={{
-                      alignSelf: 'flex-end',
-                      marginHorizontal: spacing(16),
-                      gap: spacing(5),
-                    }}
-                  />
-                  <FlatList
-                    data={documents}
-                    renderItem={({ item }) => (
-                      <RenderDocument
-                        item={item}
-                        navigate={mode =>
-                          navigation.navigate('DocumentEditor', {
-                            mode,
-                            documentId: item._id,
-                            userId,
-                          })
-                        }
-                      />
-                    )}
-                    keyExtractor={i => i._id}
-                    scrollEnabled={false}
-                    contentContainerStyle={{
-                      padding: spacing(16),
-                      paddingBottom: spacing(40),
-                    }}
-                    showsVerticalScrollIndicator={false}
-                    onEndReached={() => {
-                      if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-                    }}
-                    onEndReachedThreshold={0.3}
-                    ListFooterComponent={
-                      isFetchingNextPage ? (
-                        <View
-                          style={{
-                            paddingVertical: spacing(10),
-                            alignItems: 'center',
-                          }}
-                        >
-                          <Text
-                            style={{
-                              color: theme.colors.gray[500],
-                              fontSize: fontSize(14),
-                            }}
-                          >
-                            Loading...
-                          </Text>
-                        </View>
-                      ) : null
-                    }
-                    ListEmptyComponent={
-                      <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>
-                          No documents found.
-                        </Text>
-                      </View>
-                    }
-                  />
-                </View>
-              ) : (
-                <View>
-                  {isChatLoading ? (
-                    <AvatarListSkeleton trailing paddingHorizontal={16} />
-                  ) : (
-                    <FlatList
-                      data={chats?.data}
-                      renderItem={({ item }) => (
-                        <ChatMessage
-                          item={item}
-                          userId={userId}
-                          onPress={() =>
-                            navigation.navigate('CoachChatRoom', {
-                              roomId: item._id!,
-                              userId,
-                            })
-                          }
-                        />
-                      )}
-                      keyExtractor={item => item._id ?? item.createdAt}
-                      refreshing={isFetching}
-                      onRefresh={refetch}
-                      showsVerticalScrollIndicator={false}
-                      onViewableItemsChanged={viewableItemsChanged}
-                      viewabilityConfig={{
-                        itemVisiblePercentThreshold: 60, // triggers when 60% visible
-                      }}
-                      scrollEnabled={false}
-                      contentContainerStyle={{ paddingHorizontal: spacing(10) }}
-                    />
-                  )}
-                </View>
-              )}
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No tasks found.</Text>
             </View>
-          </>
-        )}
-      </Animated.ScrollView>
+          }
+        />
+      ) : (
+        <Animated.ScrollView
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingBottom: FLOATING_BAR_FOOTPRINT,
+            flexGrow: 1,
+          }}
+          bounces={false}
+          style={{ backgroundColor: theme.colors.white }}
+        >
+          {renderBigHeader()}
+          {renderTabsBar()}
+          <View style={styles.tabContent}>
+            {activeTab === 'Documents' ? renderDocuments() : renderChats()}
+          </View>
+        </Animated.ScrollView>
+      )}
     </View>
   );
 }
@@ -688,6 +698,15 @@ const styles = StyleSheet.create({
   },
 
   tabContent: { backgroundColor: theme.colors.white },
+  tasksToolbar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: spacing(12),
+    paddingHorizontal: spacing(16),
+    paddingVertical: spacing(10),
+    backgroundColor: theme.colors.white,
+  },
 
   /* small sticky header (absolute) */
   smallHeaderContainer: {

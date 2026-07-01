@@ -32,6 +32,7 @@ import { queryClient } from '../../../App';
 import {
   deleteTask,
   getTask,
+  getTaskAssignees,
   markSubtaskAsCompleted,
 } from '../../api/functions/task.api';
 import { Calendar, ChevronLeft } from '../../assets';
@@ -341,11 +342,27 @@ const TaskDetailsScreen = () => {
                 <Pressable
                   style={styles.assigneeValue}
                   disabled={!canEdit}
-                  onPress={() =>
+                  onPress={() => {
+                    // Warm the assignees cache so the sheet opens with data
+                    // ready (no loading-skeleton flash during the slide-in).
+                    queryClient.prefetchInfiniteQuery({
+                      queryKey: ['task-assignees', taskId, ''],
+                      queryFn: ({ pageParam, signal }) =>
+                        getTaskAssignees(
+                          {
+                            taskId: taskId as string,
+                            page: pageParam as number,
+                            search: '',
+                          },
+                          signal,
+                        ),
+                      initialPageParam: 1,
+                      staleTime: 60 * 1000,
+                    });
                     SheetManager.show('assignee-sheet', {
                       payload: { taskId },
-                    })
-                  }
+                    });
+                  }}
                 >
                   {assignees.length === 0 ? (
                     <Text style={styles.unassigned}>Unassigned</Text>

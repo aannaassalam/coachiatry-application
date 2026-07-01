@@ -1,14 +1,16 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { Search as SearchIcon, SearchX, X } from 'lucide-react-native';
 import moment from 'moment';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Modal,
   Platform,
   Pressable,
+  StatusBar,
   Text,
   TextInput,
   View,
@@ -43,7 +45,7 @@ const SkeletonRow = () => {
   return (
     <Animated.View style={[skeletonStyles.row, animStyle]}>
       <View style={skeletonStyles.avatar} />
-      <View style={{ flex: 1, gap: spacing(8) }}>
+      <View style={skeletonStyles.body}>
         <View style={skeletonStyles.nameBar} />
         <View style={skeletonStyles.msgBar} />
       </View>
@@ -53,7 +55,7 @@ const SkeletonRow = () => {
 };
 
 const SkeletonList = () => (
-  <View style={{ padding: spacing(20), paddingTop: spacing(10), gap: spacing(16) }}>
+  <View style={skeletonStyles.wrap}>
     {Array.from({ length: 6 }).map((_, i) => (
       <SkeletonRow key={i} />
     ))}
@@ -61,10 +63,24 @@ const SkeletonList = () => (
 );
 
 const skeletonStyles = createStyleSheet({
+  wrap: {
+    padding: spacing(16),
+    paddingTop: spacing(14),
+    gap: spacing(10),
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing(12),
+    borderWidth: 1,
+    borderColor: theme.colors.gray[200],
+    borderRadius: fontSize(14),
+    backgroundColor: theme.colors.white,
+    padding: spacing(12),
+  },
+  body: {
+    flex: 1,
+    gap: spacing(8),
   },
   avatar: {
     width: scale(42),
@@ -99,40 +115,47 @@ interface ChatSearchProps {
   onClose: () => void;
 }
 
+const previewText = (item: ChatConversation) =>
+  item.lastMessage?.content ||
+  (item.lastMessage?.type === 'image'
+    ? '📷 Images'
+    : item.lastMessage?.type === 'video'
+      ? '🎥 Videos'
+      : item.lastMessage?.type === 'file'
+        ? '📁 Files'
+        : '');
+
 export default function ChatSearch({ visible, onClose }: ChatSearchProps) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<ChatSearchNavigationProp>();
   const { profile } = useAuth();
   const [query, setQuery] = useState('');
+  const inputRef = useRef<TextInput>(null);
 
   const debouncedSearch = useDebounce(query, 300);
 
-  const {
-    data,
-    isLoading,
-    isFetchingNextPage,
-    fetchNextPage,
-    hasNextPage,
-  } = useInfiniteQuery({
-    queryKey: ['conversations-search', debouncedSearch],
-    queryFn: ({ pageParam = 1, signal }) =>
-      getAllConversations(
-        {
-          page: pageParam,
-          search: debouncedSearch,
-          sort: '-updatedAt',
-        },
-        signal,
-      ),
-    initialPageParam: 1,
-    getNextPageParam: lastPage => {
-      const { currentPage, totalPages } = lastPage.meta;
-      return currentPage < totalPages ? currentPage + 1 : undefined;
-    },
-    enabled: visible && debouncedSearch.length > 0,
-  });
+  const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } =
+    useInfiniteQuery({
+      queryKey: ['conversations-search', debouncedSearch],
+      queryFn: ({ pageParam = 1, signal }) =>
+        getAllConversations(
+          {
+            page: pageParam,
+            search: debouncedSearch,
+            sort: '-updatedAt',
+          },
+          signal,
+        ),
+      initialPageParam: 1,
+      getNextPageParam: lastPage => {
+        const { currentPage, totalPages } = lastPage.meta;
+        return currentPage < totalPages ? currentPage + 1 : undefined;
+      },
+      enabled: visible && debouncedSearch.length > 0,
+    });
 
   const conversations = data?.pages.flatMap(page => page.data) ?? [];
+  const hasQuery = debouncedSearch.length > 0;
 
   const handleClose = () => {
     setQuery('');
@@ -167,21 +190,14 @@ export default function ChatSearch({ visible, onClose }: ChatSearchProps) {
           src={details.photo}
           size={scale(42)}
           name={details.name}
-          fontSize={fontSize(20)}
+          fontSize={fontSize(18)}
         />
-        <View style={{ flex: 1 }}>
+        <View style={styles.itemBody}>
           <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
             {details.name}
           </Text>
           <Text style={styles.lastMsg} numberOfLines={1} ellipsizeMode="tail">
-            {item.lastMessage?.content ||
-              (item.lastMessage?.type === 'image'
-                ? '📷 Images'
-                : item.lastMessage?.type === 'video'
-                  ? '🎥 Videos'
-                  : item.lastMessage?.type === 'file'
-                    ? '📁 Files'
-                    : '')}
+            {previewText(item)}
           </Text>
         </View>
         {item.lastMessage?.createdAt && (
@@ -199,50 +215,91 @@ export default function ChatSearch({ visible, onClose }: ChatSearchProps) {
       onRequestClose={handleClose}
       animationType="slide"
       statusBarTranslucent
+      navigationBarTranslucent
+      onShow={() => {
+        // Force dark status-bar icons for the light modal (Android only).
+        if (Platform.OS === 'android') {
+          StatusBar.setBarStyle('dark-content');
+        }
+        // autoFocus marks the input focused without raising the keyboard, so
+        // focus explicitly once the open animation has finished.
+        setTimeout(
+          () => inputRef.current?.focus(),
+          Platform.OS === 'android' ? 150 : 50,
+        );
+      }}
     >
+      {visible && Platform.OS === 'android' && (
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor="transparent"
+          translucent
+        />
+      )}
       <View
-        style={{
-          flex: 1,
-          paddingTop: Platform.OS === 'ios' ? insets.top : 0,
-        }}
+        style={[
+          styles.modalRoot,
+          {
+            paddingTop:
+              Platform.OS === 'ios'
+                ? insets.top
+                : Math.max(insets.top, StatusBar.currentHeight ?? 0),
+          },
+        ]}
       >
         <View style={styles.searchHeader}>
-          <Text style={styles.heading}>Search Chats</Text>
-          <View style={styles.searchRow}>
-            <TextInput
-              placeholder="Search by name..."
-              style={styles.searchInput}
-              placeholderTextColor={theme.colors.gray[500]}
-              value={query}
-              onChangeText={setQuery}
-              autoFocus
-            />
-            <Pressable style={styles.cancelBtn} onPress={handleClose}>
-              <Text style={styles.cancelText}>Cancel</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.heading}>Search Chats</Text>
+            <Pressable
+              onPress={handleClose}
+              hitSlop={spacing(10)}
+              style={styles.closeBtn}
+            >
+              <X size={fontSize(20)} color={theme.colors.gray[700]} />
             </Pressable>
           </View>
+
+          <View style={styles.searchField}>
+            <SearchIcon size={fontSize(18)} color={theme.colors.gray[400]} />
+            <TextInput
+              ref={inputRef}
+              placeholder="Search by name..."
+              style={styles.searchFieldInput}
+              placeholderTextColor={theme.colors.gray[400]}
+              value={query}
+              onChangeText={setQuery}
+              returnKeyType="search"
+            />
+            {query.length > 0 && (
+              <Pressable
+                onPress={() => setQuery('')}
+                hitSlop={spacing(10)}
+                style={styles.clearBtn}
+              >
+                <X size={fontSize(15)} color={theme.colors.gray[500]} />
+              </Pressable>
+            )}
+          </View>
         </View>
-        {isLoading && debouncedSearch.length > 0 ? (
-          <SkeletonList />
+
+        {isLoading && hasQuery ? (
+          <View style={styles.listBg}>
+            <SkeletonList />
+          </View>
         ) : (
           <FlatList
             data={conversations}
             contentContainerStyle={[
-              styles.listContent,
-              { paddingBottom: insets.bottom },
+              styles.searchContentContainer,
+              conversations.length === 0 && styles.searchContentEmpty,
+              { paddingBottom: insets.bottom + spacing(20) },
             ]}
-            style={{ backgroundColor: theme.colors.gray[50], flex: 1 }}
+            style={styles.listBg}
             renderItem={renderItem}
             keyExtractor={item => item._id ?? item.createdAt}
             showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={() => (
-              <View
-                style={{
-                  height: 1,
-                  backgroundColor: theme.colors.gray[200],
-                }}
-              />
-            )}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             onEndReached={() => {
               if (hasNextPage && !isFetchingNextPage) {
                 fetchNextPage();
@@ -251,38 +308,37 @@ export default function ChatSearch({ visible, onClose }: ChatSearchProps) {
             onEndReachedThreshold={0.6}
             ListFooterComponent={
               isFetchingNextPage ? (
-                <View
-                  style={{
-                    marginVertical: spacing(12),
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 10,
-                  }}
-                >
-                  <ActivityIndicator size="small" />
-                  <Text>Loading more...</Text>
+                <View style={styles.footerLoader}>
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.primary}
+                  />
+                  <Text style={styles.footerText}>Loading more...</Text>
                 </View>
               ) : null
             }
             ListEmptyComponent={
-              <View
-                style={{
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingVertical: spacing(40),
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: fontSize(14),
-                    color: theme.colors.gray[500],
-                    fontStyle: 'italic',
-                  }}
-                >
-                  {debouncedSearch
-                    ? 'No conversations found'
-                    : 'Start typing to search'}
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconCircle}>
+                  {hasQuery ? (
+                    <SearchX
+                      size={fontSize(26)}
+                      color={theme.colors.gray[400]}
+                    />
+                  ) : (
+                    <SearchIcon
+                      size={fontSize(26)}
+                      color={theme.colors.gray[400]}
+                    />
+                  )}
+                </View>
+                <Text style={styles.emptyTitle}>
+                  {hasQuery ? 'No conversations found' : 'Search chats'}
+                </Text>
+                <Text style={styles.emptySubtitle}>
+                  {hasQuery
+                    ? `We couldn't find anything for “${debouncedSearch.trim()}”`
+                    : 'Start typing to find your conversations'}
                 </Text>
               </View>
             }
@@ -294,45 +350,93 @@ export default function ChatSearch({ visible, onClose }: ChatSearchProps) {
 }
 
 const styles = createStyleSheet({
-  heading: {
-    fontSize: fontSize(18),
-    fontFamily: theme.fonts.archivo.medium,
-    color: theme.colors.gray[950],
-    textAlign: 'center',
+  modalRoot: {
+    flex: 1,
+    backgroundColor: theme.colors.white,
   },
   searchHeader: {
     paddingHorizontal: spacing(20),
-    paddingVertical: spacing(20),
-    backgroundColor: '#fff',
-    paddingBottom: spacing(10),
-    gap: spacing(15),
+    paddingTop: spacing(14),
+    paddingBottom: spacing(14),
+    backgroundColor: theme.colors.white,
+    gap: spacing(14),
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.gray[100],
   },
-  searchRow: {
+  titleRow: {
     flexDirection: 'row',
-    gap: spacing(10),
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  searchInput: {
+  heading: {
+    fontSize: fontSize(22),
+    fontFamily: theme.fonts.archivo.semiBold,
+    color: theme.colors.gray[950],
+  },
+  closeBtn: {
+    width: scale(32),
+    height: scale(32),
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.gray[100],
+  },
+  searchField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(10),
+    height: scale(46),
+    paddingHorizontal: spacing(14),
+    borderRadius: fontSize(14),
+    backgroundColor: theme.colors.secondary,
     borderWidth: 1,
-    borderColor: theme.colors.gray[300],
-    borderRadius: 10,
-    paddingHorizontal: spacing(15),
-    paddingVertical: Platform.OS === 'ios' ? spacing(12) : spacing(10),
+    borderColor: theme.colors.gray[200],
+  },
+  searchFieldInput: {
     flex: 1,
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(15),
+    color: theme.colors.gray[900],
+    padding: 0,
   },
-  cancelBtn: {
-    padding: spacing(5),
+  clearBtn: {
+    width: scale(20),
+    height: scale(20),
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.gray[200],
   },
-  cancelText: {},
-  listContent: {
-    padding: spacing(20),
-    paddingTop: spacing(10),
+  listBg: {
+    flex: 1,
+    backgroundColor: theme.colors.gray[50],
+  },
+  searchContentContainer: {
+    padding: spacing(16),
+    paddingTop: spacing(14),
+    gap: spacing(10),
+  },
+  searchContentEmpty: {
+    flexGrow: 1,
   },
   chatCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing(12),
-    paddingVertical: spacing(12),
+    borderWidth: 1,
+    borderColor: theme.colors.gray[200],
+    borderRadius: fontSize(14),
+    backgroundColor: theme.colors.white,
+    padding: spacing(12),
+    shadowColor: theme.colors.gray[900],
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  itemBody: {
+    flex: 1,
+    gap: spacing(4),
   },
   name: {
     fontSize: fontSize(14),
@@ -343,11 +447,53 @@ const styles = createStyleSheet({
     fontSize: fontSize(13),
     fontFamily: theme.fonts.lato.regular,
     color: theme.colors.gray[500],
-    marginTop: spacing(2),
   },
   time: {
     fontSize: fontSize(12),
     fontFamily: theme.fonts.lato.regular,
+    color: theme.colors.gray[400],
+    alignSelf: 'flex-start',
+  },
+  footerLoader: {
+    marginVertical: spacing(12),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing(8),
+  },
+  footerText: {
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(13),
     color: theme.colors.gray[500],
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing(40),
+    paddingBottom: spacing(60),
+  },
+  emptyIconCircle: {
+    width: scale(72),
+    height: scale(72),
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.gray[100],
+    marginBottom: spacing(16),
+  },
+  emptyTitle: {
+    color: theme.colors.gray[800],
+    fontFamily: theme.fonts.archivo.semiBold,
+    fontSize: fontSize(16),
+    marginBottom: spacing(6),
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    color: theme.colors.gray[500],
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(13),
+    textAlign: 'center',
+    lineHeight: fontSize(19),
   },
 });

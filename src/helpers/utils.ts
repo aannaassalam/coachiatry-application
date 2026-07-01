@@ -8,9 +8,16 @@ import { Filter } from '../typescript/interface/common.interface';
 
 export const storage = createMMKV();
 
+// Operators that are a presence check and therefore carry no value (mirrors the
+// web's VALUELESS_OPERATORS in lib/functions/_helpers.lib).
+export const VALUELESS_OPERATORS = ['isSet', 'isNotSet'];
+
 export function sanitizeFilters(values: Filter[]): Filter[] {
   return values.filter(
-    f => f.selectedKey && f.selectedOperator && f.selectedValue,
+    f =>
+      f.selectedKey &&
+      f.selectedOperator &&
+      (f.selectedValue || VALUELESS_OPERATORS.includes(f.selectedOperator)),
   );
 }
 

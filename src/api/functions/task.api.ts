@@ -2,6 +2,7 @@ import moment from 'moment';
 import { Filter } from '../../typescript/interface/common.interface';
 import { Task, TaskBody } from '../../typescript/interface/task.interface';
 import { User } from '../../typescript/interface/user.interface';
+import { VALUELESS_OPERATORS } from '../../helpers/utils';
 import axiosInstance from '../axiosInstance';
 import { endpoints } from '../endpoints';
 
@@ -10,39 +11,48 @@ export type TaskAssignee = Pick<
   '_id' | 'fullName' | 'photo' | 'role' | 'email' | 'updatedAt'
 >;
 
+// dueDate filter ranges — kept in lock-step with the web (today / yesterday /
+// tomorrow / thisWeek / nextWeek). Always clone() before mutating so the shared
+// `today` instance is never altered between branches.
 function getDueDateQuery(value: string) {
   const today = moment().startOf('day');
 
   switch (value) {
     case 'today':
       return {
-        gte: today.toDate(),
-        lte: today.endOf('day').toDate(),
+        gte: today.clone().startOf('day').toDate(),
+        lte: today.clone().endOf('day').toDate(),
       };
 
-    case 'yesterday':
+    case 'yesterday': {
+      const yesterday = today.clone().subtract(1, 'day');
       return {
-        gte: today.clone().subtract(1, 'day').startOf('day').toDate(),
-        lte: today.clone().subtract(1, 'day').endOf('day').toDate(),
+        gte: yesterday.clone().startOf('day').toDate(),
+        lte: yesterday.clone().endOf('day').toDate(),
       };
+    }
 
-    case 'tomorrow':
+    case 'tomorrow': {
+      const tomorrow = today.clone().add(1, 'day');
       return {
-        gte: today.clone().add(1, 'day').startOf('day').toDate(),
-        lte: today.clone().add(1, 'day').endOf('day').toDate(),
+        gte: tomorrow.clone().startOf('day').toDate(),
+        lte: tomorrow.clone().endOf('day').toDate(),
       };
+    }
 
-    case 'this week':
+    case 'thisWeek':
       return {
         gte: today.clone().startOf('week').toDate(),
         lte: today.clone().endOf('week').toDate(),
       };
 
-    case 'this month':
+    case 'nextWeek': {
+      const nextWeek = today.clone().add(1, 'week');
       return {
-        gte: today.clone().startOf('month').toDate(),
-        lte: today.clone().endOf('month').toDate(),
+        gte: nextWeek.clone().startOf('week').toDate(),
+        lte: nextWeek.clone().endOf('week').toDate(),
       };
+    }
 
     default:
       return null;
@@ -53,10 +63,11 @@ function buildFilterQuery(values: Filter[]): Record<string, any> {
   const query: Record<string, any> = {};
 
   values.forEach(filter => {
+    const valueless = VALUELESS_OPERATORS.includes(filter.selectedOperator);
     if (
       !filter.selectedKey ||
       !filter.selectedOperator ||
-      !filter.selectedValue
+      (!filter.selectedValue && !valueless)
     )
       return;
 
@@ -64,6 +75,18 @@ function buildFilterQuery(values: Filter[]): Record<string, any> {
     const value = filter.selectedValue;
 
     if (key === 'dueDate') {
+      // Presence checks ignore the value entirely. dueDate defaults to null in
+      // the schema, so "set" means non-null and "not set" means null/absent.
+      // The backend coerces the string "null" → null.
+      if (filter.selectedOperator === 'isSet') {
+        query.dueDate = { ne: 'null' };
+        return;
+      }
+      if (filter.selectedOperator === 'isNotSet') {
+        query.dueDate = 'null';
+        return;
+      }
+
       const dateRange = getDueDateQuery(value);
       if (!dateRange) return;
 
@@ -75,7 +98,6 @@ function buildFilterQuery(values: Filter[]): Record<string, any> {
       }
     } else {
       // Normal fields (status, category, priority)
-      console.log(filter.selectedOperator);
       if (filter.selectedOperator === 'is') {
         query[key] = value;
       } else if (filter.selectedOperator === 'isNot') {
@@ -134,12 +156,14 @@ export const getAllTasksByCoach = async (
 ): Promise<Task[]> => {
   const filterQuery = buildFilterQuery(filter);
 
-  const res = await axiosInstance.get(endpoints.task.getAll, {
+  // Use the dedicated coach endpoint (owned OR assigned) instead of /task?user=,
+  // which only returned tasks the client OWNS and silently dropped tasks merely
+  // assigned to them. Mirrors the web's getAllTasksByCoach.
+  const res = await axiosInstance.get(endpoints.task.getAllCoach(userId), {
     params: {
       populate: 'category,status,assignedTo,user',
       sort,
       ...filterQuery,
-      user: userId,
     },
     signal,
   });
@@ -206,14 +230,37 @@ export const deleteTask = async (task_id: string) => {
   return res;
 };
 
+export interface TaskAssigneesPage {
+  canAssign: boolean;
+  assignees: TaskAssignee[];
+  meta: {
+    totalCount: number;
+    currentPage: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 export const getTaskAssignees = async (
-  taskId: string,
+  {
+    taskId,
+    page = 1,
+    search = '',
+  }: {
+    taskId: string;
+    page?: number;
+    search?: string;
+  },
   signal?: AbortSignal,
-): Promise<{ canAssign: boolean; assignees: TaskAssignee[] }> => {
+): Promise<TaskAssigneesPage> => {
+  // Always send `page` so the backend serves the paginated, role-based list
+  // (staff → all staff system-wide, user → the owner's hierarchy). Omitting it
+  // hits the legacy non-paginated shape, which is reserved for other consumers.
   const res = await axiosInstance.get(endpoints.task.assignees(taskId), {
+    params: { page, search },
     signal,
   });
-  return res.data;
+  return res.data as TaskAssigneesPage;
 };
 
 export const assignToggle = async (body: {

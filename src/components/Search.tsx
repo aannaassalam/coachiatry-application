@@ -1,44 +1,68 @@
-import { Calendar, FileText, FolderOpen } from 'lucide-react-native';
+import {
+  Calendar,
+  ChevronRight,
+  FileText,
+  FolderOpen,
+  Search as SearchIcon,
+  SearchX,
+  X,
+} from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import moment from 'moment';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Modal,
   Platform,
   Pressable,
+  StatusBar,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { KeyboardAwareFlatList } from 'react-native-keyboard-aware-scroll-view';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createStyleSheet } from 'react-native-unistyles';
 import { getSearch } from '../api/functions/common.api';
 import { CoachAi, HeaderSearchIcon } from '../assets';
-import AvatarListSkeleton from './skeletons/AvatarListSkeleton';
 import { useDebounce } from '../hooks/useDebounce';
 import { theme } from '../theme';
 import { AppStackParamList } from '../types/navigation';
 import { fontSize, scale, spacing } from '../utils';
-import TouchableButton from './TouchableButton';
 import CoachAiSheet from './CoachAi';
+import TouchableButton from './TouchableButton';
+import { Skeleton } from './ui/Skeleton';
 
-const renderSearchIcons = (type: string) => {
+const CATEGORIES = [
+  { key: 'all', label: 'All' },
+  { key: 'task', label: 'Tasks' },
+  { key: 'document', label: 'Documents' },
+] as const;
+
+const renderTypeIcon = (type: string) => {
+  const iconProps = { size: fontSize(18), color: theme.colors.primary };
   switch (type) {
-    case 'task':
-      return <FileText size={fontSize(18)} />;
     case 'document':
-      return <FolderOpen size={fontSize(18)} />;
+      return <FolderOpen {...iconProps} />;
     default:
-      return <FileText size={fontSize(18)} />;
+      return <FileText {...iconProps} />;
   }
 };
+
+const SearchResultsSkeleton = () => (
+  <View style={styles.skeletonWrap}>
+    {[0, 1, 2, 3, 4].map(i => (
+      <View key={i} style={styles.searchItem}>
+        <Skeleton width={scale(44)} height={scale(44)} borderRadius={12} />
+        <View style={styles.skeletonBody}>
+          <Skeleton width="70%" height={14} borderRadius={5} />
+          <Skeleton width="40%" height={12} borderRadius={5} />
+        </View>
+      </View>
+    ))}
+  </View>
+);
 
 type SearchNavigationProp = NativeStackNavigationProp<AppStackParamList>;
 
@@ -47,7 +71,8 @@ export default function Search() {
   const navigation = useNavigation<SearchNavigationProp>();
   const [searchModal, setSearchModal] = useState(false);
   const [query, setQuery] = React.useState('');
-  const [category, setCategory] = React.useState('all');
+  const [category, setCategory] = React.useState<string>('all');
+  const inputRef = useRef<TextInput>(null);
 
   const debouncedSearch = useDebounce(query, 300);
 
@@ -62,7 +87,11 @@ export default function Search() {
     staleTime: 60 * 1000,
   });
 
+  const results = data.filter(_data => _data.type !== 'transcript');
   const isRefreshing = !!data && isFetching && !isLoading;
+  const hasQuery = !!debouncedSearch.trim();
+
+  const closeModal = () => setSearchModal(false);
 
   const onItemPress = (type: string, id: string) => {
     if (type === 'task') {
@@ -70,7 +99,7 @@ export default function Search() {
     } else {
       navigation.navigate('DocumentEditor', { documentId: id });
     }
-    setSearchModal(false);
+    closeModal();
   };
 
   return (
@@ -85,158 +114,188 @@ export default function Search() {
       <CoachAiSheet page="general">
         <CoachAi />
       </CoachAiSheet>
-      {/* <TouchableButton activeOpacity={0.8}>
-        <CoachAi />
-      </TouchableButton> */}
+
       <Modal
         visible={searchModal}
-        onRequestClose={() => setSearchModal(false)}
+        onRequestClose={closeModal}
         animationType="slide"
         statusBarTranslucent
+        navigationBarTranslucent
+        onShow={() => {
+          // Force dark status-bar icons for the light modal (Android only).
+          if (Platform.OS === 'android') {
+            StatusBar.setBarStyle('dark-content');
+          }
+          // autoFocus marks the input focused without raising the keyboard, so
+          // focus explicitly once the open animation has finished.
+          setTimeout(
+            () => inputRef.current?.focus(),
+            Platform.OS === 'android' ? 150 : 50,
+          );
+        }}
       >
+        {searchModal && Platform.OS === 'android' && (
+          <StatusBar
+            barStyle="dark-content"
+            backgroundColor="transparent"
+            translucent
+          />
+        )}
         <View
-          style={{
-            flex: 1,
-            paddingTop: Platform.OS === 'ios' ? insets.top : 0,
-          }}
+          style={[
+            styles.modalRoot,
+            {
+              // The modal is statusBarTranslucent (and edge-to-edge is enforced
+              // on Android 15+), so it draws under the status bar / notch.
+              // insets.top is unreliable inside a RN Modal on Android, so fall
+              // back to the status bar height. The white background fills the
+              // reserved strip so the status bar icons stay readable.
+              paddingTop:
+                Platform.OS === 'ios'
+                  ? insets.top
+                  : Math.max(insets.top, StatusBar.currentHeight ?? 0),
+            },
+          ]}
         >
           <View style={styles.searchHeader}>
-            <Text style={styles.heading}>Search</Text>
-            <View style={styles.searchRow}>
-              <TextInput
-                placeholder="Search..."
-                style={styles.searchHeaderInput}
-                placeholderTextColor={theme.colors.gray[500]}
-                value={query}
-                onChangeText={val => setQuery(val)}
-                autoFocus
-              />
+            <View style={styles.titleRow}>
+              <Text style={styles.heading}>Search</Text>
               <Pressable
-                style={styles.cancelBtn}
-                onPress={() => setSearchModal(false)}
+                onPress={closeModal}
+                hitSlop={spacing(10)}
+                style={styles.closeBtn}
               >
-                <Text style={styles.cancelText}>Cancel</Text>
+                <X size={fontSize(20)} color={theme.colors.gray[700]} />
               </Pressable>
             </View>
-            <View style={styles.searchRow}>
-              <TouchableButton
-                style={[
-                  styles.badge,
-                  {
-                    paddingHorizontal: spacing(15),
-                    paddingVertical: spacing(6),
-                  },
-                  category === 'all' && {
-                    backgroundColor: theme.colors.primary,
-                  },
-                ]}
-                onPress={() => setCategory('all')}
-              >
-                <Text
-                  style={[
-                    styles.badgeText,
-                    category === 'all' && { color: theme.colors.white },
-                  ]}
+
+            <View style={styles.searchField}>
+              <SearchIcon size={fontSize(18)} color={theme.colors.gray[400]} />
+              <TextInput
+                ref={inputRef}
+                placeholder="Search tasks and documents..."
+                style={styles.searchFieldInput}
+                placeholderTextColor={theme.colors.gray[400]}
+                value={query}
+                onChangeText={setQuery}
+                returnKeyType="search"
+              />
+              {query.length > 0 && (
+                <Pressable
+                  onPress={() => setQuery('')}
+                  hitSlop={spacing(10)}
+                  style={styles.clearBtn}
                 >
-                  All
-                </Text>
-              </TouchableButton>
-              <TouchableButton
-                style={[
-                  styles.badge,
-                  {
-                    paddingHorizontal: spacing(15),
-                    paddingVertical: spacing(6),
-                  },
-                  category === 'task' && {
-                    backgroundColor: theme.colors.primary,
-                  },
-                ]}
-                onPress={() => setCategory('task')}
-              >
-                <Text
-                  style={[
-                    styles.badgeText,
-                    category === 'task' && { color: theme.colors.white },
-                  ]}
-                >
-                  Task
-                </Text>
-              </TouchableButton>
-              <TouchableButton
-                style={[
-                  styles.badge,
-                  {
-                    paddingHorizontal: spacing(15),
-                    paddingVertical: spacing(6),
-                  },
-                  category === 'document' && {
-                    backgroundColor: theme.colors.primary,
-                  },
-                ]}
-                onPress={() => setCategory('document')}
-              >
-                <Text
-                  style={[
-                    styles.badgeText,
-                    category === 'document' && { color: theme.colors.white },
-                  ]}
-                >
-                  Document
-                </Text>
-              </TouchableButton>
+                  <X size={fontSize(15)} color={theme.colors.gray[500]} />
+                </Pressable>
+              )}
+            </View>
+
+            <View style={styles.chipsRow}>
+              {CATEGORIES.map(chip => {
+                const active = category === chip.key;
+                return (
+                  <TouchableButton
+                    key={chip.key}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => setCategory(chip.key)}
+                  >
+                    <Text
+                      style={[styles.chipText, active && styles.chipTextActive]}
+                    >
+                      {chip.label}
+                    </Text>
+                  </TouchableButton>
+                );
+              })}
             </View>
           </View>
+
           {isLoading ? (
-            <AvatarListSkeleton />
+            <View style={styles.listBg}>
+              <SearchResultsSkeleton />
+            </View>
           ) : (
             <KeyboardAwareFlatList
-              data={data.filter(_data => _data.type !== 'transcript')}
+              data={results}
               contentContainerStyle={[
                 styles.searchContentContainer,
-                { paddingBottom: insets.bottom },
+                results.length === 0 && styles.searchContentEmpty,
+                { paddingBottom: insets.bottom + spacing(20) },
               ]}
               refreshing={isRefreshing}
               onRefresh={refetch}
-              style={{
-                backgroundColor: theme.colors.gray[50],
-                flex: 1,
-              }}
+              style={styles.listBg}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              ListHeaderComponent={
+                results.length > 0 ? (
+                  <Text style={styles.resultCount}>
+                    {results.length} result{results.length === 1 ? '' : 's'}
+                  </Text>
+                ) : null
+              }
               renderItem={({ item }) => (
                 <TouchableButton
                   style={styles.searchItem}
                   onPress={() => onItemPress(item.type, item._id)}
                 >
-                  <View style={styles.icon}>
-                    {renderSearchIcons(item.type)}
+                  <View style={styles.iconTile}>
+                    {renderTypeIcon(item.type)}
                   </View>
-                  <View style={styles.itemContainer}>
-                    <Text style={styles.itemText}>{item.title}</Text>
-                    <View style={styles.lowerContainer}>
-                      <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{item.type}</Text>
+                  <View style={styles.itemBody}>
+                    <Text style={styles.itemTitle} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    <View style={styles.metaRow}>
+                      <View style={styles.typeBadge}>
+                        <Text style={styles.typeBadgeText}>{item.type}</Text>
                       </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: spacing(4),
-                        }}
-                      >
-                        <Calendar
-                          size={fontSize(12)}
-                          color={theme.colors.gray[600]}
-                        />
-                        <Text style={styles.calendarText}>
-                          {moment(item.createdAt).format('ll')}
-                        </Text>
-                      </View>
+                      <View style={styles.metaDot} />
+                      <Calendar
+                        size={fontSize(12)}
+                        color={theme.colors.gray[500]}
+                      />
+                      <Text style={styles.metaText}>
+                        {moment(item.createdAt).format('ll')}
+                      </Text>
                     </View>
                   </View>
+                  <ChevronRight
+                    size={fontSize(18)}
+                    color={theme.colors.gray[300]}
+                  />
                 </TouchableButton>
               )}
               keyExtractor={item => item._id}
               showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                isFetching ? null : (
+                  <View style={styles.emptyContainer}>
+                    <View style={styles.emptyIconCircle}>
+                      {hasQuery ? (
+                        <SearchX
+                          size={fontSize(26)}
+                          color={theme.colors.gray[400]}
+                        />
+                      ) : (
+                        <SearchIcon
+                          size={fontSize(26)}
+                          color={theme.colors.gray[400]}
+                        />
+                      )}
+                    </View>
+                    <Text style={styles.emptyTitle}>
+                      {hasQuery ? 'No results found' : 'Search everything'}
+                    </Text>
+                    <Text style={styles.emptySubtitle}>
+                      {hasQuery
+                        ? `We couldn't find anything for “${debouncedSearch.trim()}”`
+                        : 'Find your tasks and documents by title'}
+                    </Text>
+                  </View>
+                )
+              }
             />
           )}
         </View>
@@ -262,7 +321,6 @@ const styles = createStyleSheet({
     borderWidth: 1,
     borderColor: theme.colors.gray[200],
     paddingHorizontal: spacing(12),
-    // paddingVertical: spacing(6),
     shadowColor: theme.colors.gray[500],
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -276,90 +334,211 @@ const styles = createStyleSheet({
     color: theme.colors.gray[400],
     fontFamily: theme.fonts.lato.regular,
   },
-  heading: {
-    fontSize: fontSize(18),
-    fontFamily: theme.fonts.archivo.medium,
-    color: theme.colors.gray[950],
-    textAlign: 'center',
-  },
-  searchContentContainer: {
-    padding: spacing(20),
-    paddingHorizontal: spacing(20),
-    paddingTop: spacing(15),
-    // alignItems: 'center',
-    // justifyContent: 'center',
+
+  // Modal
+  modalRoot: {
+    flex: 1,
+    backgroundColor: theme.colors.white,
   },
   searchHeader: {
     paddingHorizontal: spacing(20),
-    paddingVertical: spacing(20),
-    backgroundColor: '#fff',
-    paddingBottom: spacing(10),
-    gap: spacing(15),
-  },
-  searchRow: {
-    flexDirection: 'row',
-    gap: spacing(10),
-    alignItems: 'center',
-  },
-  searchHeaderInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.gray[300],
-    borderRadius: 10,
-    paddingHorizontal: Platform.OS === 'ios' ? spacing(15) : spacing(15),
-    paddingVertical: Platform.OS === 'ios' ? spacing(12) : spacing(10),
-    flex: 1,
-  },
-  cancelBtn: {
-    padding: spacing(5),
-  },
-  cancelText: {},
-  searchItem: {
-    flexDirection: 'row',
-    gap: spacing(10),
-    borderWidth: 1,
-    borderColor: theme.colors.gray[200],
-    borderRadius: 10,
+    paddingTop: spacing(14),
+    paddingBottom: spacing(14),
     backgroundColor: theme.colors.white,
-    padding: spacing(10),
-    marginBottom: spacing(10),
+    gap: spacing(14),
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.gray[100],
   },
-  icon: {
-    backgroundColor: theme.colors.gray[200],
-    width: scale(45),
-    height: scale(45),
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  heading: {
+    fontSize: fontSize(22),
+    fontFamily: theme.fonts.archivo.semiBold,
+    color: theme.colors.gray[950],
+  },
+  closeBtn: {
+    width: scale(32),
+    height: scale(32),
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 6,
+    backgroundColor: theme.colors.gray[100],
   },
-  itemContainer: {
-    gap: Platform.OS === 'ios' ? spacing(8) : spacing(4),
+  searchField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(10),
+    height: scale(46),
+    paddingHorizontal: spacing(14),
+    borderRadius: fontSize(14),
+    backgroundColor: theme.colors.secondary,
+    borderWidth: 1,
+    borderColor: theme.colors.gray[200],
   },
-  itemText: {
-    color: theme.colors.gray[700],
+  searchFieldInput: {
+    flex: 1,
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(15),
+    color: theme.colors.gray[900],
+    padding: 0,
+  },
+  clearBtn: {
+    width: scale(20),
+    height: scale(20),
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.gray[200],
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    gap: spacing(8),
+  },
+  chip: {
+    paddingHorizontal: spacing(16),
+    paddingVertical: spacing(8),
+    borderRadius: 999,
+    backgroundColor: theme.colors.gray[100],
+    borderWidth: 1,
+    borderColor: theme.colors.gray[200],
+  },
+  chipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  chipText: {
     fontFamily: theme.fonts.archivo.medium,
-    fontSize: fontSize(14),
-    marginTop: spacing(2),
+    fontSize: fontSize(13),
+    color: theme.colors.gray[600],
   },
-  lowerContainer: {
+  chipTextActive: {
+    color: theme.colors.white,
+  },
+
+  // List
+  listBg: {
+    flex: 1,
+    backgroundColor: theme.colors.gray[50],
+  },
+  searchContentContainer: {
+    padding: spacing(16),
+    paddingTop: spacing(14),
+    gap: spacing(10),
+  },
+  searchContentEmpty: {
+    flexGrow: 1,
+  },
+  resultCount: {
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(12),
+    color: theme.colors.gray[500],
+    marginBottom: spacing(4),
+    marginLeft: spacing(2),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  skeletonWrap: {
+    padding: spacing(16),
+    paddingTop: spacing(14),
+    gap: spacing(10),
+  },
+  skeletonBody: {
+    flex: 1,
+    gap: spacing(8),
+  },
+  searchItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing(12),
+    borderWidth: 1,
+    borderColor: theme.colors.gray[200],
+    borderRadius: fontSize(14),
+    backgroundColor: theme.colors.white,
+    padding: spacing(12),
+    shadowColor: theme.colors.gray[900],
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  badge: {
+  iconTile: {
+    width: scale(44),
+    height: scale(44),
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: 'rgba(14,23,52,0.06)',
+  },
+  itemBody: {
+    flex: 1,
+    gap: spacing(6),
+  },
+  itemTitle: {
+    color: theme.colors.gray[900],
+    fontFamily: theme.fonts.archivo.semiBold,
+    fontSize: fontSize(14),
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(6),
+  },
+  typeBadge: {
     paddingHorizontal: spacing(8),
-    paddingVertical: Platform.OS === 'ios' ? spacing(4) : spacing(1),
-    backgroundColor: theme.colors.gray[200],
-    borderRadius: 100,
+    paddingVertical: Platform.OS === 'ios' ? spacing(3) : spacing(1),
+    backgroundColor: theme.colors.gray[100],
+    borderRadius: 999,
   },
-  badgeText: {
-    color: theme.colors.gray[700],
+  typeBadgeText: {
+    color: theme.colors.gray[600],
     fontFamily: theme.fonts.archivo.medium,
-    fontSize: Platform.OS === 'ios' ? fontSize(12) : fontSize(10),
+    fontSize: fontSize(11),
     textTransform: 'capitalize',
   },
-  calendarText: {
-    color: theme.colors.gray[600],
-    verticalAlign: 'middle',
-    fontSize: Platform.OS === 'ios' ? fontSize(14) : fontSize(12),
+  metaDot: {
+    width: scale(3),
+    height: scale(3),
+    borderRadius: 999,
+    backgroundColor: theme.colors.gray[300],
+  },
+  metaText: {
+    color: theme.colors.gray[500],
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(12),
+  },
+
+  // Empty
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing(40),
+    paddingBottom: spacing(60),
+  },
+  emptyIconCircle: {
+    width: scale(72),
+    height: scale(72),
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.gray[100],
+    marginBottom: spacing(16),
+  },
+  emptyTitle: {
+    color: theme.colors.gray[800],
+    fontFamily: theme.fonts.archivo.semiBold,
+    fontSize: fontSize(16),
+    marginBottom: spacing(6),
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    color: theme.colors.gray[500],
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(13),
+    textAlign: 'center',
+    lineHeight: fontSize(19),
   },
 });

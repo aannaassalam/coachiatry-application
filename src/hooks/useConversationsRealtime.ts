@@ -30,6 +30,25 @@ export function useConversationsRealtime() {
       lastMessage: Message;
       updatedAt: string;
     }) => {
+      // Build the patched conversation (preview + reorder + unread) from the
+      // existing one. Shared so every cache that lists conversations stays
+      // consistent.
+      const buildUpdated = (current: ChatConversation): ChatConversation => {
+        const isMyMessage = update.lastMessage?.sender?._id === profile?._id;
+        // The chat currently open on screen is effectively already read.
+        const isFocused = getFocusedChat() === update.chatId;
+        return {
+          ...current,
+          lastMessage: update.lastMessage,
+          updatedAt: update.updatedAt,
+          unreadCount:
+            isMyMessage || isFocused
+              ? current.unreadCount || 0
+              : (current.unreadCount || 0) + 1,
+        };
+      };
+
+      // 1) The infinite list shared by the Chats tab + floating chat list.
       queryClient.setQueryData<
         InfiniteData<PaginatedResponse<ChatConversation[]>, number>
       >(['conversations'], old => {
@@ -39,21 +58,7 @@ export function useConversationsRealtime() {
         const idx = allConvs.findIndex(c => c._id === update.chatId);
         if (idx === -1) return old;
 
-        const current = allConvs[idx];
-        const isMyMessage = update.lastMessage?.sender?._id === profile?._id;
-        // The chat currently open on screen is effectively already read.
-        const isFocused = getFocusedChat() === update.chatId;
-
-        const updatedConv: ChatConversation = {
-          ...current,
-          lastMessage: update.lastMessage,
-          updatedAt: update.updatedAt,
-          unreadCount:
-            isMyMessage || isFocused
-              ? current.unreadCount || 0
-              : (current.unreadCount || 0) + 1,
-        };
-
+        const updatedConv = buildUpdated(allConvs[idx]);
         const withoutUpdated = allConvs.filter((_, i) => i !== idx);
         const newFirstPageData = [updatedConv, ...withoutUpdated].slice(
           0,
@@ -68,6 +73,27 @@ export function useConversationsRealtime() {
           ],
         };
       });
+
+      // 2) The Dashboard's "All messages" preview uses a separate, non-infinite
+      // query key, so it must be patched here too — otherwise the last message
+      // there never updates in realtime.
+      queryClient.setQueryData<PaginatedResponse<ChatConversation[]>>(
+        ['conversations-dashboard'],
+        old => {
+          if (!old?.data?.length) return old;
+          const idx = old.data.findIndex(c => c._id === update.chatId);
+          if (idx === -1) return old;
+
+          const updatedConv = buildUpdated(old.data[idx]);
+          const withoutUpdated = old.data.filter((_, i) => i !== idx);
+          const newData = [updatedConv, ...withoutUpdated].slice(
+            0,
+            old.meta?.limit || old.data.length,
+          );
+
+          return { ...old, data: newData };
+        },
+      );
     };
 
     socket.on('conversation_updated', onConversationUpdated);

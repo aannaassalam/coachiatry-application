@@ -5,6 +5,8 @@ import {
   FlatList,
   Keyboard,
   KeyboardAvoidingView as RNKeyboardAvoidingView,
+  Linking,
+  PermissionsAndroid,
   Platform,
   StyleSheet,
   Text,
@@ -14,6 +16,7 @@ import {
   View,
   ViewToken,
 } from 'react-native';
+import { showMessage } from 'react-native-flash-message';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import ChatRoomSkeleton from '../../components/skeletons/ChatRoomSkeleton';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -1248,16 +1251,97 @@ const ChatScreen = () => {
 
   if (isLoading || isConversationLoading) return <ChatRoomSkeleton />;
 
-  const handleOpenCamera = async () => {
-    const res = await launchCamera({
-      mediaType: 'photo',
-      includeBase64: false,
-      saveToPhotos: true,
-      quality: 0.6,
-      cameraType: 'back',
-    });
+  // Android requires the runtime CAMERA grant before launchCamera will open.
+  // Because the manifest declares android.permission.CAMERA, react-native-image-
+  // picker refuses to launch (returning an error) unless it's been granted — and
+  // it does NOT request it for us. On API <= 28, saveToPhotos additionally needs
+  // WRITE_EXTERNAL_STORAGE. iOS handles its own prompt via the Info.plist keys.
+  const ensureAndroidCameraPermission = async (): Promise<boolean> => {
+    if (Platform.OS !== 'android') return true;
 
-    if (res.didCancel || !res.assets) return;
+    const wantStorage =
+      typeof Platform.Version === 'number' && Platform.Version <= 28;
+    const toRequest = [
+      PermissionsAndroid.PERMISSIONS.CAMERA,
+      ...(wantStorage
+        ? [PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE]
+        : []),
+    ];
+
+    const result = await PermissionsAndroid.requestMultiple(toRequest);
+
+    const cameraGranted =
+      result[PermissionsAndroid.PERMISSIONS.CAMERA] ===
+      PermissionsAndroid.RESULTS.GRANTED;
+    const storageOk =
+      !wantStorage ||
+      result[PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE] ===
+        PermissionsAndroid.RESULTS.GRANTED;
+
+    if (cameraGranted && storageOk) return true;
+
+    const permanentlyDenied = Object.values(result).includes(
+      PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN,
+    );
+    showMessage({
+      type: 'danger',
+      message: 'Camera permission needed',
+      description: permanentlyDenied
+        ? 'Enable Camera access for this app in Settings to take photos.'
+        : 'Camera access is required to take photos.',
+      ...(permanentlyDenied
+        ? { onPress: () => Linking.openSettings(), duration: 4000 }
+        : {}),
+    });
+    return false;
+  };
+
+  const handleOpenCamera = async () => {
+    const allowed = await ensureAndroidCameraPermission();
+    if (!allowed) return;
+
+    let res;
+    try {
+      res = await launchCamera({
+        mediaType: 'photo',
+        includeBase64: false,
+        saveToPhotos: true,
+        quality: 0.6,
+        cameraType: 'back',
+      });
+    } catch (e) {
+      console.log('launchCamera error:', e);
+      showMessage({
+        type: 'danger',
+        message: 'Unable to open camera',
+        description: 'Something went wrong while opening the camera.',
+      });
+      return;
+    }
+
+    if (res.didCancel) return;
+
+    // Surface failures instead of silently doing nothing (the old behaviour,
+    // which is what made the camera look "broken" on a permission error).
+    if (res.errorCode) {
+      console.log('launchCamera errorCode:', res.errorCode, res.errorMessage);
+      showMessage({
+        type: 'danger',
+        message: 'Unable to open camera',
+        description:
+          res.errorCode === 'camera_unavailable'
+            ? 'No camera is available on this device.'
+            : res.errorCode === 'permission'
+              ? 'Camera permission is required to take photos.'
+              : (res.errorMessage ?? 'Could not open the camera.'),
+        ...(res.errorCode === 'permission'
+          ? { onPress: () => Linking.openSettings(), duration: 4000 }
+          : {}),
+      });
+      return;
+    }
+
+    if (!res.assets) return;
 
     const mapped = res.assets.map(asset => ({
       uri: asset.uri!,

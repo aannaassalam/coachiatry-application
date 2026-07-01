@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Image, Platform } from 'react-native';
+import { View, Text, Pressable, Image } from 'react-native';
 import ActionSheet, {
   SheetManager,
   SheetProps,
@@ -12,6 +12,7 @@ import { assets } from '../../assets';
 import AppButton from '../ui/AppButton';
 import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
+import { SORT_COLUMNS } from '../../helpers/taskSort';
 
 // ----------------- Helpers -----------------
 const cycleMongoSort = (current: string, key: string) => {
@@ -43,17 +44,16 @@ const SortSheetBody = ({
     <View>
       <Text style={styles.heading}>Sort by</Text>
 
-      {/* Sort by Name */}
-      <Pressable style={styles.sortRow} onPress={() => onSelect('title')}>
-        <Text style={styles.sortText}>Name</Text>
-        {getArrow(appliedSort, 'title')}
-      </Pressable>
-
-      {/* Sort by Due Date */}
-      <Pressable style={styles.sortRow} onPress={() => onSelect('dueDate')}>
-        <Text style={styles.sortText}>Due Date</Text>
-        {getArrow(appliedSort, 'dueDate')}
-      </Pressable>
+      {SORT_COLUMNS.map(column => (
+        <Pressable
+          key={column.key}
+          style={styles.sortRow}
+          onPress={() => onSelect(column.key)}
+        >
+          <Text style={styles.sortText}>{column.label}</Text>
+          {getArrow(appliedSort, column.key)}
+        </Pressable>
+      ))}
     </View>
   );
 };

@@ -10,7 +10,6 @@ import React, {
 import {
   ActivityIndicator,
   Image,
-  Platform,
   Pressable,
   Text,
   View,
@@ -31,12 +30,38 @@ import { useQueries } from '@tanstack/react-query';
 import { getAllCategories } from '../../api/functions/category.api';
 import { getAllStatuses } from '../../api/functions/status.api';
 
+import { VALUELESS_OPERATORS } from '../../helpers/utils';
+
 /* ---------- Types ---------- */
 type Filter = {
   selectedKey: string;
   selectedOperator: string;
   selectedValue: string;
 };
+
+/* ---------- Filter config (kept in lock-step with the web's FilterBox) ---------- */
+// dueDate option values must match getDueDateQuery in task.api.ts exactly.
+const DUE_DATE_OPTIONS: { label: string; value: string }[] = [
+  { label: 'Today', value: 'today' },
+  { label: 'Yesterday', value: 'yesterday' },
+  { label: 'Tomorrow', value: 'tomorrow' },
+  { label: 'This Week', value: 'thisWeek' },
+  { label: 'Next Week', value: 'nextWeek' },
+];
+
+const OPERATOR_LABELS: Record<string, string> = {
+  is: 'is',
+  isNot: 'is not',
+  isSet: 'is set',
+  isNotSet: 'is not set',
+};
+
+// Operators offered per filter key. Only dueDate gets the presence checks.
+const operatorsForKey = (key?: string): string[] =>
+  key === 'dueDate' ? ['is', 'isNot', 'isSet', 'isNotSet'] : ['is', 'isNot'];
+
+const dueDateLabel = (value?: string) =>
+  DUE_DATE_OPTIONS.find(o => o.value === value)?.label ?? value;
 
 type TempFilter = (Partial<Filter> & { editIndex?: number | null }) | null;
 
@@ -176,9 +201,8 @@ const InitialFilterScreen = () => {
                         onPress={() => editField(idx, 'selectedOperator')}
                       >
                         <Text style={styles.selectBoxText} numberOfLines={1}>
-                          {filter.selectedOperator === 'isNot'
-                            ? 'is not'
-                            : filter.selectedOperator}
+                          {OPERATOR_LABELS[filter.selectedOperator] ??
+                            filter.selectedOperator}
                         </Text>
                         <Feather
                           name="chevron-down"
@@ -188,29 +212,35 @@ const InitialFilterScreen = () => {
                       </Pressable>
                     </View>
 
-                    <View style={styles.row}>
-                      <Pressable
-                        style={styles.selectBox}
-                        onPress={() => editField(idx, 'selectedValue')}
-                      >
-                        <Text style={styles.selectBoxText} numberOfLines={1}>
-                          {filter.selectedKey === 'status'
-                            ? statuses.find(
-                                _s => _s._id === filter.selectedValue,
-                              )?.title
-                            : filter.selectedKey === 'category'
-                              ? categories.find(
-                                  _c => _c._id === filter.selectedValue,
+                    {/* Presence-check operators (is set / is not set) carry no
+                        value, so the value selector is hidden for them. */}
+                    {!VALUELESS_OPERATORS.includes(filter.selectedOperator) && (
+                      <View style={styles.row}>
+                        <Pressable
+                          style={styles.selectBox}
+                          onPress={() => editField(idx, 'selectedValue')}
+                        >
+                          <Text style={styles.selectBoxText} numberOfLines={1}>
+                            {filter.selectedKey === 'status'
+                              ? statuses.find(
+                                  _s => _s._id === filter.selectedValue,
                                 )?.title
-                              : (filter.selectedValue ?? 'Value')}
-                        </Text>
-                        <Feather
-                          name="chevron-down"
-                          size={16}
-                          color="#4F4D55"
-                        />
-                      </Pressable>
-                    </View>
+                              : filter.selectedKey === 'category'
+                                ? categories.find(
+                                    _c => _c._id === filter.selectedValue,
+                                  )?.title
+                                : filter.selectedKey === 'dueDate'
+                                  ? dueDateLabel(filter.selectedValue)
+                                  : (filter.selectedValue ?? 'Value')}
+                          </Text>
+                          <Feather
+                            name="chevron-down"
+                            size={16}
+                            color="#4F4D55"
+                          />
+                        </Pressable>
+                      </View>
+                    )}
                   </View>
                 </View>
               ))
@@ -293,9 +323,28 @@ const SelectTypeFilterScreen = () => {
 
 const SelectOperatorFilterScreen = () => {
   const router = useSheetRouter('filter-sheet');
-  const { tempFilter, setTempFilter } = useTempFilter();
+  const { tempFilter, setTempFilter, commitFilter } = useTempFilter();
+
+  const operators = operatorsForKey(tempFilter?.selectedKey);
 
   const pick = (op: string) => {
+    // Presence-check operators carry no value — commit straight away and return
+    // to the active-filters list instead of routing to value selection.
+    if (VALUELESS_OPERATORS.includes(op)) {
+      commitFilter(
+        {
+          selectedKey: tempFilter?.selectedKey ?? 'dueDate',
+          selectedOperator: op,
+          selectedValue: '',
+        },
+        tempFilter?.editIndex ?? null,
+      );
+      setTempFilter(null);
+      setTimeout(() => {
+        router?.initialNavigation();
+      }, 10);
+      return;
+    }
     setTempFilter({ ...(tempFilter ?? {}), selectedOperator: op });
     router?.navigate('select-values');
   };
@@ -305,18 +354,14 @@ const SelectOperatorFilterScreen = () => {
       <ScrollView contentContainerStyle={styles.contentContainer}>
         <Text style={styles.heading}>Select Operator</Text>
         <View>
-          <Pressable style={styles.box} onPress={() => pick('is')}>
-            <Text style={styles.boxText}>is</Text>
-            {tempFilter?.selectedOperator === 'is' && (
-              <Feather name="check" size={fontSize(12)} />
-            )}
-          </Pressable>
-          <Pressable style={styles.box} onPress={() => pick('isNot')}>
-            <Text style={styles.boxText}>is not</Text>
-            {tempFilter?.selectedOperator === 'isNot' && (
-              <Feather name="check" size={fontSize(12)} />
-            )}
-          </Pressable>
+          {operators.map(op => (
+            <Pressable key={op} style={styles.box} onPress={() => pick(op)}>
+              <Text style={styles.boxText}>{OPERATOR_LABELS[op] ?? op}</Text>
+              {tempFilter?.selectedOperator === op && (
+                <Feather name="check" size={fontSize(12)} />
+              )}
+            </Pressable>
+          ))}
         </View>
       </ScrollView>
 
@@ -418,11 +463,14 @@ const SelectValueFilterScreen = () => {
     }
 
     if (key === 'dueDate') {
-      const options = ['today', 'this week', 'this month'];
-      return options.map(o => (
-        <Pressable key={o} style={styles.box} onPress={() => onPickValue(o)}>
-          <Text style={styles.boxText}>{o}</Text>
-          {tempFilter?.selectedValue === o && (
+      return DUE_DATE_OPTIONS.map(o => (
+        <Pressable
+          key={o.value}
+          style={styles.box}
+          onPress={() => onPickValue(o.value)}
+        >
+          <Text style={styles.boxText}>{o.label}</Text>
+          {tempFilter?.selectedValue === o.value && (
             <Feather name="check" size={fontSize(12)} />
           )}
         </Pressable>

@@ -15,7 +15,7 @@ import {
   MessageCircle,
 } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BackHandler, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   FadeIn,
@@ -209,6 +209,24 @@ export default function FloatingChatHost() {
     const unsub = rootNavigationRef.addListener('state', read);
     return unsub;
   }, []);
+
+  // The floating "Messages" overlay lives in an independent navigation tree,
+  // which Android's hardware-back integration does not see. Without this, back
+  // falls through to the root navigator and exits the app while the overlay is
+  // open. Handle it manually: pop the floating stack (e.g. ChatRoom → Chats),
+  // and once at the list, collapse the overlay instead of leaving the app.
+  useEffect(() => {
+    if (!isOpen) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (floatingNavRef.isReady() && floatingNavRef.canGoBack()) {
+        floatingNavRef.goBack();
+      } else {
+        close();
+      }
+      return true;
+    });
+    return () => sub.remove();
+  }, [isOpen, close]);
 
   useEffect(() => {
     if (!isOpen || !isFloatingNavReady || !pendingRoomId) return;
