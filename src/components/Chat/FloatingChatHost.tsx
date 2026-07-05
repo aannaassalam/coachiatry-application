@@ -25,6 +25,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { getAllConversations } from '../../api/functions/chat.api';
+import { reconcileUnread, syncBadge } from '../../notifications';
 import { useFloatingChat } from '../../contexts/FloatingChatContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useConversationsRealtime } from '../../hooks/useConversationsRealtime';
@@ -119,6 +120,21 @@ export default function FloatingChatHost() {
 
   const totalUnread = useMemo(() => {
     return conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  }, [conversations]);
+
+  // Reconcile the push-driven MMKV counters + OS app-icon badge with the
+  // server-authoritative conversation list whenever it (re)loads — e.g. on app
+  // foreground, when React Query refetches — so the two unread systems can't
+  // drift apart.
+  useEffect(() => {
+    if (!conversations.length) return;
+    reconcileUnread(
+      conversations.map(c => ({
+        chatId: c._id,
+        unreadCount: c.unreadCount,
+      })),
+    );
+    void syncBadge();
   }, [conversations]);
 
   const activeConversation = useMemo(

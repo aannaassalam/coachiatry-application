@@ -164,6 +164,24 @@ export const totalUnread = (): number => {
   return total;
 };
 
+/**
+ * Reconcile the per-chat MMKV unread counters with the server-authoritative
+ * conversation list. The OS badge (see totalUnread) is push-driven and drifts
+ * from the in-app React Query `unreadCount`; calling this whenever the
+ * conversations list is fetched corrects the loaded chats to the server's
+ * truth. Chats not in the list are left untouched (they may live beyond the
+ * loaded page and still carry a valid push-driven count).
+ */
+export const reconcileUnread = (
+  entries: { chatId?: string; unreadCount?: number }[],
+) => {
+  for (const { chatId, unreadCount } of entries) {
+    if (!chatId) continue;
+    if ((unreadCount || 0) > 0) setUnread(chatId, unreadCount || 0);
+    else clearUnread(chatId);
+  }
+};
+
 /* -------------------------------------------------------------------------- */
 /* Currently-focused chat (drives in-app suppression)                         */
 /* -------------------------------------------------------------------------- */

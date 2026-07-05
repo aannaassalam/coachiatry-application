@@ -11,7 +11,7 @@ import ChatRoomSkeleton from '../../components/skeletons/ChatRoomSkeleton';
 
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { InfiniteData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import moment from 'moment';
 import Animated, {
   FadeInUp,
@@ -21,7 +21,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { getConversationByCoach } from '../../api/functions/chat.api';
-import { getMessages } from '../../api/functions/message.api';
+import { getMessagesByCoach } from '../../api/functions/message.api';
 import { formatChatDateSeparator } from '../../helpers/utils';
 import {
   clearChatNotifications,
@@ -32,7 +32,14 @@ import { SmartAvatar } from '../../components/ui/SmartAvatar';
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
-import { Message } from '../../typescript/interface/message.interface';
+import { PaginatedResponse } from '../../typescript/interface/common.interface';
+import {
+  Message,
+  MessageStatus,
+} from '../../typescript/interface/message.interface';
+import { queryClient } from '../../../App';
+import { useAuth } from '../../hooks/useAuth';
+import { useSocket } from '../../hooks/useSocket';
 import {
   fontSize,
   isAndroid,
@@ -120,6 +127,11 @@ const RenderMessage = ({
               isMe ? styles.myMessage : styles.otherMessage,
             ]}
           >
+            {conversation?.type === 'group' && !isMe && (
+              <Text style={styles.senderName} numberOfLines={1}>
+                {item.sender?.fullName}
+              </Text>
+            )}
             {item.replyTo?._id && (
               <View
                 style={[
@@ -228,6 +240,8 @@ const CoachChatScreen = () => {
   const route = useRoute<RouteProp<AppStackParamList, 'CoachChatRoom'>>();
   const { roomId: room, userId } = route.params;
 
+  const socket = useSocket();
+  const { profile } = useAuth();
   const messageKeyMap = useRef<Map<string, string>>(new Map());
 
   const getStableKey = (msg: Message) => {
@@ -258,7 +272,7 @@ const CoachChatScreen = () => {
     isLoading,
   } = useInfiniteQuery({
     queryKey: ['messages', room],
-    queryFn: ctx => getMessages(ctx),
+    queryFn: ctx => getMessagesByCoach(ctx),
     initialPageParam: 1,
     enabled: !!room,
     getNextPageParam: lastPage => {
@@ -373,6 +387,176 @@ const CoachChatScreen = () => {
       setFocusedChat(undefined);
     };
   }, [room]);
+
+  // NOTE: This is a read-only coach/staff view of a CLIENT's chat. It must NOT
+  // emit `mark_seen` — reading here must never change the client's seen status
+  // or unread count. (The route `userId` is the CLIENT's id, so emitting it
+  // would pass the backend membership guard and wrongly mark the client's
+  // messages read.) We only subscribe to realtime updates for display.
+
+  // Join the chat room and subscribe to realtime message/seen/reaction events.
+  useEffect(() => {
+    if (!socket || !room) return;
+
+    const joinRoom = () => {
+      socket.emit('join_room', {
+        // Identify with the coach's own id, not the client route param.
+        chatId: room,
+        userId: profile?._id,
+        friendId: friend?.user._id,
+        isGroup: conversation?.type === 'group',
+      });
+    };
+
+    // Join on mount and rejoin on reconnection (new server socket = lost rooms).
+    joinRoom();
+    socket.on('connect', joinRoom);
+
+    // NEW MESSAGE (from server) — reconcile optimistic tempId, dedup, prepend.
+    const handleNewMessage = (msg: Message) => {
+      if (msg.chat !== room) return;
+
+      if (msg.tempId && msg._id) {
+        const oldKey = messageKeyMap.current.get(msg.tempId);
+        if (oldKey) messageKeyMap.current.set(msg._id, oldKey);
+      }
+
+      queryClient.setQueryData<
+        InfiniteData<PaginatedResponse<Message[]>, number>
+      >(['messages', room], old => {
+        if (!old) return old;
+        const firstPage = old.pages[0];
+        if (!firstPage) return old;
+        const existingMessages = firstPage.data;
+
+        const tempIdx = existingMessages.findIndex(
+          m => m.tempId && msg.tempId && m.tempId === msg.tempId,
+        );
+        if (tempIdx !== -1) {
+          const newMessages = [...existingMessages];
+          newMessages[tempIdx] = { ...msg, status: 'sent' as MessageStatus };
+          return {
+            ...old,
+            pages: [{ ...firstPage, data: newMessages }, ...old.pages.slice(1)],
+            pageParams: old.pageParams,
+          };
+        }
+
+        const exists = existingMessages.some(
+          m =>
+            (m._id && msg._id && m._id === msg._id) ||
+            (m.tempId && msg.tempId && m.tempId === msg.tempId),
+        );
+        if (exists) return old;
+
+        return {
+          ...old,
+          pages: [
+            {
+              ...firstPage,
+              data: [
+                { ...msg, status: 'sent' as MessageStatus },
+                ...existingMessages,
+              ],
+            },
+            ...old.pages.slice(1),
+          ],
+          pageParams: old.pageParams,
+        };
+      });
+    };
+
+    // SEEN receipts — flip my sent messages to 'seen', and zero my own unread.
+    const handleSeenBulk = ({
+      chatId,
+      userId: seenUserId,
+    }: {
+      chatId: string;
+      userId: string;
+    }) => {
+      if (chatId !== room) return;
+
+      if (seenUserId !== userId) {
+        queryClient.setQueryData<InfiniteData<PaginatedResponse<Message[]>>>(
+          ['messages', chatId],
+          old => {
+            if (!old) return old;
+            return {
+              ...old,
+              pages: old.pages.map(page => ({
+                ...page,
+                data: page.data.map(m =>
+                  m.sender?._id === userId
+                    ? { ...m, status: 'seen' as MessageStatus }
+                    : m,
+                ),
+              })),
+            };
+          },
+        );
+      }
+
+      if (seenUserId === userId) {
+        queryClient.setQueryData<
+          InfiniteData<PaginatedResponse<ChatConversation[]>>
+        >(['conversations'], old => {
+          if (!old || !old.pages.length) return old;
+          const allItems = old.pages.flatMap(p => p.data);
+          const idx = allItems.findIndex(c => c._id === chatId);
+          if (idx === -1) return old;
+          allItems[idx] = { ...allItems[idx], unreadCount: 0 };
+          return {
+            ...old,
+            pages: [
+              {
+                ...old.pages[0],
+                data: allItems.slice(0, old.pages[0].meta.limit || 20),
+              },
+              ...old.pages.slice(1),
+            ],
+          };
+        });
+      }
+    };
+
+    const handleReaction = ({
+      messageId,
+      reactions,
+    }: {
+      messageId: string;
+      reactions: Message['reactions'];
+    }) => {
+      queryClient.setQueryData<InfiniteData<PaginatedResponse<Message[]>>>(
+        ['messages', room],
+        old => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map(page => ({
+              ...page,
+              data: page.data.map(m =>
+                m._id === messageId ? { ...m, reactions } : m,
+              ),
+            })),
+          };
+        },
+      );
+    };
+
+    socket.on('new_message', handleNewMessage);
+    socket.on('message_seen_update_bulk', handleSeenBulk);
+    socket.on('reaction_updated', handleReaction);
+
+    return () => {
+      socket.off('connect', joinRoom);
+      socket.emit('leave_room', { chatId: room, userId: profile?._id });
+      // Remove the exact handler instances so listeners don't leak/accumulate
+      // across room changes and remounts.
+      socket.off('new_message', handleNewMessage);
+      socket.off('message_seen_update_bulk', handleSeenBulk);
+      socket.off('reaction_updated', handleReaction);
+    };
+  }, [socket, room, userId, profile?._id, friend?.user?._id, conversation?.type]);
 
   if (isLoading || isConversationLoading) return <ChatRoomSkeleton />;
 
@@ -537,6 +721,12 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: fontSize(14),
     fontFamily: theme.fonts.lato.regular,
+  },
+  senderName: {
+    fontSize: fontSize(12),
+    fontFamily: theme.fonts.archivo.medium,
+    color: theme.colors.primary,
+    marginBottom: spacing(2),
   },
   inputBar: {
     flexDirection: 'row',

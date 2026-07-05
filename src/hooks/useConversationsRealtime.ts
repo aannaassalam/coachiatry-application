@@ -48,6 +48,7 @@ export function useConversationsRealtime() {
         };
       };
 
+      let found = false;
       // 1) The infinite list shared by the Chats tab + floating chat list.
       queryClient.setQueryData<
         InfiniteData<PaginatedResponse<ChatConversation[]>, number>
@@ -57,6 +58,7 @@ export function useConversationsRealtime() {
         const allConvs = old.pages.flatMap(p => p.data);
         const idx = allConvs.findIndex(c => c._id === update.chatId);
         if (idx === -1) return old;
+        found = true;
 
         const updatedConv = buildUpdated(allConvs[idx]);
         const withoutUpdated = allConvs.filter((_, i) => i !== idx);
@@ -94,6 +96,15 @@ export function useConversationsRealtime() {
           return { ...old, data: newData };
         },
       );
+
+      // The conversation isn't in the loaded list (brand-new chat, or one past
+      // the loaded window) — refetch so it appears instead of being dropped.
+      if (!found) {
+        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        queryClient.invalidateQueries({
+          queryKey: ['conversations-dashboard'],
+        });
+      }
     };
 
     socket.on('conversation_updated', onConversationUpdated);

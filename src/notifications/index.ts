@@ -16,6 +16,7 @@ export {
   readActiveChats,
   readChatHistory,
   readUnread,
+  reconcileUnread,
   setFocusedChat,
   setUnread,
   totalUnread,

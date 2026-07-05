@@ -108,6 +108,7 @@ export const endpoints = {
     editScheduleMessage: (messageId: string) =>
       `/message/schedule/${messageId}`,
     getMessages: (room: string) => `/message/${room}`,
+    getMessagesByCoach: (room: string) => `/message/coach/room/${room}`,
   },
   ai: {
     chatWithAi: '/ai/native',

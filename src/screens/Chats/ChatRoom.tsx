@@ -244,6 +244,11 @@ const RenderMessage = ({
                 isMe ? styles.myMessage : styles.otherMessage,
               ]}
             >
+              {conversation?.type === 'group' && !isMe && (
+                <Text style={styles.senderName} numberOfLines={1}>
+                  {item.sender?.fullName}
+                </Text>
+              )}
               {item.replyTo?._id && (
                 <View
                   style={[
@@ -684,7 +689,7 @@ const ChatScreen = () => {
     // socket.emit('mark_seen', { chatId: room, userId: profile?._id });
 
     // NEW MESSAGE (from server)
-    socket.on('new_message', (msg: Message) => {
+    const handleNewMessage = (msg: Message) => {
       if (msg.chat !== room) return;
 
       if (msg.tempId && msg._id) {
@@ -757,10 +762,16 @@ const ChatScreen = () => {
       // Conversation list preview/reorder/unread is handled centrally by
       // useConversationsRealtime() (mounted in FloatingChatHost) via the
       // 'conversation_updated' event — no need to duplicate it here.
-    });
+    };
 
     // Delivery, seen, reaction updates (same as before)
-    socket.on('message_seen_update_bulk', ({ chatId, userId }) => {
+    const handleSeenBulk = ({
+      chatId,
+      userId,
+    }: {
+      chatId: string;
+      userId: string;
+    }) => {
       if (chatId !== room) return;
 
       if (userId !== profile?._id) {
@@ -783,34 +794,35 @@ const ChatScreen = () => {
         );
       }
 
-      // also update chat list preview
+      // also update chat list preview — zero the unread badge in place on
+      // whatever page the conversation lives on (previously only page 0 was
+      // rewritten, so a conversation on page 2+ kept a stale badge).
       if (userId === profile?._id) {
         queryClient.setQueryData<
           InfiniteData<PaginatedResponse<ChatConversation[]>>
         >(['conversations'], old => {
           if (!old || !old.pages.length) return old;
 
-          const allItems = old.pages.flatMap(p => p.data);
-          const idx = allItems.findIndex(c => c._id === chatId);
-          if (idx === -1) return old;
-
-          allItems[idx] = { ...allItems[idx], unreadCount: 0 };
-
           return {
             ...old,
-            pages: [
-              {
-                ...old.pages[0],
-                data: allItems.slice(0, old.pages[0].meta.limit || 20),
-              },
-              ...old.pages.slice(1),
-            ],
+            pages: old.pages.map(page => ({
+              ...page,
+              data: page.data.map(c =>
+                c._id === chatId ? { ...c, unreadCount: 0 } : c,
+              ),
+            })),
           };
         });
       }
-    });
+    };
 
-    socket.on('reaction_updated', ({ messageId, reactions }) => {
+    const handleReaction = ({
+      messageId,
+      reactions,
+    }: {
+      messageId: string;
+      reactions: Message['reactions'];
+    }) => {
       queryClient.setQueryData<InfiniteData<PaginatedResponse<Message[]>>>(
         ['messages', room],
         old => {
@@ -824,40 +836,53 @@ const ChatScreen = () => {
           return { ...old, pages: updatedPages };
         },
       );
-    });
+    };
 
-    socket.on(
-      'user_typing',
-      ({ chatId, userId }: { chatId: string; userId: string }) => {
-        if (chatId === room && userId !== profile?._id) {
-          setTypingUsers(prev =>
-            prev.includes(userId) ? prev : [...prev, userId],
-          );
-        }
-      },
-    );
+    const handleTyping = ({
+      chatId,
+      userId,
+    }: {
+      chatId: string;
+      userId: string;
+    }) => {
+      if (chatId === room && userId !== profile?._id) {
+        setTypingUsers(prev =>
+          prev.includes(userId) ? prev : [...prev, userId],
+        );
+      }
+    };
 
-    socket.on(
-      'user_stop_typing',
-      ({ chatId, userId }: { chatId: string; userId: string }) => {
-        if (chatId === room) {
-          setTypingUsers(prev => prev.filter(id => id !== userId));
-        }
-      },
-    );
+    const handleStopTyping = ({
+      chatId,
+      userId,
+    }: {
+      chatId: string;
+      userId: string;
+    }) => {
+      if (chatId === room) {
+        setTypingUsers(prev => prev.filter(id => id !== userId));
+      }
+    };
+
+    // Register named handlers so cleanup can remove exactly these instances. A
+    // bare socket.off('event') removes ALL listeners for that event on the
+    // shared socket — which would wipe the listeners other always-mounted
+    // screens (e.g. FloatingChatHost) registered on the same socket.
+    socket.on('new_message', handleNewMessage);
+    socket.on('message_seen_update_bulk', handleSeenBulk);
+    socket.on('reaction_updated', handleReaction);
+    socket.on('user_typing', handleTyping);
+    socket.on('user_stop_typing', handleStopTyping);
 
     return () => {
       socket.off('connect', joinRoom);
       socket.emit('stop_typing', { chatId: room, userId: profile?._id });
       socket.emit('leave_room', { chatId: room, userId: profile?._id });
-      socket.off('new_message');
-      // The actual listener registered above is 'message_seen_update_bulk' —
-      // the previous two off()s targeted events that were never added, so the
-      // real handler leaked and accumulated across room changes/remounts.
-      socket.off('message_seen_update_bulk');
-      socket.off('reaction_updated');
-      socket.off('user_typing');
-      socket.off('user_stop_typing');
+      socket.off('new_message', handleNewMessage);
+      socket.off('message_seen_update_bulk', handleSeenBulk);
+      socket.off('reaction_updated', handleReaction);
+      socket.off('user_typing', handleTyping);
+      socket.off('user_stop_typing', handleStopTyping);
     };
   }, [socket, room, profile?._id, friend?.user?._id, conversation?.type]);
 
@@ -1832,6 +1857,12 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: fontSize(14),
     fontFamily: theme.fonts.lato.regular,
+  },
+  senderName: {
+    fontSize: fontSize(12),
+    fontFamily: theme.fonts.archivo.medium,
+    color: theme.colors.primary,
+    marginBottom: spacing(2),
   },
   textWithTime: {
     flexDirection: 'row',
