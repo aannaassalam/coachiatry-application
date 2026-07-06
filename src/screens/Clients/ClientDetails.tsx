@@ -49,7 +49,7 @@ import {
   getAllConversationsByCoach,
   getConversationByCoach,
 } from '../../api/functions/chat.api';
-import { getMessages } from '../../api/functions/message.api';
+import { getMessagesByCoach } from '../../api/functions/message.api';
 import { queryClient } from '../../../App';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
 import ChatMessage from '../../components/Chat/Coach/ChatMessage';
@@ -181,9 +181,13 @@ export default function ClientDetailsA1() {
           queryKey: ['conversations', item._id],
           queryFn: ({ signal }) => getConversationByCoach(item._id, signal),
         });
+        // Must use the coach route (matches CoachChatRoom's queryFn). The
+        // member-gated getMessages 403s for staff, and since it shares the
+        // ['messages', roomId] key, an in-flight failing prefetch would make
+        // the chat open blank when CoachChatRoom dedupes onto it.
         queryClient.prefetchInfiniteQuery({
           queryKey: ['messages', item._id],
-          queryFn: ctx => getMessages(ctx),
+          queryFn: ctx => getMessagesByCoach(ctx),
           initialPageParam: 1,
         });
       });
@@ -574,7 +578,11 @@ export default function ClientDetailsA1() {
               {renderBigHeader()}
               {renderTabsBar()}
               <View style={styles.tasksToolbar}>
-                <FilterButton filters={filters} setFilters={setFilters} />
+                <FilterButton
+                  filters={filters}
+                  setFilters={setFilters}
+                  userId={userId}
+                />
                 <SortButton sort={sort} setSort={setSort} />
               </View>
             </View>

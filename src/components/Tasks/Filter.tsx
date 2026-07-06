@@ -25,8 +25,14 @@ import ActionSheet, {
 } from 'react-native-actions-sheet';
 import { createStyleSheet } from 'react-native-unistyles';
 import Feather from 'react-native-vector-icons/Feather';
-import { getAllCategories } from '../../api/functions/category.api';
-import { getAllStatuses } from '../../api/functions/status.api';
+import {
+  getAllCategories,
+  getAllCategoriesByCoach,
+} from '../../api/functions/category.api';
+import {
+  getAllStatuses,
+  getAllStatusesByCoach,
+} from '../../api/functions/status.api';
 import { assets } from '../../assets';
 import { VALUELESS_OPERATORS } from '../../helpers/utils';
 import { theme } from '../../theme';
@@ -90,6 +96,9 @@ type TempFilter = (Partial<Filter> & { editIndex?: number | null }) | null;
 type SheetPayload = {
   filters: Filter[];
   setFilters: React.Dispatch<React.SetStateAction<Filter[]>>;
+  // When a staff member filters a viewed client's tasks, the category/status
+  // options must come from the client, not the logged-in staff.
+  userId?: string;
 };
 
 /* ---------- Local Context for sheet state (NOT SheetProvider) ---------- */
@@ -100,6 +109,7 @@ type InternalSheetState = {
   setTempFilter: (f: TempFilter) => void;
   commitFilter: (final: Filter, editIndex?: number | null) => void;
   removeFilter: (filter: Filter[]) => void;
+  userId?: string;
 };
 
 const TempFilterContext = createContext<InternalSheetState | null>(null);
@@ -195,6 +205,7 @@ const InitialFilterScreen = () => {
     setTempFilter,
     setLocalFilters,
     removeFilter: removeParentFilter,
+    userId,
   } = useTempFilter();
 
   const [
@@ -203,14 +214,18 @@ const InitialFilterScreen = () => {
   ] = useQueries({
     queries: [
       {
-        queryKey: ['categories'],
+        queryKey: ['categories', userId],
         queryFn: ({ signal }: { signal: AbortSignal }) =>
-          getAllCategories(signal),
+          userId
+            ? getAllCategoriesByCoach(userId, signal)
+            : getAllCategories(signal),
       },
       {
-        queryKey: ['status'],
+        queryKey: ['status', userId],
         queryFn: ({ signal }: { signal: AbortSignal }) =>
-          getAllStatuses(signal),
+          userId
+            ? getAllStatusesByCoach(userId, signal)
+            : getAllStatuses(signal),
       },
     ],
   });
@@ -458,7 +473,7 @@ const SelectOperatorFilterScreen = () => {
 
 const SelectValueFilterScreen = () => {
   const router = useSheetRouter('filter-sheet');
-  const { tempFilter, setTempFilter, commitFilter } = useTempFilter();
+  const { tempFilter, setTempFilter, commitFilter, userId } = useTempFilter();
 
   const [
     { data: categories = [], isLoading: isCategoryLoading },
@@ -466,14 +481,18 @@ const SelectValueFilterScreen = () => {
   ] = useQueries({
     queries: [
       {
-        queryKey: ['categories'],
+        queryKey: ['categories', userId],
         queryFn: ({ signal }: { signal: AbortSignal }) =>
-          getAllCategories(signal),
+          userId
+            ? getAllCategoriesByCoach(userId, signal)
+            : getAllCategories(signal),
       },
       {
-        queryKey: ['status'],
+        queryKey: ['status', userId],
         queryFn: ({ signal }: { signal: AbortSignal }) =>
-          getAllStatuses(signal),
+          userId
+            ? getAllStatusesByCoach(userId, signal)
+            : getAllStatuses(signal),
       },
     ],
   });
@@ -584,6 +603,7 @@ export const FilterSheet = (props: SheetProps<'filter-sheet'>) => {
   const incoming = props.payload as SheetPayload | undefined;
   const parentSetFilters = incoming?.setFilters;
   const initialFilters = incoming?.filters ?? [];
+  const userId = incoming?.userId;
 
   // local reactive copy of filters to make UI reactive inside sheet
   const [localFilters, setLocalFilters] = useState<Filter[]>(initialFilters);
@@ -624,8 +644,9 @@ export const FilterSheet = (props: SheetProps<'filter-sheet'>) => {
       setTempFilter,
       commitFilter,
       removeFilter,
+      userId,
     }),
-    [commitFilter, localFilters, tempFilter, removeFilter],
+    [commitFilter, localFilters, tempFilter, removeFilter, userId],
   );
 
   return (
@@ -649,9 +670,11 @@ export const FilterSheet = (props: SheetProps<'filter-sheet'>) => {
 export default function FilterButton({
   filters,
   setFilters,
+  userId,
 }: {
   filters: Filter[];
   setFilters: React.Dispatch<React.SetStateAction<Filter[]>>;
+  userId?: string;
 }) {
   const present = () => {
     // pass only initial data (do NOT pass setters for temp state)
@@ -659,6 +682,7 @@ export default function FilterButton({
       payload: {
         filters,
         setFilters,
+        userId,
       },
     });
   };

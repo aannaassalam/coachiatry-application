@@ -218,6 +218,13 @@ export default function AddEditTask() {
   const { profile } = useAuth();
   const { taskId, predefinedDueDate, predefinedStatus, userId } = route.params;
 
+  // A staff member (coach/manager/admin) editing on behalf of a viewed client
+  // must use the coach-scoped endpoints/data. Gating on role === 'coach' alone
+  // wrongly excluded managers and admins, dropping them onto the self-scoped
+  // path (empty pickers, task created on themselves).
+  const isStaffViewingClient =
+    !!userId && ['coach', 'manager', 'admin'].includes(profile?.role ?? '');
+
   const [dateTimePicker, setDateTimePicker] = useState(false);
   const [durationPicker, setDurationPicker] = useState(false);
 
@@ -444,7 +451,7 @@ export default function AddEditTask() {
     const finalData = buildTaskPayload(data);
     if (taskId) {
       editMutate({ task_id: taskId, data: finalData });
-    } else if (profile?.role === 'coach' && !!userId) {
+    } else if (isStaffViewingClient) {
       coachMutate({ ...finalData, user: userId });
     } else {
       mutate(finalData);
@@ -742,7 +749,7 @@ export default function AddEditTask() {
                                 <GeneralPickerSheet
                                   heading="Category"
                                   options={
-                                    (profile?.role === 'coach' && !!userId
+                                    (isStaffViewingClient
                                       ? userCategories?.map(_cat => ({
                                           label: _cat.title,
                                           value: _cat._id,
@@ -758,7 +765,7 @@ export default function AddEditTask() {
                                   onCreateNew={() => {
                                     const cb = field.onChange;
                                     const uid =
-                                      profile?.role === 'coach' && userId
+                                      isStaffViewingClient
                                         ? userId
                                         : undefined;
                                     SheetManager.hide('general-sheet');
@@ -782,7 +789,7 @@ export default function AddEditTask() {
                         }
                       >
                         <Text style={styles.inputText} numberOfLines={1}>
-                          {(profile?.role === 'coach' && !!userId
+                          {(isStaffViewingClient
                             ? userCategories?.find(
                                 _cat => _cat._id === field.value,
                               )?.title
@@ -857,7 +864,7 @@ export default function AddEditTask() {
                                 <GeneralPickerSheet
                                   heading="Status"
                                   options={
-                                    (profile?.role === 'coach' && !!userId
+                                    (isStaffViewingClient
                                       ? userStatuses?.map(_status => ({
                                           label: _status.title,
                                           value: _status._id,
@@ -873,7 +880,7 @@ export default function AddEditTask() {
                                   onCreateNew={() => {
                                     const cb = field.onChange;
                                     const uid =
-                                      profile?.role === 'coach' && userId
+                                      isStaffViewingClient
                                         ? userId
                                         : undefined;
                                     SheetManager.hide('general-sheet');
@@ -897,7 +904,7 @@ export default function AddEditTask() {
                         }
                       >
                         <Text style={styles.inputText} numberOfLines={1}>
-                          {(profile?.role === 'coach' && !!userId
+                          {(isStaffViewingClient
                             ? userStatuses?.find(
                                 _status => _status._id === field.value,
                               )?.title

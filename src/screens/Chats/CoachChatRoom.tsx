@@ -30,6 +30,7 @@ import {
 import { ChevronLeft } from '../../assets';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
 import { theme } from '../../theme';
+import { getSenderColor } from '../../constants/taxonomyColors';
 import { AppStackParamList } from '../../types/navigation';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
 import { PaginatedResponse } from '../../typescript/interface/common.interface';
@@ -128,7 +129,13 @@ const RenderMessage = ({
             ]}
           >
             {conversation?.type === 'group' && !isMe && (
-              <Text style={styles.senderName} numberOfLines={1}>
+              <Text
+                style={[
+                  styles.senderName,
+                  { color: getSenderColor(item.sender?._id) },
+                ]}
+                numberOfLines={1}
+              >
                 {item.sender?.fullName}
               </Text>
             )}
@@ -723,10 +730,10 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.lato.regular,
   },
   senderName: {
-    fontSize: fontSize(12),
-    fontFamily: theme.fonts.archivo.medium,
-    color: theme.colors.primary,
-    marginBottom: spacing(2),
+    fontSize: fontSize(11),
+    fontFamily: theme.fonts.archivo.semiBold,
+    letterSpacing: 0.2,
+    marginBottom: spacing(3),
   },
   inputBar: {
     flexDirection: 'row',

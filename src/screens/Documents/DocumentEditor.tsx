@@ -146,6 +146,11 @@ export default function DocumentEditor() {
     tag = '',
     content = '',
   } = route.params || {};
+
+  // Staff (coach/manager/admin) acting on a viewed client's document. Gating on
+  // role === 'coach' alone excluded managers/admins onto the self-scoped path.
+  const isStaffViewingClient =
+    !!userId && ['coach', 'manager', 'admin'].includes(profile?.role ?? '');
   const editor = useRef<RichEditor | null>(null);
   const scrollRef = useRef<KeyboardAwareScrollView>(null);
   const [editorValue, setEditorValue] = useState(content);
@@ -257,7 +262,7 @@ export default function DocumentEditor() {
       });
     if (localMode === 'edit') {
       edit({ ..._data, content: editorValue, documentId });
-    } else if (profile?.role === 'coach' && userId) {
+    } else if (isStaffViewingClient) {
       coachMutate({ ..._data, content: editorValue, user: userId });
     } else {
       mutate({ ..._data, content: editorValue });
@@ -560,7 +565,7 @@ export default function DocumentEditor() {
                       //     : categories?.find(_cat => _cat._id === field.value),
                       // );
                       const selectedTag =
-                        profile?.role === 'coach' && !!userId
+                        isStaffViewingClient
                           ? userCategories?.find(
                               _cat => _cat._id === field.value,
                             )
@@ -577,9 +582,7 @@ export default function DocumentEditor() {
                                   <DocumentCategorySheetBody
                                     category={field.value}
                                     fieldChange={field.onChange}
-                                    forClient={
-                                      profile?.role === 'coach' && !!userId
-                                    }
+                                    forClient={isStaffViewingClient}
                                     userId={userId}
                                   />
                                 ),

@@ -21,3 +21,17 @@ export const predefinedColors: TaxonomyColor[] = [
   { bg: '#F0FDF4', text: '#166534' }, // Mint Green
   { bg: '#FEF9C3', text: '#854D0E' }, // Mustard Yellow
 ];
+
+// Distinct, accessible colours for group-chat sender names. Each participant
+// gets a stable colour derived from a seed (their id), so their name reads as a
+// coloured label rather than part of the message text.
+const senderNameColors = predefinedColors.map(c => c.text);
+
+export const getSenderColor = (seed?: string): string => {
+  if (!seed) return senderNameColors[0];
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  }
+  return senderNameColors[Math.abs(hash) % senderNameColors.length];
+};
