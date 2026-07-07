@@ -80,6 +80,8 @@ export const endpoints = {
     getAllWatching: '/user/get-all-watching',
     suggestUsers: '/user/suggestions',
     addWatchers: '/user/add-watchers',
+    findWatcherByEmail: '/user/find-watcher-by-email',
+    inviteWatchers: '/user/invite-watchers',
     userByIds: '/user/user-by-ids',
     createUser: '/user/create-user',
     userById: (userId: string) => `/user/user-by-id/${userId}`,

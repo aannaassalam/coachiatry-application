@@ -307,7 +307,9 @@ const ChatSection = ({ chats }: { chats: ChatConversation[] }) => {
                 {details.name}
               </Text>
               <Text style={styles.timeText}>
-                {moment(item.lastMessage?.createdAt).fromNow(true)}
+                {item.lastMessage?.createdAt
+                  ? moment(item.lastMessage.createdAt).fromNow(true)
+                  : moment(item.createdAt).fromNow(true)}
               </Text>
             </View>
             <Text

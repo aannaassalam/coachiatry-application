@@ -33,8 +33,10 @@ import AntDesign from 'react-native-vector-icons/AntDesign';
 import { queryClient } from '../../../App';
 import {
   addWatchers,
+  findWatcherByEmail,
   getMyProfile,
   getUserSuggestions,
+  inviteWatchersByEmail,
   revokeViewAccess,
 } from '../../api/functions/user.api';
 import { ChevronLeft } from '../../assets';
@@ -48,7 +50,12 @@ import { User } from '../../typescript/interface/user.interface';
 import { removeFCMToken } from '../../api/functions/auth.api';
 import messaging from '@react-native-firebase/messaging';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { Check, Pencil } from 'lucide-react-native';
+import { Check, Mail, Pencil, UserPlus, X } from 'lucide-react-native';
+
+type SelectedUser = Pick<User, '_id' | 'fullName' | 'email' | 'photo'>;
+
+const isValidEmail = (email: string) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -105,9 +112,13 @@ const RenderWatcher = ({ item }: { item: User }) => {
 const FooterComponent = ({
   isAdding,
   mutate,
+  label = 'Add',
+  disabled = false,
 }: {
   isAdding: boolean;
   mutate: () => void;
+  label?: string;
+  disabled?: boolean;
 }) => {
   const insets = useSafeAreaInsets();
   return (
@@ -119,7 +130,12 @@ const FooterComponent = ({
         marginTop: 'auto',
       }}
     >
-      <AppButton text="Add" onPress={mutate} isLoading={isAdding} />
+      <AppButton
+        text={label}
+        onPress={mutate}
+        isLoading={isAdding}
+        disabled={disabled}
+      />
     </View>
   );
 };
@@ -130,7 +146,8 @@ export default function Profile() {
   const { setAuthData } = useAuth();
   const [addPersonModal, setAddPersonModal] = useState(false);
   const [search, setSearch] = useState('');
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<SelectedUser[]>([]);
+  const [invitedEmails, setInvitedEmails] = useState<string[]>([]);
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -189,16 +206,93 @@ export default function Profile() {
     });
   };
 
-  const { mutate: watchersMutate, isPending: isAdding } = useMutation({
-    mutationFn: addWatchers,
-    onSuccess: () => {
-      setAddPersonModal(false);
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    },
-    meta: {
-      invalidateQueries: ['settings-profile'],
+  const closeAddPerson = () => {
+    setAddPersonModal(false);
+    setSelectedUsers([]);
+    setInvitedEmails([]);
+    setSearch('');
+  };
+
+  // Resolve a typed email: add the person if they already have an account, or
+  // stage an email invite if they don't.
+  const { mutate: resolveEmail, isPending: isResolving } = useMutation({
+    mutationFn: findWatcherByEmail,
+    onSuccess: (res, email) => {
+      const normalized = email.trim().toLowerCase();
+      if (res.isSelf) {
+        showMessage({
+          message: "That's your email",
+          description: "You can't add yourself as a watcher.",
+          type: 'warning',
+        });
+        return;
+      }
+      if (res.found && res.user) {
+        if (res.alreadyWatcher) {
+          showMessage({
+            message: 'Already added',
+            description: `${res.user.fullName} is already watching you.`,
+            type: 'info',
+          });
+          return;
+        }
+        setSelectedUsers(prev =>
+          prev.some(u => u._id === res.user!._id) ? prev : [...prev, res.user!],
+        );
+      } else {
+        setInvitedEmails(prev =>
+          prev.includes(normalized) ? prev : [...prev, normalized],
+        );
+      }
+      setSearch('');
     },
   });
+
+  const { mutate: submitMutate, isPending: isAdding } = useMutation({
+    mutationFn: async () => {
+      if (selectedUsers.length) {
+        await addWatchers(selectedUsers.map(u => u._id));
+      }
+      if (invitedEmails.length) {
+        await inviteWatchersByEmail(invitedEmails);
+      }
+    },
+    onSuccess: () => {
+      const added = selectedUsers.length;
+      const invited = invitedEmails.length;
+      closeAddPerson();
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['settings-profile'] });
+      showMessage({
+        message: 'Success',
+        description: [
+          added ? `${added} watcher${added > 1 ? 's' : ''} added` : '',
+          invited ? `${invited} invite${invited > 1 ? 's' : ''} sent` : '',
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        type: 'success',
+      });
+    },
+  });
+
+  const suggestions = data.filter(
+    _data => !profile?.sharedViewers?.map(_sv => _sv._id).includes(_data._id),
+  );
+  const trimmedEmail = search.trim().toLowerCase();
+  // Offer an email invite when the query looks like an email that isn't already
+  // staged (as a selected user or a pending invite).
+  const showInviteRow =
+    isValidEmail(trimmedEmail) &&
+    !invitedEmails.includes(trimmedEmail) &&
+    !selectedUsers.some(u => u.email?.toLowerCase() === trimmedEmail);
+  const hasStaged = selectedUsers.length > 0 || invitedEmails.length > 0;
+  const footerLabel =
+    invitedEmails.length > 0 && selectedUsers.length === 0
+      ? 'Send Invite'
+      : invitedEmails.length > 0 && selectedUsers.length > 0
+        ? 'Add & Invite'
+        : 'Add';
 
   return (
     <ScrollView
@@ -375,7 +469,7 @@ export default function Profile() {
       )}
       <Modal
         visible={addPersonModal}
-        onRequestClose={() => setAddPersonModal(false)}
+        onRequestClose={closeAddPerson}
         animationType="slide"
         statusBarTranslucent
       >
@@ -389,17 +483,16 @@ export default function Profile() {
             <Text style={styles.heading}>Add Person</Text>
             <View style={styles.searchRow}>
               <TextInput
-                placeholder="Search..."
+                placeholder="Search name or enter email…"
                 style={styles.searchHeaderInput}
                 placeholderTextColor={theme.colors.gray[500]}
                 value={search}
                 onChangeText={val => setSearch(val)}
+                autoCapitalize="none"
+                keyboardType="email-address"
                 autoFocus
               />
-              <Pressable
-                style={styles.cancelBtn}
-                onPress={() => setAddPersonModal(false)}
-              >
+              <Pressable style={styles.cancelBtn} onPress={closeAddPerson}>
                 <Text>Cancel</Text>
               </Pressable>
             </View>
@@ -409,12 +502,7 @@ export default function Profile() {
           ) : (
             <>
               <KeyboardAwareFlatList
-                data={data.filter(
-                  _data =>
-                    !profile?.sharedViewers
-                      ?.map(_sv => _sv._id)
-                      .includes(_data._id),
-                )}
+                data={suggestions}
                 contentContainerStyle={[
                   styles.searchContentContainer,
                   { paddingBottom: insets.bottom },
@@ -423,38 +511,146 @@ export default function Profile() {
                   backgroundColor: theme.colors.gray[50],
                   flex: 1,
                 }}
+                keyboardShouldPersistTaps="handled"
                 keyExtractor={item => item._id}
-                renderItem={({ item }) => (
-                  <TouchableButton
-                    style={styles.watcherRow}
-                    onPress={() =>
-                      setSelectedUsers(prev =>
-                        prev.includes(item._id)
-                          ? prev.filter(_p => _p !== item._id)
-                          : [...prev, item._id],
-                      )
-                    }
-                    disabled={isAdding}
-                  >
-                    <View style={styles.watcherLeft}>
-                      <SmartAvatar
-                        src={item.photo}
-                        name={item.fullName}
-                        size={fontSize(40)}
-                      />
-                      <View>
-                        <Text style={styles.watcherName}>{item.fullName}</Text>
-                        <Text style={styles.watcherEmail}>{item.email}</Text>
-                      </View>
-                    </View>
-                    {selectedUsers.includes(item._id) && (
-                      <Check
-                        size={fontSize(14)}
-                        color={theme.colors.gray[500]}
-                      />
+                ListHeaderComponent={
+                  <View>
+                    {/* Invite-by-email action */}
+                    {showInviteRow && (
+                      <TouchableButton
+                        style={styles.inviteRow}
+                        onPress={() => resolveEmail(trimmedEmail)}
+                        disabled={isResolving || isAdding}
+                      >
+                        <View style={styles.inviteIconWrap}>
+                          <UserPlus
+                            size={fontSize(18)}
+                            color={theme.colors.primary}
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.inviteTitle}>
+                            Invite via email
+                          </Text>
+                          <Text
+                            style={styles.inviteSubtitle}
+                            numberOfLines={1}
+                          >
+                            {trimmedEmail}
+                          </Text>
+                        </View>
+                        {isResolving ? (
+                          <ActivityIndicator
+                            size="small"
+                            color={theme.colors.primary}
+                          />
+                        ) : (
+                          <View style={styles.invitePill}>
+                            <Mail
+                              size={fontSize(13)}
+                              color={theme.colors.white}
+                            />
+                            <Text style={styles.invitePillText}>Invite</Text>
+                          </View>
+                        )}
+                      </TouchableButton>
                     )}
-                  </TouchableButton>
-                )}
+
+                    {/* Staged selections */}
+                    {hasStaged && (
+                      <View style={styles.chipsWrap}>
+                        {selectedUsers.map(u => (
+                          <View key={u._id} style={styles.chip}>
+                            <Text style={styles.chipText} numberOfLines={1}>
+                              {u.fullName}
+                            </Text>
+                            <Pressable
+                              hitSlop={8}
+                              onPress={() =>
+                                setSelectedUsers(prev =>
+                                  prev.filter(x => x._id !== u._id),
+                                )
+                              }
+                            >
+                              <X
+                                size={fontSize(13)}
+                                color={theme.colors.gray[500]}
+                              />
+                            </Pressable>
+                          </View>
+                        ))}
+                        {invitedEmails.map(email => (
+                          <View
+                            key={email}
+                            style={[styles.chip, styles.inviteChip]}
+                          >
+                            <Mail
+                              size={fontSize(12)}
+                              color={theme.colors.primary}
+                            />
+                            <Text
+                              style={[styles.chipText, styles.inviteChipText]}
+                              numberOfLines={1}
+                            >
+                              {email}
+                            </Text>
+                            <Pressable
+                              hitSlop={8}
+                              onPress={() =>
+                                setInvitedEmails(prev =>
+                                  prev.filter(x => x !== email),
+                                )
+                              }
+                            >
+                              <X
+                                size={fontSize(13)}
+                                color={theme.colors.primary}
+                              />
+                            </Pressable>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                }
+                renderItem={({ item }) => {
+                  const isSelected = selectedUsers.some(
+                    u => u._id === item._id,
+                  );
+                  return (
+                    <TouchableButton
+                      style={styles.watcherRow}
+                      onPress={() =>
+                        setSelectedUsers(prev =>
+                          isSelected
+                            ? prev.filter(u => u._id !== item._id)
+                            : [...prev, item],
+                        )
+                      }
+                      disabled={isAdding}
+                    >
+                      <View style={styles.watcherLeft}>
+                        <SmartAvatar
+                          src={item.photo}
+                          name={item.fullName}
+                          size={fontSize(40)}
+                        />
+                        <View>
+                          <Text style={styles.watcherName}>
+                            {item.fullName}
+                          </Text>
+                          <Text style={styles.watcherEmail}>{item.email}</Text>
+                        </View>
+                      </View>
+                      {isSelected && (
+                        <Check
+                          size={fontSize(14)}
+                          color={theme.colors.gray[500]}
+                        />
+                      )}
+                    </TouchableButton>
+                  );
+                }}
                 ItemSeparatorComponent={() => (
                   <View
                     style={[styles.separator, { marginBottom: spacing(10) }]}
@@ -463,7 +659,9 @@ export default function Profile() {
               />
               <FooterComponent
                 isAdding={isAdding}
-                mutate={() => watchersMutate(selectedUsers)}
+                disabled={!hasStaged}
+                label={footerLabel}
+                mutate={() => submitMutate()}
               />
             </>
           )}
@@ -610,6 +808,80 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  inviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(12),
+    backgroundColor: theme.colors.white,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    borderStyle: 'dashed',
+    borderRadius: fontSize(12),
+    paddingVertical: spacing(12),
+    paddingHorizontal: spacing(14),
+    marginBottom: spacing(14),
+  },
+  inviteIconWrap: {
+    width: scale(38),
+    height: scale(38),
+    borderRadius: scale(19),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary + '1A',
+  },
+  inviteTitle: {
+    fontSize: fontSize(14),
+    fontFamily: theme.fonts.archivo.semiBold,
+    color: theme.colors.gray[900],
+  },
+  inviteSubtitle: {
+    fontSize: fontSize(12),
+    fontFamily: theme.fonts.lato.regular,
+    color: theme.colors.gray[600],
+    marginTop: spacing(1),
+  },
+  invitePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(5),
+    backgroundColor: theme.colors.primary,
+    borderRadius: fontSize(100),
+    paddingVertical: spacing(6),
+    paddingHorizontal: spacing(12),
+  },
+  invitePillText: {
+    color: theme.colors.white,
+    fontFamily: theme.fonts.archivo.semiBold,
+    fontSize: fontSize(12),
+  },
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing(8),
+    marginBottom: spacing(14),
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(6),
+    maxWidth: '100%',
+    backgroundColor: theme.colors.gray[100],
+    borderRadius: fontSize(100),
+    paddingVertical: spacing(6),
+    paddingHorizontal: spacing(12),
+  },
+  chipText: {
+    flexShrink: 1,
+    fontSize: fontSize(13),
+    fontFamily: theme.fonts.archivo.medium,
+    color: theme.colors.gray[800],
+  },
+  inviteChip: {
+    backgroundColor: theme.colors.primary + '14',
+  },
+  inviteChipText: {
+    color: theme.colors.primary,
   },
   watcherLeft: {
     flexDirection: 'row',

@@ -105,6 +105,33 @@ export const addWatchers = async (userIds: string[]) => {
   return res;
 };
 
+export interface FindWatcherResult {
+  found: boolean;
+  alreadyWatcher?: boolean;
+  isSelf?: boolean;
+  user?: Pick<User, '_id' | 'fullName' | 'email' | 'photo' | 'role'>;
+}
+
+// Look up whether an email belongs to a registered user (and whether they're
+// already a watcher / the current user). Powers the "invite by email" flow.
+export const findWatcherByEmail = async (
+  email: string,
+): Promise<FindWatcherResult> => {
+  const res = await axiosInstance.get(endpoints.user.findWatcherByEmail, {
+    params: { email },
+  });
+  return res.data;
+};
+
+// Email an invite to people who don't yet have an account, adding them as
+// watchers once they join.
+export const inviteWatchersByEmail = async (emails: string[]) => {
+  const res = await axiosInstance.post(endpoints.user.inviteWatchers, {
+    emails,
+  });
+  return res;
+};
+
 export const getUsers = async (
   {
     search = '',
