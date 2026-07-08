@@ -272,7 +272,7 @@ export default function UserDetails() {
                   <Text
                     style={[styles.bigEmail, { textTransform: 'capitalize' }]}
                   >
-                    {data?.role}
+                    {data?.role === 'user' ? 'Client' : data?.role}
                   </Text>
                   <View
                     style={{

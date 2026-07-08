@@ -72,6 +72,16 @@ function AppContent() {
     return subscribeForegroundListeners();
   }, []);
 
+  // A notification tapped from a cold start fires before auth resolves, so its
+  // intent is parked (the AppNavigator isn't mounted yet). Once the token loads
+  // and the AppNavigator mounts, drain it. The small delay lets the navigator
+  // commit so `BottomTabs`/`ChatRoom` are actually navigable.
+  useEffect(() => {
+    if (!token) return;
+    const t = setTimeout(() => flushPendingDeepLink(), 350);
+    return () => clearTimeout(t);
+  }, [token]);
+
   // Drain any pending deep-link intent whenever the app comes back to the
   // foreground. Only flush MMKV-parked intents here — never re-call
   // getInitialNotification, since on iOS it can keep returning the same

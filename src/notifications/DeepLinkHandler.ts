@@ -1,3 +1,4 @@
+import { CommonActions } from '@react-navigation/native';
 import { storage } from '../helpers/utils';
 import { navigationRef } from '../navigators/navigationService';
 import { PENDING_NAV_KEY } from './constants';
@@ -16,8 +17,6 @@ import type { PendingDeepLink } from './types';
  * is parked in MMKV under `PENDING_NAV_KEY` and replayed by
  * `flushPendingDeepLink` once navigation mounts.
  */
-
-const NAV_DELAY_MS = 180;
 
 // Multiple notification frameworks can fire for the same tap (FCM
 // onNotificationOpenedApp + getInitialNotification + Notifee press), so we
@@ -45,6 +44,24 @@ const clearPending = () => {
 };
 
 /**
+ * True only when the authenticated navigator (which contains `BottomTabs` and
+ * `ChatRoom`) is actually mounted. On a cold-start notification tap the auth
+ * token is still loading, so the container can be "ready" while showing the
+ * AuthNavigator — navigating to `BottomTabs` there throws
+ * "not handled by any navigator". Gate on the real route names instead of just
+ * `isReady()`.
+ */
+const isAppNavigatorMounted = (): boolean => {
+  if (!navigationRef.isReady()) return false;
+  try {
+    const root = navigationRef.getRootState();
+    return !!root?.routeNames?.includes('BottomTabs');
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Navigate into the chat room for `chatId`. Safe to call before navigation is
  * ready — the intent is parked and replayed via `flushPendingDeepLink`.
  */
@@ -57,18 +74,30 @@ export const routeToChat = (pending: PendingDeepLink) => {
   lastRoutedKey = key;
   lastRoutedAt = now;
 
-  if (!navigationRef.isReady()) {
+  // Park until the AUTHENTICATED navigator is mounted (not merely any
+  // container). flushPendingDeepLink replays it once auth completes.
+  if (!isAppNavigatorMounted()) {
     persistPending(pending);
     return;
   }
 
   try {
-    navigationRef.navigate('BottomTabs', { screen: 'Chats' });
-    setTimeout(() => {
-      navigationRef.navigate('ChatRoom', {
-        roomId: pending.chatId,
-      });
-    }, NAV_DELAY_MS);
+    // Land the user IN the chat room in a single atomic action — with the Chats
+    // tab underneath so Back returns to the conversation list. Doing this as one
+    // reset avoids the previous race (navigate to a tab, then a delayed navigate
+    // to ChatRoom) that could leave the user on the chat list instead.
+    navigationRef.dispatch(
+      CommonActions.reset({
+        index: 1,
+        routes: [
+          {
+            name: 'BottomTabs',
+            state: { index: 0, routes: [{ name: 'Chats' }] },
+          },
+          { name: 'ChatRoom', params: { roomId: pending.chatId } },
+        ],
+      }),
+    );
   } catch {
     persistPending(pending);
   }

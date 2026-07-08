@@ -72,7 +72,7 @@ export default function Users() {
             {item.fullName}
           </Text>
           <Text style={styles.email} numberOfLines={1} ellipsizeMode="tail">
-            {item.role}
+            {item.role === 'user' ? 'Client' : item.role}
           </Text>
         </View>
       </View>

@@ -4,8 +4,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import {
   FlatList,
-  Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -13,21 +11,21 @@ import {
 } from 'react-native';
 import AvatarListSkeleton from '../../components/skeletons/AvatarListSkeleton';
 
-import { assets, Calendar } from '../../assets';
-
 import AppHeader from '../../components/ui/AppHeader';
 
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { fontSize, scale, spacing } from '../../utils';
 import { FLOATING_BAR_FOOTPRINT } from '../../components/Chat/FloatingChatHost';
-import { Image } from 'react-native';
 import AppButton from '../../components/ui/AppButton';
 import { Modal } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { SheetManager } from 'react-native-actions-sheet';
 import { getClients } from '../../api/functions/coach.api';
 import { User } from '../../typescript/interface/user.interface';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
+import { useAuth } from '../../hooks/useAuth';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 type ClientScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -37,6 +35,8 @@ function MyClients() {
   const [selectedClient, setSelectedClient] = useState<User | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const navigation = useNavigation<ClientScreenNavigationProp>();
+  const { profile } = useAuth();
+  const isCoach = profile?.role === 'coach';
 
   const { data = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ['clients'],
@@ -73,27 +73,6 @@ function MyClients() {
   return (
     <View style={styles.container}>
       <AppHeader heading="My Clients" showSearch />
-      {/* <View style={{ paddingHorizontal: spacing(16) }}>
-        <View style={styles.buttonContainer}>
-          <Pressable style={styles.filterIcon} onPress={() => {}}>
-            <Image source={assets.icons.filter} style={styles.sortIcon} />
-          </Pressable>
-          <Pressable style={styles.filterIcon} onPress={() => {}}>
-            <Image source={assets.icons.sort} style={styles.sortIcon} />
-          </Pressable>
-          <AppButton
-            text="Add a New Client"
-            onPress={() => {}}
-            variant="secondary-outline"
-            style={{
-              padding: spacing(8),
-              borderRadius: fontSize(6),
-              marginLeft: 'auto',
-            }}
-            textStyle={{ fontSize: fontSize(14) }}
-          />
-        </View>
-      </View> */}
       {/* <ScrollView showsVerticalScrollIndicator={false}> */}
       {isLoading ? (
         <AvatarListSkeleton />
@@ -166,6 +145,16 @@ function MyClients() {
           </View>
         </View>
       </Modal>
+
+      {isCoach && (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={styles.addBtn}
+          onPress={() => SheetManager.show('create-client-sheet')}
+        >
+          <Ionicons name="add" size={25} color={theme.colors.white} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -177,6 +166,20 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
     flex: 1,
     position: 'relative',
+  },
+  addBtn: {
+    position: 'absolute',
+    bottom: spacing(-15) + FLOATING_BAR_FOOTPRINT,
+    right: spacing(16),
+    padding: spacing(10),
+    backgroundColor: theme.colors.primary,
+    borderRadius: 100,
+    // Lift the FAB above content on Android/iOS.
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   buttonContainer: {
     flexDirection: 'row',

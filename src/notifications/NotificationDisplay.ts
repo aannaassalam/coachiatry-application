@@ -136,7 +136,10 @@ const syncBadge = async () => {
 
 export const displayChatNotification = async (ctx: DisplayContext) => {
   const { remoteMessage, data, isBackgroundHandler } = ctx;
-  if (!hasDisplayablePayload(ctx)) return;
+  if (!hasDisplayablePayload(ctx)) {
+    console.log('[notifications] skip: no displayable payload');
+    return;
+  }
 
   // In-chat suppression: if the user is staring at this chat right now there
   // is no value in pushing a banner — the live socket already updates the
@@ -146,7 +149,12 @@ export const displayChatNotification = async (ctx: DisplayContext) => {
   // before our handler runs in that path.
   if (!isBackgroundHandler) {
     const focused = getFocusedChat();
-    if (focused && data.chatId && focused === data.chatId) return;
+    if (focused && data.chatId && focused === data.chatId) {
+      console.log(
+        `[notifications] skip: user is focused on this chat (${data.chatId})`,
+      );
+      return;
+    }
   }
 
   // On Android, when the FCM payload includes a top-level `notification`
@@ -230,6 +238,10 @@ export const displayChatNotification = async (ctx: DisplayContext) => {
     ? `${chatId}::${data.messageId || remoteMessage.messageId || Date.now()}`
     : chatId;
 
+  console.log(
+    `[notifications] calling notifee.displayNotification id=${notificationId} ` +
+      `channel=${CHAT_CHANNEL_ID} title="${title}"`,
+  );
   await notifee.displayNotification({
     id: notificationId,
     title,
@@ -293,6 +305,9 @@ export const displayChatNotification = async (ctx: DisplayContext) => {
       badgeCount: totalUnread() || unread || undefined,
     },
   });
+  console.log(
+    `[notifications] notifee.displayNotification resolved id=${notificationId}`,
+  );
 
   if (isChatScoped) {
     await updateSummaryNotification();

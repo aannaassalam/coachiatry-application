@@ -186,7 +186,15 @@ export const reconcileUnread = (
 /* Currently-focused chat (drives in-app suppression)                         */
 /* -------------------------------------------------------------------------- */
 
-const FOCUSED_CHAT_KEY = 'notif.focused-chat';
+// In-memory ONLY — deliberately not persisted to MMKV. The focused chat is a
+// runtime concept (what's on screen right now), and it is only ever read from
+// the main JS context (the foreground display path + useConversationsRealtime),
+// never from the headless background handler. Persisting it caused stale
+// suppression: if the app was killed while a chat was open, the value survived
+// the restart and silently suppressed ALL foreground notifications for that
+// chat until it was opened and closed again. A module variable resets to
+// "nothing focused" on every launch, so it can never go stale.
+let focusedChatId: string | undefined;
 
 /**
  * Set the chat the user is currently viewing. Notifications for this chat
@@ -195,13 +203,7 @@ const FOCUSED_CHAT_KEY = 'notif.focused-chat';
  * unmount to clear.
  */
 export const setFocusedChat = (chatId?: string) => {
-  if (chatId) {
-    storage.set(FOCUSED_CHAT_KEY, chatId);
-  } else {
-    storage.remove(FOCUSED_CHAT_KEY);
-  }
+  focusedChatId = chatId || undefined;
 };
 
-export const getFocusedChat = (): string | undefined => {
-  return storage.getString(FOCUSED_CHAT_KEY);
-};
+export const getFocusedChat = (): string | undefined => focusedChatId;

@@ -356,188 +356,191 @@ export default function AddEditUser() {
           <>
             <ScrollView
               style={{ flex: 1 }}
-              contentContainerStyle={{ flexGrow: 1, paddingBottom: spacing(16) }}
+              contentContainerStyle={{
+                flexGrow: 1,
+                paddingBottom: spacing(16),
+              }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
-            <FormProvider {...form}>
-              <View style={{ gap: spacing(12) }}>
-                <AppInput
-                  label="Full Name"
-                  name="name"
-                  placeholder="Enter name"
-                />
-                <AppInput
-                  label="Email Address"
-                  name="email"
-                  placeholder="Enter email address"
-                  keyboardType="email-address"
-                />
-                <Controller
-                  name="role"
-                  control={form.control}
-                  render={({ field }) => {
-                    return (
-                      <View>
-                        <Text style={styles.label}>Role</Text>
-                        <View style={styles.toggleButtons}>
-                          {profile?.role === 'admin' && (
-                            <>
-                              <TouchableOpacity
-                                style={[
-                                  styles.toggleButton,
-                                  field.value === 'admin' && {
-                                    backgroundColor: theme.colors.primary,
-                                  },
-                                ]}
-                                onPress={() => {
-                                  setMembers([]);
-                                  setSelectedUsers([]);
-                                  field.onChange('admin');
-                                }}
-                              >
-                                <Text
+              <FormProvider {...form}>
+                <View style={{ gap: spacing(12) }}>
+                  <AppInput
+                    label="Full Name"
+                    name="name"
+                    placeholder="Enter name"
+                  />
+                  <AppInput
+                    label="Email Address"
+                    name="email"
+                    placeholder="Enter email address"
+                    keyboardType="email-address"
+                  />
+                  <Controller
+                    name="role"
+                    control={form.control}
+                    render={({ field }) => {
+                      return (
+                        <View>
+                          <Text style={styles.label}>Role</Text>
+                          <View style={styles.toggleButtons}>
+                            {profile?.role === 'admin' && (
+                              <>
+                                <TouchableOpacity
                                   style={[
-                                    styles.toggleButtonText,
+                                    styles.toggleButton,
                                     field.value === 'admin' && {
-                                      color: theme.colors.white,
+                                      backgroundColor: theme.colors.primary,
                                     },
                                   ]}
+                                  onPress={() => {
+                                    setMembers([]);
+                                    setSelectedUsers([]);
+                                    field.onChange('admin');
+                                  }}
                                 >
-                                  Admin
-                                </Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity
+                                  <Text
+                                    style={[
+                                      styles.toggleButtonText,
+                                      field.value === 'admin' && {
+                                        color: theme.colors.white,
+                                      },
+                                    ]}
+                                  >
+                                    Admin
+                                  </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={[
+                                    styles.toggleButton,
+                                    field.value === 'manager' && {
+                                      backgroundColor: theme.colors.primary,
+                                    },
+                                  ]}
+                                  onPress={() => {
+                                    setMembers([]);
+                                    setSelectedUsers([]);
+                                    field.onChange('manager');
+                                  }}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.toggleButtonText,
+                                      field.value === 'manager' && {
+                                        color: theme.colors.white,
+                                      },
+                                    ]}
+                                  >
+                                    Manager
+                                  </Text>
+                                </TouchableOpacity>
+                              </>
+                            )}
+                            <TouchableOpacity
+                              style={[
+                                styles.toggleButton,
+                                field.value === 'coach' && {
+                                  backgroundColor: theme.colors.primary,
+                                },
+                              ]}
+                              onPress={() => {
+                                setMembers([]);
+                                setSelectedUsers([]);
+                                field.onChange('coach');
+                              }}
+                            >
+                              <Text
                                 style={[
-                                  styles.toggleButton,
-                                  field.value === 'manager' && {
-                                    backgroundColor: theme.colors.primary,
+                                  styles.toggleButtonText,
+                                  field.value === 'coach' && {
+                                    color: theme.colors.white,
                                   },
                                 ]}
-                                onPress={() => {
-                                  setMembers([]);
-                                  setSelectedUsers([]);
-                                  field.onChange('manager');
-                                }}
                               >
-                                <Text
-                                  style={[
-                                    styles.toggleButtonText,
-                                    field.value === 'manager' && {
-                                      color: theme.colors.white,
-                                    },
-                                  ]}
-                                >
-                                  Manager
-                                </Text>
-                              </TouchableOpacity>
-                            </>
-                          )}
-                          <TouchableOpacity
-                            style={[
-                              styles.toggleButton,
-                              field.value === 'coach' && {
-                                backgroundColor: theme.colors.primary,
-                              },
-                            ]}
-                            onPress={() => {
-                              setMembers([]);
-                              setSelectedUsers([]);
-                              field.onChange('coach');
-                            }}
-                          >
-                            <Text
+                                Coach
+                              </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
                               style={[
-                                styles.toggleButtonText,
-                                field.value === 'coach' && {
-                                  color: theme.colors.white,
-                                },
-                              ]}
-                            >
-                              Coach
-                            </Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[
-                              styles.toggleButton,
-                              field.value === 'user' && {
-                                backgroundColor: theme.colors.primary,
-                              },
-                            ]}
-                            onPress={() => {
-                              setMembers([]);
-                              setSelectedUsers([]);
-                              field.onChange('user');
-                            }}
-                          >
-                            <Text
-                              style={[
-                                styles.toggleButtonText,
+                                styles.toggleButton,
                                 field.value === 'user' && {
-                                  color: theme.colors.white,
+                                  backgroundColor: theme.colors.primary,
                                 },
                               ]}
+                              onPress={() => {
+                                setMembers([]);
+                                setSelectedUsers([]);
+                                field.onChange('user');
+                              }}
                             >
-                              Patient
-                            </Text>
-                          </TouchableOpacity>
+                              <Text
+                                style={[
+                                  styles.toggleButtonText,
+                                  field.value === 'user' && {
+                                    color: theme.colors.white,
+                                  },
+                                ]}
+                              >
+                                Client
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
                         </View>
-                      </View>
-                    );
-                  }}
-                />
-                {requiresAssignment && !autoAssigned && (
-                  <View style={styles.watchersSection}>
-                    <Text style={styles.sectionTitle}>Managed by</Text>
-                    <FlatList
-                      data={members}
-                      keyExtractor={item => item.value}
-                      renderItem={({ item }) => <RenderMember item={item} />}
-                      scrollEnabled={false}
-                      contentContainerStyle={{
-                        gap: spacing(12),
-                        marginTop: spacing(10),
-                      }}
-                      ListEmptyComponent={() => (
-                        <View
-                          style={{
-                            height: verticalScale(50),
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Text
+                      );
+                    }}
+                  />
+                  {requiresAssignment && !autoAssigned && (
+                    <View style={styles.watchersSection}>
+                      <Text style={styles.sectionTitle}>Managed by</Text>
+                      <FlatList
+                        data={members}
+                        keyExtractor={item => item.value}
+                        renderItem={({ item }) => <RenderMember item={item} />}
+                        scrollEnabled={false}
+                        contentContainerStyle={{
+                          gap: spacing(12),
+                          marginTop: spacing(10),
+                        }}
+                        ListEmptyComponent={() => (
+                          <View
                             style={{
-                              fontSize: fontSize(12),
-                              fontStyle: 'italic',
-                              color: theme.colors.gray[500],
+                              height: verticalScale(50),
+                              alignItems: 'center',
+                              justifyContent: 'center',
                             }}
                           >
-                            No members added
-                          </Text>
-                        </View>
-                      )}
-                      ItemSeparatorComponent={() => (
-                        <View style={styles.separator} />
-                      )}
-                    />
-
-                    <View style={styles.bottomButtons}>
-                      <AppButton
-                        text="+ Add Member"
-                        onPress={() => setAddPersonModal(true)}
-                        variant="primary"
-                        style={{
-                          paddingVertical: spacing(8),
-                          paddingHorizontal: spacing(14),
-                        }}
-                        textStyle={{ fontSize: fontSize(14) }}
+                            <Text
+                              style={{
+                                fontSize: fontSize(12),
+                                fontStyle: 'italic',
+                                color: theme.colors.gray[500],
+                              }}
+                            >
+                              No members added
+                            </Text>
+                          </View>
+                        )}
+                        ItemSeparatorComponent={() => (
+                          <View style={styles.separator} />
+                        )}
                       />
+
+                      <View style={styles.bottomButtons}>
+                        <AppButton
+                          text="+ Add Member"
+                          onPress={() => setAddPersonModal(true)}
+                          variant="primary"
+                          style={{
+                            paddingVertical: spacing(8),
+                            paddingHorizontal: spacing(14),
+                          }}
+                          textStyle={{ fontSize: fontSize(14) }}
+                        />
+                      </View>
                     </View>
-                  </View>
-                )}
-              </View>
-            </FormProvider>
+                  )}
+                </View>
+              </FormProvider>
             </ScrollView>
             <AppButton
               text={id ? 'Save' : 'Submit'}

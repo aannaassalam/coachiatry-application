@@ -6,6 +6,7 @@ import {
   ACTION_MARK_READ,
   ACTION_OPEN_APP,
   ACTION_OPEN_CHAT,
+  IS_ANDROID,
   IS_IOS,
 } from './constants';
 import { routeToChat } from './DeepLinkHandler';
@@ -33,25 +34,44 @@ const handleRemoteMessage = async (
   remoteMessage: FirebaseMessagingTypes.RemoteMessage,
   isBackgroundHandler: boolean,
 ) => {
-  const data = parseChatPushData(remoteMessage);
+  try {
+    const data = parseChatPushData(remoteMessage);
+    console.log(
+      `[notifications] message received (bg=${isBackgroundHandler}) chatId=${
+        data.chatId ?? '—'
+      }`,
+    );
 
-  // Dedup across foreground + background + cold-start delivery paths.
-  if (!markSeenOnce(remoteMessage, data)) return;
+    // Dedup across foreground + background + cold-start delivery paths.
+    if (!markSeenOnce(remoteMessage, data)) return;
 
-  // On iOS in the background, the APNS alert + the NSE have already shown
-  // the notification (with avatar attached). Re-rendering here would
-  // duplicate it. We still consume the message above for dedup-cache
-  // priming and history tracking would belong here in the future.
-  if (IS_IOS && isBackgroundHandler) return;
+    // On iOS in the background, the APNS alert + the NSE have already shown
+    // the notification (with avatar attached). Re-rendering here would
+    // duplicate it. We still consume the message above for dedup-cache
+    // priming and history tracking would belong here in the future.
+    if (IS_IOS && isBackgroundHandler) return;
 
-  // Only render when we have enough to draw a chat notification.
-  if (!data.chatId && !remoteMessage.notification) return;
+    // On Android in the background/killed, the OS renders the FCM
+    // `android.notification` block directly — reliable even when this headless
+    // task is killed before notifee finishes drawing (the actual cause of the
+    // missing banners). Re-rendering via notifee here would duplicate it. The
+    // unread badge self-heals on next app foreground (reconcileUnread).
+    if (IS_ANDROID && isBackgroundHandler) return;
 
-  await displayChatNotification({
-    remoteMessage,
-    data,
-    isBackgroundHandler,
-  });
+    // Only render when we have enough to draw a chat notification.
+    if (!data.chatId && !remoteMessage.notification) return;
+
+    await displayChatNotification({
+      remoteMessage,
+      data,
+      isBackgroundHandler,
+    });
+  } catch (err) {
+    // A throw here (e.g. notifee display, avatar fetch) would otherwise
+    // silently drop the notification — surface it so release builds are
+    // diagnosable via logcat.
+    console.warn('[notifications] handleRemoteMessage failed', err);
+  }
 };
 
 /**

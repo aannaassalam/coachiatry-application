@@ -21,15 +21,29 @@ let tokenRefreshUnsub: (() => void) | undefined;
 // backend so subsequent cold starts can short-circuit redundant POSTs.
 const LAST_REGISTERED_TOKEN_KEY = 'notif.last-registered-fcm-token';
 
-const registerTokenIfChanged = async (token: string) => {
-  const previous = storage.getString(LAST_REGISTERED_TOKEN_KEY);
-  if (previous === token) return;
+// Always POST the token to the backend. The backend stores it with $addToSet,
+// so this is idempotent and cheap. Crucially it re-asserts the token even when
+// the client believes it is unchanged — the backend can drop a token (its
+// invalid-token pruning), and if we only ever registered on *change* the device
+// would then be permanently missing from the backend's token list and receive
+// no notifications at all. This is the main cause of push silently dying on a
+// long-lived install.
+const registerToken = async (token: string) => {
   try {
     await updateFCMToken(token);
     storage.set(LAST_REGISTERED_TOKEN_KEY, token);
+    console.log('[notifications] FCM token registered with backend');
   } catch (err) {
     console.warn('[notifications] updateFCMToken failed', err);
   }
+};
+
+// Used by the token-refresh listener, which can fire frequently — only POST
+// when the value actually changed.
+const registerTokenIfChanged = async (token: string) => {
+  const previous = storage.getString(LAST_REGISTERED_TOKEN_KEY);
+  if (previous === token) return;
+  await registerToken(token);
 };
 
 /**
@@ -45,12 +59,28 @@ const registerTokenIfChanged = async (token: string) => {
 export const initNotifications = async (): Promise<string | null> => {
   await setupNotificationChannels();
   const granted = await requestPermission();
-  if (!granted) return null;
+  if (!granted) {
+    // The OS will suppress the *display* of notifications until the user
+    // enables them in system settings (Android 13+ POST_NOTIFICATIONS). We
+    // still fetch and register the token below — delivery to the JS handlers
+    // does not require the permission, and this way push resumes the moment
+    // the user grants it, with no re-login needed.
+    console.warn(
+      '[notifications] notification permission not granted — banners will be ' +
+        'suppressed by the OS until enabled in Settings.',
+    );
+  }
 
   let token: string | null = null;
   try {
     token = await messaging().getToken();
-    if (token) await registerTokenIfChanged(token);
+    console.log(
+      '[notifications] FCM token:',
+      token ? `${token.slice(0, 12)}…(len ${token.length})` : 'null',
+    );
+    // Re-assert on every init (login / cold start), not only on change, so a
+    // backend that pruned this token gets it back.
+    if (token) await registerToken(token);
   } catch (err) {
     console.warn('[notifications] getToken failed', err);
   }

@@ -6,6 +6,7 @@ import { SortSheet } from './components/Tasks/Sort';
 import CreateTaxonomySheet from './components/CreateTaxonomySheet';
 import DeleteTaxonomySheet from './components/DeleteTaxonomySheet';
 import AssigneePickerSheet from './components/AssigneePickerSheet';
+import CreateClientSheet from './components/CreateClientSheet';
 
 registerSheet('filter-sheet', FilterSheet);
 registerSheet('general-sheet', BottomSheet);
@@ -13,6 +14,7 @@ registerSheet('sort-sheet', SortSheet);
 registerSheet('create-taxonomy-sheet', CreateTaxonomySheet);
 registerSheet('delete-taxonomy-sheet', DeleteTaxonomySheet);
 registerSheet('assignee-sheet', AssigneePickerSheet);
+registerSheet('create-client-sheet', CreateClientSheet);
 
 type Filter = {
   selectedKey: string;
@@ -100,6 +102,14 @@ declare module 'react-native-actions-sheet' {
       payload: {
         taskId: string;
       };
+    }>;
+
+    /**
+     * Coach adds a new client (name + email). Role is fixed to "user"; the
+     * backend auto-assigns them to the coach and emails a generated password.
+     */
+    'create-client-sheet': SheetDefinition<{
+      payload?: object;
     }>;
   }
 }
