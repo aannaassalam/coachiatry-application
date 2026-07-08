@@ -9,6 +9,7 @@ import {
 import FastImage from 'react-native-fast-image';
 import { UploadProgressOverlay } from './UploadOverlay';
 import { Message } from '../../typescript/interface/message.interface';
+import { theme } from '../../theme';
 import { fontSize, scale, spacing } from '../../utils';
 
 const ImageLoaderWrapper = ({
@@ -87,9 +88,11 @@ const ImageLoaderWrapper = ({
 export function ImageMessage({
   message,
   setSelected,
+  isMe = false,
 }: {
   message: Message;
   setSelected: (index: number) => void;
+  isMe?: boolean;
 }) {
   const files = message.files || [];
 
@@ -140,7 +143,16 @@ export function ImageMessage({
         })}
       </View>
 
-      {!!message.content && <Text style={styles.text}>{message.content}</Text>}
+      {!!message.content && (
+        <Text
+          style={[
+            styles.text,
+            { color: isMe ? theme.colors.white : theme.colors.gray[900] },
+          ]}
+        >
+          {message.content}
+        </Text>
+      )}
     </View>
   );
 }

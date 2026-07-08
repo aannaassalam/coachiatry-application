@@ -325,6 +325,7 @@ const RenderMessage = ({
                   <ImageMessage
                     message={item}
                     setSelected={index => setAttachmentIndex(index)}
+                    isMe={isMe}
                   />
                   <Text
                     style={[
@@ -344,6 +345,7 @@ const RenderMessage = ({
                   <VideoMessage
                     message={item}
                     setSelected={index => setAttachmentIndex(index)}
+                    isMe={isMe}
                   />
                   <Text
                     style={[
@@ -360,7 +362,7 @@ const RenderMessage = ({
                 </View>
               ) : (
                 <View>
-                  <FileMessage message={item} />
+                  <FileMessage message={item} isMe={isMe} />
                   <Text
                     style={[
                       styles.mediaTimestamp,

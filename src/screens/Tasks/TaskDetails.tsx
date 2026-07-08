@@ -614,7 +614,7 @@ const styles = createStyleSheet({
   unassigned: {
     fontSize: fontSize(14),
     fontFamily: theme.fonts.lato.regular,
-    color: theme.colors.gray[400],
+    color: theme.colors.gray[500],
   },
   avatarStack: {
     flexDirection: 'row',

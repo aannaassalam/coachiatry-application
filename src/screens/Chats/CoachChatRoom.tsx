@@ -191,15 +191,17 @@ const RenderMessage = ({
                 <ImageMessage
                   message={item}
                   setSelected={index => setAttachmentIndex(index)}
+                  isMe={isMe}
                 />
               </View>
             ) : item.type === 'video' ? (
               <VideoMessage
                 message={item}
                 setSelected={index => setAttachmentIndex(index)}
+                isMe={isMe}
               />
             ) : (
-              <FileMessage message={item} />
+              <FileMessage message={item} isMe={isMe} />
             )}
           </TouchableOpacity>
         </View>

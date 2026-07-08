@@ -111,9 +111,11 @@ const VideoLoaderWrapper = ({
 export function VideoMessage({
   message,
   setSelected,
+  isMe = false,
 }: {
   message: Message;
   setSelected: (index: number) => void;
+  isMe?: boolean;
 }) {
   const files = message.files || [];
 
@@ -164,7 +166,16 @@ export function VideoMessage({
         })}
       </View>
 
-      {!!message.content && <Text style={styles.text}>{message.content}</Text>}
+      {!!message.content && (
+        <Text
+          style={[
+            styles.text,
+            { color: isMe ? theme.colors.white : theme.colors.gray[900] },
+          ]}
+        >
+          {message.content}
+        </Text>
+      )}
     </View>
   );
 }

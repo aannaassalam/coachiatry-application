@@ -12,18 +12,48 @@ import TouchableButton from '../TouchableButton';
 import { CircularProgress, getFileIcon } from './UploadOverlay';
 import { Download } from 'lucide-react-native';
 
+type FileColors = {
+  name: string;
+  details: string;
+  content: string;
+  card: string;
+  icon: string;
+};
+
+// File cards render inside the message bubble, which is near-black for my own
+// messages and near-white for received ones. Hardcoded white text was invisible
+// on received (light) bubbles — pick a palette that contrasts with each.
+const fileColors = (isMe: boolean): FileColors =>
+  isMe
+    ? {
+        name: theme.colors.white,
+        details: 'rgba(255,255,255,0.7)',
+        content: theme.colors.white,
+        card: 'rgba(255,255,255,0.12)',
+        icon: theme.colors.gray[300],
+      }
+    : {
+        name: theme.colors.gray[900],
+        details: theme.colors.gray[600],
+        content: theme.colors.gray[900],
+        card: 'rgba(0,0,0,0.06)',
+        icon: theme.colors.gray[500],
+      };
+
 const FileCardLayout = ({
   file,
   progress,
   fileExists,
   localFilePath,
   setFileExists,
+  c,
 }: {
   file: NonNullable<Message['files']>[0];
   progress: number;
   fileExists: boolean;
   localFilePath: string;
   setFileExists: React.Dispatch<React.SetStateAction<boolean>>;
+  c: FileColors;
 }) => {
   const icon = getFileIcon(file.type);
   const fileName =
@@ -99,10 +129,13 @@ const FileCardLayout = ({
 
       {/* Center Section: Name, Type, Size */}
       <View style={fileCardStyles.textWrapper}>
-        <Text style={fileCardStyles.nameText} numberOfLines={1}>
+        <Text
+          style={[fileCardStyles.nameText, { color: c.name }]}
+          numberOfLines={1}
+        >
           {displayName}
         </Text>
-        <Text style={fileCardStyles.detailsText}>
+        <Text style={[fileCardStyles.detailsText, { color: c.details }]}>
           {file.type.split('/').pop()?.toUpperCase() || 'Unknown'} |{' '}
           {fileSize.toString()}
         </Text>
@@ -116,7 +149,7 @@ const FileCardLayout = ({
           <CircularProgress progress={downloadProgress} />
         ) : !fileExists ? (
           <Pressable onPress={downloadFile}>
-            <Download size={fontSize(25)} color={theme.colors.gray[300]} />
+            <Download size={fontSize(25)} color={c.icon} />
           </Pressable>
         ) : null}
       </View>
@@ -128,9 +161,11 @@ const FileCardLayout = ({
 const FileLoaderWrapper = ({
   file,
   index,
+  c,
 }: {
   file: NonNullable<Message['files']>[0];
   index: number;
+  c: FileColors;
 }) => {
   const { fileExists, localFilePath, setFileExists } = useFileCache(
     decodeURIComponent(file.url).split('/').pop() ?? '',
@@ -148,7 +183,7 @@ const FileLoaderWrapper = ({
   return (
     <TouchableButton
       key={file._id || index}
-      style={styles.fileCardSingle}
+      style={[styles.fileCardSingle, { backgroundColor: c.card }]}
       onPress={fileExists ? openLocalFile : undefined}
       activeOpacity={0.9}
     >
@@ -159,6 +194,7 @@ const FileLoaderWrapper = ({
         fileExists={fileExists}
         localFilePath={localFilePath}
         setFileExists={setFileExists}
+        c={c}
       />
     </TouchableButton>
   );
@@ -166,8 +202,15 @@ const FileLoaderWrapper = ({
 
 // ... existing imports ...
 
-export function FileMessage({ message }: { message: Message }) {
+export function FileMessage({
+  message,
+  isMe = false,
+}: {
+  message: Message;
+  isMe?: boolean;
+}) {
   const files = message.files || [];
+  const c = fileColors(isMe);
 
   if (!files.length) return null; // 🛑 Removed: isGrid, isLargeGrid, filesToShow logic
 
@@ -177,11 +220,13 @@ export function FileMessage({ message }: { message: Message }) {
       <View style={styles.listContainer}>
         {files.map((f, i) => {
           // Map over ALL files
-          return <FileLoaderWrapper key={f._id || i} file={f} index={i} />;
+          return <FileLoaderWrapper key={f._id || i} file={f} index={i} c={c} />;
         })}
       </View>
       {message.content ? (
-        <Text style={styles.text}>{message.content}</Text>
+        <Text style={[styles.text, { color: c.content }]}>
+          {message.content}
+        </Text>
       ) : null}
     </View>
   );
