@@ -11,22 +11,27 @@ import { theme } from '../../theme';
 import { fontSize, spacing } from '../../utils';
 import TaskListSkeleton from '../skeletons/TaskListSkeleton';
 import TaskSectionList from './TaskSectionList';
+import { GroupColumnKey } from '../../helpers/taskGroup';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 export default function ListView({
   sort,
   filters,
+  group,
+  groupDir,
 }: {
   sort: string;
   filters: Filter[];
+  group: string;
+  groupDir: string;
 }) {
   const queryClient = useQueryClient();
 
   const [
-    { data: tasks = [], isLoading, isFetching, refetch },
+    { data: tasks = [], isLoading, refetch },
     {
       data: status = [],
       isLoading: isStatusLoading,
-      isFetching: isStatusFetching,
       refetch: statusRefetch,
     },
   ] = useQueries({
@@ -52,6 +57,12 @@ export default function ListView({
       },
     ],
   });
+
+  // Only spin the refresh control on an explicit pull — not on the background
+  // refetch that fires when returning to the list after editing a task.
+  const { refreshing, onRefresh } = usePullToRefresh(() =>
+    Promise.all([refetch(), statusRefetch()]),
+  );
 
   // Stable key that only changes when the actual task list changes
   const taskIds = tasks.map(t => t._id).join(',');
@@ -98,11 +109,10 @@ export default function ListView({
       tasks={tasks}
       statuses={status}
       sort={sort}
-      refreshing={isFetching || isStatusFetching}
-      onRefresh={() => {
-        refetch();
-        statusRefetch();
-      }}
+      group={group as GroupColumnKey}
+      groupDir={groupDir}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       contentContainerStyle={{ paddingBottom: FLOATING_BAR_FOOTPRINT }}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>

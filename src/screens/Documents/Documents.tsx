@@ -39,6 +39,7 @@ import AppBadge from '../../components/ui/AppBadge';
 import AppHeader from '../../components/ui/AppHeader';
 import AppTabs from '../../components/ui/AppTabs';
 import { hapticOptions } from '../../helpers/utils';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { PaginatedResponse } from '../../typescript/interface/common.interface';
@@ -192,7 +193,6 @@ const RenderContent = ({ activeTab }: { activeTab: string }) => {
     fetchNextPage,
     hasNextPage,
     refetch,
-    isRefetching,
   } = useInfiniteQuery<PaginatedResponse<Document[]>>({
     queryKey: ['documents', activeTab],
     queryFn: ({ pageParam = 1, signal }) =>
@@ -205,11 +205,12 @@ const RenderContent = ({ activeTab }: { activeTab: string }) => {
     staleTime: 60 * 1000,
   });
 
+  // Must run before the early return below — hooks can't be called conditionally.
+  const { refreshing: isRefreshing, onRefresh } = usePullToRefresh(refetch);
+
   if (isLoading) return <DocumentListSkeleton />;
 
   const documents = data?.pages.flatMap(page => page.data) ?? [];
-  const isRefreshing =
-    !!data && isRefetching && !isFetchingNextPage && !isLoading;
 
   return (
     <FlatList
@@ -227,7 +228,7 @@ const RenderContent = ({ activeTab }: { activeTab: string }) => {
       )}
       keyExtractor={item => item._id}
       refreshing={isRefreshing}
-      onRefresh={refetch}
+      onRefresh={onRefresh}
       showsVerticalScrollIndicator={false}
       onEndReached={() => {
         if (hasNextPage && !isFetchingNextPage) fetchNextPage();

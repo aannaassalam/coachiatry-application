@@ -29,8 +29,9 @@ import { getAllTasksByCoach } from '../../api/functions/task.api';
 import { getUserById } from '../../api/functions/user.api';
 import { Calendar, ChevronLeft } from '../../assets';
 import TaskSectionList from '../../components/Tasks/TaskSectionList';
-import FilterButton from '../../components/Tasks/Filter';
-import SortButton from '../../components/Tasks/Sort';
+import TaskControls from '../../components/Tasks/TaskControls';
+import { GroupColumnKey } from '../../helpers/taskGroup';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { sanitizeFilters } from '../../helpers/utils';
 import { Filter } from '../../typescript/interface/common.interface';
 import TouchableButton from '../../components/TouchableButton';
@@ -107,6 +108,8 @@ export default function ClientDetailsA1() {
     'Documents',
   );
   const [sort, setSort] = useState('');
+  const [group, setGroup] = useState('status');
+  const [groupDir, setGroupDir] = useState('asc');
   const [filters, setFilters] = useState<Filter[]>([]);
   const validatedFilters = sanitizeFilters(filters);
 
@@ -198,7 +201,6 @@ export default function ClientDetailsA1() {
     data: chats,
     isLoading: isChatLoading,
     refetch,
-    isFetching,
   } = useQuery({
     // Unique key: must NOT collide with the global ['conversations'] infinite
     // query owned by FloatingChatHost (mixing useQuery + useInfiniteQuery on the
@@ -208,6 +210,8 @@ export default function ClientDetailsA1() {
     queryFn: ({ signal }) =>
       getAllConversationsByCoach({ userId: userId as string }, signal),
   });
+
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const directChatWithClient = useMemo(() => {
     if (!chats?.data?.length || !profile?._id) return null;
@@ -466,8 +470,8 @@ export default function ClientDetailsA1() {
             />
           )}
           keyExtractor={item => item._id ?? item.createdAt}
-          refreshing={isFetching}
-          onRefresh={refetch}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           showsVerticalScrollIndicator={false}
           onViewableItemsChanged={viewableItemsChanged}
           viewabilityConfig={{
@@ -568,6 +572,8 @@ export default function ClientDetailsA1() {
           tasks={tasks}
           statuses={status}
           sort={sort}
+          group={group as GroupColumnKey}
+          groupDir={groupDir}
           userId={userId}
           contentContainerStyle={{
             paddingBottom: FLOATING_BAR_FOOTPRINT,
@@ -578,12 +584,17 @@ export default function ClientDetailsA1() {
               {renderBigHeader()}
               {renderTabsBar()}
               <View style={styles.tasksToolbar}>
-                <FilterButton
+                <TaskControls
                   filters={filters}
                   setFilters={setFilters}
                   userId={userId}
+                  sort={sort}
+                  setSort={setSort}
+                  group={group}
+                  setGroup={setGroup}
+                  groupDir={groupDir}
+                  setGroupDir={setGroupDir}
                 />
-                <SortButton sort={sort} setSort={setSort} />
               </View>
             </View>
           }

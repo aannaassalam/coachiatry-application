@@ -19,6 +19,7 @@ import {
 } from '../../api/functions/chat.api';
 import { getMessages } from '../../api/functions/message.api';
 import { useDebounce } from '../../hooks/useDebounce';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { theme } from '../../theme';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
 import AvatarListSkeleton from '../skeletons/AvatarListSkeleton';
@@ -77,6 +78,7 @@ export default function FloatingChatList() {
   });
 
   const active = isSearching ? searchQuery : mainQuery;
+  const { refreshing, onRefresh } = usePullToRefresh(() => active.refetch());
   const listData = useMemo(
     () => active.data?.pages.flatMap(page => page.data) ?? [],
     [active.data],
@@ -108,8 +110,8 @@ export default function FloatingChatList() {
           data={listData}
           renderItem={({ item }) => <ChatMessage item={item} fromFloating />}
           keyExtractor={item => item._id ?? item.createdAt}
-          refreshing={active.isFetching && !active.isFetchingNextPage}
-          onRefresh={active.refetch}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           showsVerticalScrollIndicator={false}
           onViewableItemsChanged={viewableItemsChanged}
           viewabilityConfig={{ itemVisiblePercentThreshold: 60 }}

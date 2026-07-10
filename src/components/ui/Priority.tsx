@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { StyleProp, Text, View, ViewStyle } from 'react-native';
 import { createStyleSheet } from 'react-native-unistyles';
 import { Flag } from '../../assets';
 import { theme } from '../../theme';
@@ -7,12 +7,15 @@ import { fontSize, scale, spacing } from '../../utils';
 export default function Priority({
   priority,
   size = scale(18),
+  style,
 }: {
   priority: 'high' | 'medium' | 'low';
   size?: number;
+  /** Override/extend the container style (e.g. strip padding in dense rows). */
+  style?: StyleProp<ViewStyle>;
 }) {
   return (
-    <View style={[styles.priority]}>
+    <View style={[styles.priority, style]}>
       <Flag
         color={
           priority === 'high'

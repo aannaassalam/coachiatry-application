@@ -6,7 +6,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   InteractionManager,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,6 +18,7 @@ import { getAllDocuments } from '../../api/functions/document.api';
 import { getAllStatuses } from '../../api/functions/status.api';
 import { getAllTasks } from '../../api/functions/task.api';
 import { ChevronLeft } from '../../assets';
+import IndividualTask from '../../components/Tasks/IndividualTask';
 import TaskBadge from '../../components/Tasks/TaskBadge';
 import TouchableButton from '../../components/TouchableButton';
 import AppBadge from '../../components/ui/AppBadge';
@@ -26,13 +26,12 @@ import AppHeader from '../../components/ui/AppHeader';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
 import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
-import { AppStackParamList, AuthStackParamList } from '../../types/navigation';
+import { AppStackParamList } from '../../types/navigation';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
 import { Document } from '../../typescript/interface/document.interface';
 import { Status } from '../../typescript/interface/status.interface';
 import { Task } from '../../typescript/interface/task.interface';
 import { fontSize, scale, spacing } from '../../utils';
-import { storage } from '../../helpers/utils';
 import { FLOATING_BAR_FOOTPRINT } from '../../components/Chat/FloatingChatHost';
 
 moment.updateLocale('en', {
@@ -73,8 +72,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
   labelColor,
   tasks = [],
 }) => {
-  const navigation = useNavigation<ScreenNavigationProp>();
-
   return (
     <View>
       {/* Label */}
@@ -86,39 +83,12 @@ const TaskCard: React.FC<TaskCardProps> = ({
         marginBottom={spacing(6)}
       />
 
-      {/* Tasks List */}
+      {/* Tasks List — same rich card as the Tasks list view. Grouped by status
+          here, so the status pill is omitted (showStatus defaults to false). */}
       {tasks?.length > 0 && (
         <View style={styles.taskList}>
           {tasks.map(task => (
-            <Pressable
-              onPress={() =>
-                navigation.navigate('TaskDetails', { taskId: task._id })
-              }
-              key={task._id}
-              style={styles.taskCard}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.taskTitle}>{task.title}</Text>
-                <Text style={styles.taskDate}>
-                  {task.dueDate
-                    ? moment(task.dueDate).format('D MMM, YYYY')
-                    : 'No due date available'}
-                </Text>
-              </View>
-              {(task.subtasks ?? [])?.length > 0 && (
-                <View style={styles.progressContainer}>
-                  <Ionicons
-                    name="git-branch-outline"
-                    size={fontSize(16)}
-                    color={theme.colors.gray[700]}
-                  />
-                  <Text style={styles.progressText}>
-                    {task.subtasks?.filter(_st => _st.completed).length}/
-                    {task.subtasks?.length}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
+            <IndividualTask key={task._id} task={task} />
           ))}
         </View>
       )}
@@ -506,46 +476,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing(10),
     paddingHorizontal: spacing(12),
     gap: spacing(10),
-  },
-  taskCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: theme.colors.white,
-    gap: spacing(5),
-    borderRadius: fontSize(10),
-    paddingVertical: spacing(10),
-    paddingHorizontal: spacing(14),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  taskTitle: {
-    fontSize: fontSize(14),
-    fontFamily: theme.fonts.lato.regular,
-    color: theme.colors.gray[900],
-    marginBottom: spacing(4),
-  },
-  taskDate: {
-    fontSize: fontSize(12),
-    fontFamily: theme.fonts.lato.regular,
-    color: theme.colors.gray[700],
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.gray[100],
-    paddingHorizontal: spacing(8),
-    paddingVertical: spacing(4),
-    borderRadius: fontSize(8),
-  },
-  progressText: {
-    marginLeft: spacing(4),
-    fontSize: fontSize(13),
-    color: theme.colors.gray[700],
-    fontFamily: theme.fonts.lato.regular,
   },
   // docs
   docCard: {

@@ -13,8 +13,19 @@ import { Status } from '../../typescript/interface/status.interface';
 import { Task } from '../../typescript/interface/task.interface';
 import { fontSize, spacing } from '../../utils';
 import { sortTasks } from '../../helpers/taskSort';
+import {
+  GroupColumnKey,
+  NO_GROUP,
+  TaskGroup,
+  getGroups,
+} from '../../helpers/taskGroup';
 import IndividualTask from './IndividualTask';
 import TaskBadge from './TaskBadge';
+
+// Fallback pill colours for groups without their own colour (priority, owner,
+// assignee, due date). Mirrors the web ListView's `#F3F4F6` / `#4B5563`.
+const DEFAULT_GROUP_BG = '#F3F4F6';
+const DEFAULT_GROUP_TEXT = '#4B5563';
 
 // FlashList animated for the collapsing-header screen (client details). The
 // reanimated scroll handler attaches to this component's onScroll.
@@ -31,7 +42,7 @@ type Nav = NativeStackNavigationProp<AppStackParamList, 'Tasks'>;
 type HeaderRow = {
   type: 'header';
   key: string;
-  status: Status;
+  group: TaskGroup;
   count: number;
   expanded: boolean;
 };
@@ -45,14 +56,14 @@ type TaskRow = {
 type EmptyRow = { type: 'empty'; key: string };
 type Row = HeaderRow | TaskRow | EmptyRow;
 
-function StatusHeader({
-  status,
+function GroupHeader({
+  group,
   count,
   expanded,
   userId,
   onToggle,
 }: {
-  status: Status;
+  group: TaskGroup;
   count: number;
   expanded: boolean;
   userId?: string;
@@ -73,24 +84,29 @@ function StatusHeader({
       </Pressable>
       <Pressable onPress={onToggle}>
         <TaskBadge
-          title={status.title}
+          title={group.label}
           count={count}
-          labelColor={status.color.text}
-          backgroundColor={status.color.bg}
+          labelColor={group.text ?? DEFAULT_GROUP_TEXT}
+          backgroundColor={group.bg ?? DEFAULT_GROUP_BG}
         />
       </Pressable>
-      <Pressable
-        style={styles.addTaskButton}
-        onPress={() =>
-          navigation.navigate('AddEditTask', {
-            predefinedStatus: status._id,
-            userId,
-          })
-        }
-      >
-        <AntDesign name="plus" color="#838383" size={spacing(12)} />
-        <Text style={styles.addTaskButtonText}>Add Task</Text>
-      </Pressable>
+      {/* Per-group quick-add only makes sense when grouping by status — the new
+          task can inherit that status. Other groupings (priority, due date, …)
+          have no such target, matching the web ListView. */}
+      {group.statusId && (
+        <Pressable
+          style={styles.addTaskButton}
+          onPress={() =>
+            navigation.navigate('AddEditTask', {
+              predefinedStatus: group.statusId,
+              userId,
+            })
+          }
+        >
+          <AntDesign name="plus" color="#838383" size={spacing(12)} />
+          <Text style={styles.addTaskButtonText}>Add Task</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -99,6 +115,13 @@ export interface TaskSectionListProps {
   tasks: Task[];
   statuses: Status[];
   sort: string;
+  /**
+   * Field to bucket by, or `NO_GROUP` for a flat list. Defaults to `status`
+   * (the historical behaviour).
+   */
+  group?: GroupColumnKey | typeof NO_GROUP;
+  /** Order of the groups themselves ('asc' | 'desc'). Defaults to 'asc'. */
+  groupDir?: string;
   userId?: string;
   refreshing?: boolean;
   onRefresh?: () => void;
@@ -115,6 +138,8 @@ export default function TaskSectionList({
   tasks,
   statuses,
   sort,
+  group = 'status',
+  groupDir = 'asc',
   userId,
   refreshing,
   onRefresh,
@@ -127,66 +152,69 @@ export default function TaskSectionList({
 }: TaskSectionListProps) {
   const { styles } = useStyles(stylesheet);
 
-  // Sort a COPY of statuses by priority; never mutate the cached array.
-  const sortedStatuses = React.useMemo(
-    () => [...statuses].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0)),
-    [statuses],
-  );
+  const isGrouped = group !== NO_GROUP;
+  // The status pill is redundant on cards when the list is already grouped by
+  // status (the group header shows it). Show it for any other grouping.
+  const showStatus = group !== 'status';
 
-  // Sort the full list once (client-side, semantic), then bucket by status.
-  const tasksByStatus = React.useMemo(() => {
+  // Sort the full list once (client-side, semantic), then bucket by the chosen
+  // field. When grouping is off we keep the flat sorted list under a single
+  // synthetic group so the row-flattening below stays uniform.
+  const groups = React.useMemo<TaskGroup[]>(() => {
     const sorted = sortTasks(tasks, sort);
-    const map: Record<string, Task[]> = {};
-    sorted.forEach(t => {
-      const sid = t.status?._id;
-      if (!sid) return;
-      (map[sid] ??= []).push(t);
-    });
-    return map;
-  }, [tasks, sort]);
+    if (!isGrouped) {
+      return [{ key: NO_GROUP, label: '', tasks: sorted }];
+    }
+    return getGroups(sorted, group as GroupColumnKey, groupDir, statuses);
+  }, [tasks, sort, group, groupDir, statuses, isGrouped]);
 
-  // Expanded state per status. Default-expand the first status once it loads.
+  // Expanded state per group. Default-expand the first group; re-default when
+  // the grouping itself changes (its buckets, and thus keys, differ).
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
-  const didInit = React.useRef(false);
+  const signature = groups.map(g => g.key).join('|');
+  const prevSignature = React.useRef<string | null>(null);
   React.useEffect(() => {
-    if (didInit.current || sortedStatuses.length === 0) return;
-    didInit.current = true;
-    setExpanded({ [sortedStatuses[0]._id]: true });
-  }, [sortedStatuses]);
+    if (prevSignature.current === signature || groups.length === 0) return;
+    prevSignature.current = signature;
+    setExpanded({ [groups[0].key]: true });
+  }, [signature, groups]);
 
-  const toggle = React.useCallback((statusId: string) => {
-    setExpanded(prev => ({ ...prev, [statusId]: !prev[statusId] }));
+  const toggle = React.useCallback((groupKey: string) => {
+    setExpanded(prev => ({ ...prev, [groupKey]: !prev[groupKey] }));
   }, []);
 
   const rows = React.useMemo<Row[]>(() => {
     const out: Row[] = [];
-    sortedStatuses.forEach(status => {
-      const statusTasks = tasksByStatus[status._id] ?? [];
-      const isExpanded = expanded[status._id] ?? false;
-      out.push({
-        type: 'header',
-        key: `header-${status._id}`,
-        status,
-        count: statusTasks.length,
-        expanded: isExpanded,
-      });
+    groups.forEach(_group => {
+      const groupTasks = _group.tasks;
+      // With grouping off there are no collapsible headers — just the flat rows.
+      const isExpanded = isGrouped ? (expanded[_group.key] ?? false) : true;
+      if (isGrouped) {
+        out.push({
+          type: 'header',
+          key: `header-${_group.key}`,
+          group: _group,
+          count: groupTasks.length,
+          expanded: isExpanded,
+        });
+      }
       if (!isExpanded) return;
-      if (statusTasks.length === 0) {
-        out.push({ type: 'empty', key: `empty-${status._id}` });
+      if (isGrouped && groupTasks.length === 0) {
+        out.push({ type: 'empty', key: `empty-${_group.key}` });
         return;
       }
-      statusTasks.forEach((task, i) => {
+      groupTasks.forEach((task, i) => {
         out.push({
           type: 'task',
           key: `task-${task._id}`,
           task,
           isFirst: i === 0,
-          isLast: i === statusTasks.length - 1,
+          isLast: i === groupTasks.length - 1,
         });
       });
     });
     return out;
-  }, [sortedStatuses, tasksByStatus, expanded]);
+  }, [groups, expanded, isGrouped]);
 
   const renderItem = React.useCallback<
     NonNullable<FlashListProps<Row>['renderItem']>
@@ -194,12 +222,12 @@ export default function TaskSectionList({
     ({ item }) => {
       if (item.type === 'header') {
         return (
-          <StatusHeader
-            status={item.status}
+          <GroupHeader
+            group={item.group}
             count={item.count}
             expanded={item.expanded}
             userId={userId}
-            onToggle={() => toggle(item.status._id)}
+            onToggle={() => toggle(item.group.key)}
           />
         );
       }
@@ -218,11 +246,21 @@ export default function TaskSectionList({
             item.isLast && styles.groupBodyBottom,
           ]}
         >
-          <IndividualTask task={item.task} userId={userId} />
+          <IndividualTask
+            task={item.task}
+            userId={userId}
+            showStatus={showStatus}
+          />
         </View>
       );
     },
-    [styles, toggle, userId],
+    [styles, toggle, userId, showStatus],
+  );
+
+  // Re-render rows when the expanded set OR the status-pill visibility changes.
+  const extraData = React.useMemo(
+    () => ({ expanded, showStatus }),
+    [expanded, showStatus],
   );
 
   const commonProps: FlashListProps<Row> = {
@@ -230,7 +268,7 @@ export default function TaskSectionList({
     renderItem,
     keyExtractor: (item: Row) => item.key,
     getItemType: (item: Row) => item.type,
-    extraData: expanded,
+    extraData,
     showsVerticalScrollIndicator: false,
     scrollEnabled,
     ListHeaderComponent,

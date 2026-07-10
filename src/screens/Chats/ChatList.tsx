@@ -13,6 +13,7 @@ import TouchableButton from '../../components/TouchableButton';
 import AvatarListSkeleton from '../../components/skeletons/AvatarListSkeleton';
 import AppHeader from '../../components/ui/AppHeader';
 import { useAuth } from '../../hooks/useAuth';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
@@ -67,7 +68,6 @@ export default function ChatList() {
     data,
     isLoading,
     refetch,
-    isFetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -81,6 +81,8 @@ export default function ChatList() {
       return currentPage < totalPages ? currentPage + 1 : undefined;
     },
   });
+
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const conversations = data?.pages.flatMap(page => page.data) ?? [];
 
@@ -165,8 +167,8 @@ export default function ChatList() {
             data={conversations}
             renderItem={({ item }) => <ChatMessage item={item} />}
             keyExtractor={item => item._id ?? item.createdAt}
-            refreshing={isFetching && !isFetchingNextPage}
-            onRefresh={refetch}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             showsVerticalScrollIndicator={false}
             onViewableItemsChanged={viewableItemsChanged}
             viewabilityConfig={{

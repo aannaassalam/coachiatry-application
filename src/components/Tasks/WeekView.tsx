@@ -11,6 +11,7 @@ import { fontSize, spacing } from '../../utils';
 import { theme } from '../../theme';
 import { Task } from '../../typescript/interface/task.interface';
 import { FLOATING_BAR_FOOTPRINT } from '../Chat/FloatingChatHost';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 const days = [
   {
@@ -59,7 +60,7 @@ export default function WeekView({
 }) {
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isFetching, refetch } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['tasks', filters, dates],
     queryFn: ({ signal }) =>
       getAllTasks(
@@ -72,6 +73,8 @@ export default function WeekView({
       ),
     // placeholderData: (prev: Task[] | undefined) => prev
   });
+
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const onViewableItemsChanged = React.useCallback(
     ({
@@ -138,8 +141,8 @@ export default function WeekView({
         />
       )}
       keyExtractor={item => item.title}
-      refreshing={isFetching}
-      onRefresh={refetch}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       showsVerticalScrollIndicator={false}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>

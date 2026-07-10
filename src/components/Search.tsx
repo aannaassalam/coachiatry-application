@@ -27,6 +27,7 @@ import { createStyleSheet } from 'react-native-unistyles';
 import { getSearch } from '../api/functions/common.api';
 import { CoachAi, HeaderSearchIcon } from '../assets';
 import { useDebounce } from '../hooks/useDebounce';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { theme } from '../theme';
 import { AppStackParamList } from '../types/navigation';
 import { fontSize, scale, spacing } from '../utils';
@@ -88,7 +89,7 @@ export default function Search() {
   });
 
   const results = data.filter(_data => _data.type !== 'transcript');
-  const isRefreshing = !!data && isFetching && !isLoading;
+  const { refreshing: isRefreshing, onRefresh } = usePullToRefresh(refetch);
   const hasQuery = !!debouncedSearch.trim();
 
   const closeModal = () => setSearchModal(false);
@@ -224,7 +225,7 @@ export default function Search() {
                 { paddingBottom: insets.bottom + spacing(20) },
               ]}
               refreshing={isRefreshing}
-              onRefresh={refetch}
+              onRefresh={onRefresh}
               style={styles.listBg}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"

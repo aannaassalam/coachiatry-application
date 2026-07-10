@@ -27,6 +27,7 @@ import { getClients } from '../../api/functions/coach.api';
 import { User } from '../../typescript/interface/user.interface';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
 import { getUsers } from '../../api/functions/user.api';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 type ClientScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
@@ -40,7 +41,6 @@ export default function Users() {
   const {
     data,
     isLoading,
-    isFetching,
     isFetchingNextPage,
     fetchNextPage,
     hasNextPage,
@@ -56,6 +56,8 @@ export default function Users() {
       return currentPage < totalPages ? currentPage + 1 : undefined;
     },
   });
+
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const users = data?.pages.flatMap(page => page.data) ?? [];
 
@@ -108,8 +110,8 @@ export default function Users() {
             }
           }}
           onEndReachedThreshold={0.6}
-          refreshing={isFetching && !isFetchingNextPage}
-          onRefresh={refetch}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListFooterComponent={
             isFetchingNextPage ? (
               <View

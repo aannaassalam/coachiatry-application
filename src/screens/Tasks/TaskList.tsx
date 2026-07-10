@@ -1,14 +1,12 @@
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useIsFetching } from '@tanstack/react-query';
 import moment from 'moment';
 import { useState } from 'react';
 import { Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { createStyleSheet } from 'react-native-unistyles';
-import Filter from '../../components/Tasks/Filter';
 import ListView from '../../components/Tasks/ListVIew';
-import Sort from '../../components/Tasks/Sort';
+import TaskControls from '../../components/Tasks/TaskControls';
 import WeekView from '../../components/Tasks/WeekView';
 import TouchableButton from '../../components/TouchableButton';
 import AppHeader from '../../components/ui/AppHeader';
@@ -27,6 +25,8 @@ function TaskList() {
   const navigation = useNavigation<TaskListNavigationProp>();
   const [tab, setTab] = useState('list');
   const [sort, setSort] = useState('');
+  const [group, setGroup] = useState('status');
+  const [groupDir, setGroupDir] = useState('asc');
   const [filters, setFilters] = useState<
     {
       selectedKey: string;
@@ -81,10 +81,13 @@ function TaskList() {
             </Text>
           </Pressable>
         </View>
-        <View style={styles.buttonContainer}>
-          <Filter filters={filters} setFilters={setFilters} />
-          {tab === 'list' && <Sort sort={sort} setSort={setSort} />}
-        </View>
+        <TaskControls
+          filters={filters}
+          setFilters={setFilters}
+          {...(tab === 'list'
+            ? { group, setGroup, groupDir, setGroupDir, sort, setSort }
+            : {})}
+        />
       </View>
       {tab === 'week' && (
         <View style={styles.filterContainer}>
@@ -101,7 +104,12 @@ function TaskList() {
         </View>
       )}
       {tab === 'list' ? (
-        <ListView sort={sort} filters={validatedFilters} />
+        <ListView
+          sort={sort}
+          filters={validatedFilters}
+          group={group}
+          groupDir={groupDir}
+        />
       ) : (
         <WeekView dates={dates} filters={filters} />
       )}
@@ -154,7 +162,6 @@ const styles = createStyleSheet({
   activeTabText: {
     fontFamily: theme.fonts.archivo.semiBold,
   },
-  buttonContainer: { flexDirection: 'row', gap: spacing(12) },
   contentContainer: {
     flex: 1,
     padding: 36,

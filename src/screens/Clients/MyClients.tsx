@@ -22,6 +22,7 @@ import { Modal } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { SheetManager } from 'react-native-actions-sheet';
 import { getClients } from '../../api/functions/coach.api';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { User } from '../../typescript/interface/user.interface';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
 import { useAuth } from '../../hooks/useAuth';
@@ -38,10 +39,12 @@ function MyClients() {
   const { profile } = useAuth();
   const isCoach = profile?.role === 'coach';
 
-  const { data = [], isLoading, isFetching, refetch } = useQuery({
+  const { data = [], isLoading, refetch } = useQuery({
     queryKey: ['clients'],
     queryFn: ({ signal }) => getClients(signal),
   });
+
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const renderItem = ({ item }: { item: User }) => (
     <TouchableOpacity
@@ -88,8 +91,8 @@ function MyClients() {
           showsVerticalScrollIndicator={false}
           renderItem={renderItem}
           keyExtractor={item => item._id}
-          refreshing={isFetching}
-          onRefresh={refetch}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           // scrollEnabled={false}
           ItemSeparatorComponent={() => (
             <View

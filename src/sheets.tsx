@@ -3,6 +3,8 @@ import { FilterSheet } from './components/Tasks/Filter';
 import BottomSheet from './components/ui/BottomSheet';
 import { ReactNode } from 'react';
 import { SortSheet } from './components/Tasks/Sort';
+import { GroupBySheet } from './components/Tasks/GroupBy';
+import { TaskControlsSheet } from './components/Tasks/TaskControls';
 import CreateTaxonomySheet from './components/CreateTaxonomySheet';
 import DeleteTaxonomySheet from './components/DeleteTaxonomySheet';
 import AssigneePickerSheet from './components/AssigneePickerSheet';
@@ -11,6 +13,8 @@ import CreateClientSheet from './components/CreateClientSheet';
 registerSheet('filter-sheet', FilterSheet);
 registerSheet('general-sheet', BottomSheet);
 registerSheet('sort-sheet', SortSheet);
+registerSheet('group-sheet', GroupBySheet);
+registerSheet('task-controls-sheet', TaskControlsSheet);
 registerSheet('create-taxonomy-sheet', CreateTaxonomySheet);
 registerSheet('delete-taxonomy-sheet', DeleteTaxonomySheet);
 registerSheet('assignee-sheet', AssigneePickerSheet);
@@ -66,6 +70,38 @@ declare module 'react-native-actions-sheet' {
       payload: {
         sort: string;
         setSort: React.Dispatch<React.SetStateAction<string>>;
+      };
+    }>;
+
+    /**
+     * Group the task list by a field (status | assignee | owner | due date |
+     * category | priority) with an asc/desc order, or turn grouping off.
+     */
+    'group-sheet': SheetDefinition<{
+      payload: {
+        group: string;
+        setGroup: React.Dispatch<React.SetStateAction<string>>;
+        groupDir: string;
+        setGroupDir: React.Dispatch<React.SetStateAction<string>>;
+      };
+    }>;
+
+    /**
+     * Single entry-point menu for the task toolbar — lists Filter / Group by /
+     * Sort by and opens the relevant sheet on selection. Group/Sort rows are
+     * shown only when their setters are supplied.
+     */
+    'task-controls-sheet': SheetDefinition<{
+      payload: {
+        filters: Filter[];
+        setFilters: React.Dispatch<React.SetStateAction<Filter[]>>;
+        group?: string;
+        setGroup?: React.Dispatch<React.SetStateAction<string>>;
+        groupDir?: string;
+        setGroupDir?: React.Dispatch<React.SetStateAction<string>>;
+        sort?: string;
+        setSort?: React.Dispatch<React.SetStateAction<string>>;
+        userId?: string;
       };
     }>;
 
