@@ -76,6 +76,7 @@ export const endpoints = {
     getUsers: '/user/get-users',
     getProfile: '/user/me',
     updateProfile: '/user/me',
+    deleteAccount: '/user/me',
     updateProfilePicture: '/user/me/update-profile-picture',
     getAllWatching: '/user/get-all-watching',
     suggestUsers: '/user/suggestions',

@@ -184,3 +184,9 @@ export const deleteUser = async (userId: string) => {
   const res = await axiosInstance.delete(endpoints.user.deleteUser(userId));
   return res;
 };
+
+// Self-service: permanently deactivate the current user's own account.
+export const deleteMyAccount = async () => {
+  const res = await axiosInstance.delete(endpoints.user.deleteAccount);
+  return res;
+};

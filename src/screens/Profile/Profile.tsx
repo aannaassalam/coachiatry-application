@@ -33,6 +33,7 @@ import AntDesign from 'react-native-vector-icons/AntDesign';
 import { queryClient } from '../../../App';
 import {
   addWatchers,
+  deleteMyAccount,
   findWatcherByEmail,
   getMyProfile,
   getUserSuggestions,
@@ -50,7 +51,7 @@ import { User } from '../../typescript/interface/user.interface';
 import { removeFCMToken } from '../../api/functions/auth.api';
 import messaging from '@react-native-firebase/messaging';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { Check, Mail, Pencil, UserPlus, X } from 'lucide-react-native';
+import { Check, Mail, Pencil, Trash2, UserPlus, X } from 'lucide-react-native';
 
 type SelectedUser = Pick<User, '_id' | 'fullName' | 'email' | 'photo'>;
 
@@ -170,25 +171,70 @@ export default function Profile() {
 
   const [isSigningOut, setIsSigningOut] = useState(false);
 
+  // Tear down the local session: clear cached data, drop the FCM token (both on
+  // the backend and locally), sign out of Google, and wipe the stored auth
+  // token. Shared by the Logout and Delete Account flows.
+  const clearSession = async () => {
+    queryClient.clear();
+    const token = await getToken();
+    if (token) {
+      // Best-effort; on delete the account may already be gone.
+      await removeFCMToken(token).catch(() => {});
+    }
+    await GoogleSignin.signOut().catch(() => {});
+    await messaging().deleteToken();
+    await removeToken();
+
+    setAuthData({ token: '', user: null });
+  };
+
   const signOut = async () => {
     if (isSigningOut) return;
     setIsSigningOut(true);
     try {
-      queryClient.clear();
-      const token = await getToken();
-      if (token) {
-        await removeFCMToken(token);
-      }
-      await GoogleSignin.signOut();
-      await messaging().deleteToken();
-      await removeToken();
-
-      setAuthData({ token: '', user: null });
+      await clearSession();
     } catch (err) {
       console.log(err);
     } finally {
       setIsSigningOut(false);
     }
+  };
+
+  const { mutate: deleteAccountMutate, isPending: isDeletingAccount } =
+    useMutation({
+      mutationFn: deleteMyAccount,
+      // Deletion is a soft delete on the backend (account deactivated). Once it
+      // succeeds we tear down the local session so the user lands back on auth.
+      onSuccess: async () => {
+        showMessage({
+          message: 'Account deleted',
+          description: 'Your account has been deleted.',
+          type: 'success',
+        });
+        await clearSession();
+      },
+      onError: () => {
+        showMessage({
+          message: 'Error',
+          description: 'Could not delete your account. Please try again.',
+          type: 'danger',
+        });
+      },
+    });
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and sign you out. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteAccountMutate(),
+        },
+      ],
+    );
   };
 
   const handleCopyShareLink = async () => {
@@ -467,6 +513,35 @@ export default function Profile() {
           </View>
         </View>
       )}
+      {!isLoading && (
+        <View style={styles.dangerSection}>
+          <Text style={styles.sectionTitle}>Danger Zone</Text>
+          <View style={styles.dangerCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.dangerLabel}>Delete Account</Text>
+              <Text style={styles.dangerSubLabel}>
+                Permanently delete your account and sign out. This action cannot
+                be undone.
+              </Text>
+            </View>
+            <TouchableButton
+              style={styles.deleteButton}
+              onPress={confirmDeleteAccount}
+              disabled={isDeletingAccount}
+            >
+              {isDeletingAccount ? (
+                <ActivityIndicator size="small" color={theme.colors.white} />
+              ) : (
+                <>
+                  <Trash2 size={fontSize(14)} color={theme.colors.white} />
+                  <Text style={styles.deleteButtonText}>Delete</Text>
+                </>
+              )}
+            </TouchableButton>
+          </View>
+        </View>
+      )}
+
       <Modal
         visible={addPersonModal}
         onRequestClose={closeAddPerson}
@@ -797,6 +872,50 @@ const styles = StyleSheet.create({
     paddingTop: spacing(16),
     marginTop: spacing(10),
     backgroundColor: theme.colors.white,
+  },
+  dangerSection: {
+    paddingHorizontal: spacing(16),
+    paddingTop: spacing(16),
+    paddingBottom: spacing(24),
+    marginTop: spacing(10),
+    backgroundColor: theme.colors.white,
+  },
+  dangerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(12),
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: fontSize(12),
+    paddingVertical: spacing(14),
+    paddingHorizontal: spacing(14),
+  },
+  dangerLabel: {
+    fontSize: fontSize(14),
+    fontFamily: theme.fonts.archivo.semiBold,
+    color: '#DC2626',
+  },
+  dangerSubLabel: {
+    fontSize: fontSize(12),
+    fontFamily: theme.fonts.lato.regular,
+    color: theme.colors.gray[600],
+    marginTop: spacing(2),
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing(6),
+    backgroundColor: '#EF4444',
+    borderRadius: fontSize(8),
+    paddingVertical: spacing(8),
+    paddingHorizontal: spacing(14),
+    minWidth: scale(84),
+  },
+  deleteButtonText: {
+    color: theme.colors.white,
+    fontFamily: theme.fonts.archivo.semiBold,
+    fontSize: fontSize(13),
   },
   sectionTitle: {
     fontSize: fontSize(14),
