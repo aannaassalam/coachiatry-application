@@ -25,7 +25,7 @@ import { SheetManager } from 'react-native-actions-sheet';
 import DatePicker from 'react-native-date-picker';
 import { showMessage } from 'react-native-flash-message';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import {
   Menu,
   MenuOption,
@@ -227,6 +227,14 @@ export default function AddEditTask() {
 
   const [dateTimePicker, setDateTimePicker] = useState(false);
   const [durationPicker, setDurationPicker] = useState(false);
+
+  // The description is a tall multiline field that fills the scroll area, so a
+  // scroll drag can land on it and steal focus (on Android an editable={false}
+  // TextInput still captures the touch and blocks the scroll). Gate editing
+  // behind an explicit tap: while reading we render plain Text — which can never
+  // grab focus or block scrolling on any platform — and only mount the real
+  // TextInput (autoFocus) once the user taps to edit.
+  const [descriptionEditable, setDescriptionEditable] = useState(false);
 
   // --- Autosave (edit mode) state ---
   const [autosaveStatus, setAutosaveStatus] = useState<
@@ -649,8 +657,13 @@ export default function AddEditTask() {
       ) : (
         <>
           <KeyboardAwareScrollView
+            style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
+            bottomOffset={verticalScale(24)}
+            disableScrollOnKeyboardHide
+            showsVerticalScrollIndicator={false}
             bounces={false}
           >
             <View>
@@ -670,23 +683,51 @@ export default function AddEditTask() {
               <Controller
                 name="description"
                 control={form.control}
-                render={({ field }) => (
-                  <TextInput
-                    style={[
-                      styles.transparentInput,
-                      {
-                        fontSize: fontSize(16),
-                        fontFamily: theme.fonts.lato.regular,
-                      },
-                    ]}
-                    placeholder="Add description here..."
-                    placeholderTextColor={theme.colors.gray[500]}
-                    multiline
-                    {...field}
-                    onChangeText={field.onChange}
-                    textAlignVertical="top"
-                  />
-                )}
+                render={({ field }) =>
+                  descriptionEditable ? (
+                    <TextInput
+                      style={[
+                        styles.transparentInput,
+                        {
+                          fontSize: fontSize(16),
+                          fontFamily: theme.fonts.lato.regular,
+                        },
+                      ]}
+                      placeholder="Add description here..."
+                      placeholderTextColor={theme.colors.gray[500]}
+                      multiline
+                      autoFocus
+                      {...field}
+                      onChangeText={field.onChange}
+                      onBlur={() => {
+                        field.onBlur();
+                        setDescriptionEditable(false);
+                      }}
+                      textAlignVertical="top"
+                    />
+                  ) : (
+                    // Read state: plain Text can't capture focus or block the
+                    // scroll. Pressable.onPress fires only on a real tap (never
+                    // when the touch becomes a scroll), so dragging over it just
+                    // scrolls the page.
+                    <Pressable onPress={() => setDescriptionEditable(true)}>
+                      <Text
+                        style={[
+                          styles.transparentInput,
+                          {
+                            fontSize: fontSize(16),
+                            fontFamily: theme.fonts.lato.regular,
+                            color: field.value
+                              ? theme.colors.black
+                              : theme.colors.gray[500],
+                          },
+                        ]}
+                      >
+                        {field.value || 'Add description here...'}
+                      </Text>
+                    </Pressable>
+                  )
+                }
               />
               <FormProvider {...form}>
                 <AddSubtasks disabled={isEditPending || isPending} />
@@ -1109,9 +1150,19 @@ const styles = createStyleSheet({
     fontFamily: theme.fonts.archivo.semiBold,
     color: theme.colors.gray[900],
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     padding: spacing(20),
-    flex: 1,
+    // flexGrow (not flex:1) lets a short form fill the viewport while still
+    // allowing long content to grow past it and scroll. flex:1 here caps the
+    // content at the visible height, so anything under the keyboard becomes
+    // unreachable.
+    flexGrow: 1,
+    // Extra room so the last fields / end of a long description can scroll
+    // clear of the keyboard and the fixed bottom bar.
+    paddingBottom: spacing(48),
   },
   transparentInput: {
     fontSize: fontSize(20),
