@@ -172,11 +172,20 @@ export const displayChatNotification = async (ctx: DisplayContext) => {
   const senderId = data.senderId || senderName;
   const body = data.body || remoteMessage.notification?.body || '';
   const isGroup = isGroupChat(data);
-  const chatName =
-    data.chatName ||
-    (isGroup ? remoteMessage.notification?.title : senderName) ||
-    senderName;
-  const title = isGroup ? chatName : senderName;
+  // Only title with a name we know is the conversation's. The old fallback
+  // chain ended in `|| senderName`, which titled a group with its sender while
+  // the body below still prefixed the sender — the same name twice.
+  const groupName = isGroup ? (data.chatName ?? '').trim() : '';
+  const showGroupTitle = groupName.length > 0;
+  const title = showGroupTitle ? groupName : senderName;
+  // Attributing the message to its sender only reads correctly when the title
+  // is the group. When we fall back to the sender as the title, prefixing would
+  // repeat it. The server already ships a prefixed `notification.body`, so
+  // don't stack a second prefix when we fall back to it above.
+  const displayBody =
+    showGroupTitle && !body.startsWith(`${senderName}: `)
+      ? `${senderName}: ${body}`
+      : body;
 
   const { personIcon, largeIcon } = await resolveAvatarPair({
     senderImage: data.senderImage,
@@ -245,7 +254,7 @@ export const displayChatNotification = async (ctx: DisplayContext) => {
   await notifee.displayNotification({
     id: notificationId,
     title,
-    body: isGroup ? `${senderName}: ${body}` : body,
+    body: displayBody,
     data: {
       type: data.type || 'chat',
       chatId,
@@ -280,7 +289,7 @@ export const displayChatNotification = async (ctx: DisplayContext) => {
       style: {
         type: AndroidStyle.MESSAGING,
         person: { name: 'You' },
-        ...(isGroup && chatName ? { title: chatName } : {}),
+        ...(showGroupTitle ? { title: groupName } : {}),
         group: isGroup,
         messages,
       },
