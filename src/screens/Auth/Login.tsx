@@ -32,6 +32,7 @@ import AppCheckBox from '../../components/ui/AppCheckBox';
 import AppInput from '../../components/ui/AppInput';
 import { getToken, onError } from '../../helpers/utils';
 import { useAuth } from '../../hooks/useAuth';
+import { useAppleAuth } from '../../hooks/useAppleAuth';
 import { theme } from '../../theme';
 import { AuthStackParamList } from '../../types/navigation';
 import { fontSize, SCREEN_WIDTH, spacing } from '../../utils';
@@ -60,6 +61,10 @@ export default function Login() {
   const [values, setValues] = useState({
     isChecked: false,
   });
+  // Covers the Google native sheet phase (before the backend mutation starts),
+  // so the buttons disable from the first tap rather than only during the
+  // network call.
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   const { mutate, isPending } = useMutation({
     mutationFn: login,
@@ -81,7 +86,16 @@ export default function Login() {
     onError: err => {
       console.log(err);
     },
+    onSettled: () => setGoogleBusy(false),
   });
+
+  const { signInWithApple, isApplePending } = useAppleAuth();
+
+  // Any in-flight auth action (email login, Google, or Apple — including the
+  // native Google/Apple sheets) locks every button, including the other
+  // providers and the "Sign Up" link, so a second action can't race the first.
+  const disableAuth =
+    isPending || isGooglePending || googleBusy || isApplePending;
 
   const form = useForm<yup.InferType<typeof schema>>({
     resolver: yupResolver(schema),
@@ -90,7 +104,7 @@ export default function Login() {
       password: '',
       rememberMe: false,
     },
-    disabled: isPending || isGooglePending,
+    disabled: isPending || isGooglePending || isApplePending,
   });
 
   const onSubmit = (data: yup.InferType<typeof schema>) => {
@@ -100,18 +114,22 @@ export default function Login() {
   };
 
   const GoogleLogin = async () => {
+    if (disableAuth) return;
+    setGoogleBusy(true);
     try {
       await GoogleSignin.hasPlayServices({
         showPlayServicesUpdateDialog: true,
       });
       const userInfo = await GoogleSignin.signIn();
       if (userInfo.type === 'success' && userInfo.data?.idToken) {
+        // Keep busy true — the mutation takes over and clears it on settle.
         google(userInfo.data?.idToken);
       } else {
         await GoogleSignin.signOut();
+        setGoogleBusy(false);
       }
-      console.log('User Info:', userInfo);
     } catch (error) {
+      setGoogleBusy(false);
       console.log(error);
     }
   };
@@ -198,7 +216,7 @@ export default function Login() {
               style={{ marginBottom: spacing(14) }}
               onPress={form.handleSubmit(onSubmit, onError)}
               isLoading={isPending}
-              disabled={isGooglePending}
+              disabled={disableAuth}
             />
 
             {/* Google Sign-in */}
@@ -207,9 +225,27 @@ export default function Login() {
               variant="outline"
               leftIcon={<Image source={assets.icons.googleIcon} />}
               onPress={GoogleLogin}
-              disabled={isPending}
+              disabled={disableAuth}
               isLoading={isGooglePending}
             />
+            {/* Apple Sign-in (iOS only) */}
+            {Platform.OS === 'ios' && (
+              <AppButton
+                text="Sign in with Apple"
+                variant="outline"
+                style={{ marginTop: spacing(14) }}
+                leftIcon={
+                  <Ionicons
+                    name="logo-apple"
+                    size={fontSize(20)}
+                    color={theme.colors.black}
+                  />
+                }
+                onPress={signInWithApple}
+                disabled={disableAuth}
+                isLoading={isApplePending}
+              />
+            )}
             {/* Divider */}
             <View style={styles.dividerContainer}>
               <View style={styles.dividerLine} />
@@ -222,7 +258,7 @@ export default function Login() {
               <Text style={styles.signupText}>Don’t have account? </Text>
               <TouchableButton
                 onPress={() => navigation.navigate('Signup')}
-                disabled={isPending || isGooglePending}
+                disabled={disableAuth}
               >
                 <Text style={styles.signupLink}>Sign Up</Text>
               </TouchableButton>

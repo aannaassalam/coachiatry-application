@@ -203,6 +203,12 @@ export default function Profile() {
   const { mutate: deleteAccountMutate, isPending: isDeletingAccount } =
     useMutation({
       mutationFn: deleteMyAccount,
+      // Show the full-screen loader (same overlay as logout) for the whole
+      // delete → sign-out sequence, so it stays up continuously through the
+      // session teardown rather than flickering off when the request settles.
+      onMutate: () => {
+        setIsSigningOut(true);
+      },
       // Deletion is a soft delete on the backend (account deactivated). Once it
       // succeeds we tear down the local session so the user lands back on auth.
       onSuccess: async () => {
@@ -214,6 +220,7 @@ export default function Profile() {
         await clearSession();
       },
       onError: () => {
+        setIsSigningOut(false);
         showMessage({
           message: 'Error',
           description: 'Could not delete your account. Please try again.',
@@ -753,7 +760,9 @@ export default function Profile() {
         <View style={styles.signOutBackdrop}>
           <View style={styles.signOutCard}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={styles.signOutText}>Logging out…</Text>
+            <Text style={styles.signOutText}>
+              {isDeletingAccount ? 'Deleting account…' : 'Logging out…'}
+            </Text>
           </View>
         </View>
       </Modal>

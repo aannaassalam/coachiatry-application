@@ -1,6 +1,6 @@
 export const baseUrl = process.env.NEXT_APP_BASE_URL;
-export const baseUrlApi = `https://backend.coachiatry.com/api/v1`;
-// export const baseUrlApi = `http://192.168.31.140:3001/api/v1`;
+// export const baseUrlApi = `https://backend.coachiatry.com/api/v1`;
+export const baseUrlApi = `http://192.168.31.140:3001/api/v1`;
 export const baseUrlMedia = process.env.NEXT_APP_BASE_URL;
 
 // api doc => https://militarymoves-admin.dedicateddevelopers.us/apidoc
@@ -18,6 +18,7 @@ export const endpoints = {
     login: '/auth/login',
     verifyOtp: '/auth/verifyOtp',
     googleAuth: '/auth/google-auth',
+    appleAuth: '/auth/apple-auth',
     forgotPassword: '/auth/forgot-password',
     resetPassword: '/auth/reset-password',
     updatePassword: '/auth/update-password',

@@ -53,6 +53,24 @@ export const googleAuth = async (
   return res;
 };
 
+export const appleAuth = async (body: {
+  identityToken: string;
+  // Apple only returns the name on the very first authorization; forward it
+  // when present so a brand-new account gets a real name.
+  fullName?: string | null;
+  // One-time code exchanged server-side for a refresh token used to revoke the
+  // Apple credential on account deletion.
+  authorizationCode?: string | null;
+}): Promise<{ data: { token: string; user: User } }> => {
+  const res = await axiosInstance.post(endpoints.auth.appleAuth, {
+    identity_token: body.identityToken,
+    authorization_code: body.authorizationCode ?? undefined,
+    full_name: body.fullName ?? undefined,
+    platform: 'app',
+  });
+  return res;
+};
+
 export const forgotPassword = async (email: string) => {
   const res = await axiosInstance.post(endpoints.auth.forgotPassword, {
     email,

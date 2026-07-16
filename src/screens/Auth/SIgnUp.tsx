@@ -31,6 +31,7 @@ import AppButton from '../../components/ui/AppButton';
 import AppInput from '../../components/ui/AppInput';
 import { getToken, onError } from '../../helpers/utils';
 import { useAuth } from '../../hooks/useAuth';
+import { useAppleAuth } from '../../hooks/useAppleAuth';
 import { theme } from '../../theme';
 import { AuthStackParamList } from '../../types/navigation';
 import { fontSize, SCREEN_WIDTH, spacing } from '../../utils';
@@ -56,6 +57,10 @@ export default function SignUp() {
   const { styles } = useStyles(stylesheet);
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [showPassword, setShowPassword] = useState(false);
+  // Covers the Google native sheet phase (before the backend mutation starts),
+  // so the buttons disable from the first tap rather than only during the
+  // network call.
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   const { mutate, isPending } = useMutation({
     mutationFn: signup,
@@ -72,7 +77,16 @@ export default function SignUp() {
       // const fcmToken = await getToken();
       // await updateFCMToken(fcmToken as string);
     },
+    onSettled: () => setGoogleBusy(false),
   });
+
+  const { signInWithApple, isApplePending } = useAppleAuth();
+
+  // Any in-flight auth action (email signup, Google, or Apple — including the
+  // native Google/Apple sheets) locks every button, including the other
+  // providers and the "Log in" link, so a second action can't race the first.
+  const disableAuth =
+    isPending || isGooglePending || googleBusy || isApplePending;
 
   const form = useForm<yup.InferType<typeof schema>>({
     resolver: yupResolver(schema),
@@ -81,7 +95,7 @@ export default function SignUp() {
       email: '',
       password: '',
     },
-    disabled: isPending || isGooglePending,
+    disabled: isPending || isGooglePending || isApplePending,
   });
 
   const onSubmit = (data: yup.InferType<typeof schema>) => {
@@ -89,17 +103,22 @@ export default function SignUp() {
   };
 
   const GoogleLogin = async () => {
+    if (disableAuth) return;
+    setGoogleBusy(true);
     try {
       await GoogleSignin.hasPlayServices({
         showPlayServicesUpdateDialog: true,
       });
       const userInfo = await GoogleSignin.signIn();
       if (userInfo.type === 'success' && userInfo.data?.idToken) {
+        // Keep busy true — the mutation takes over and clears it on settle.
         google(userInfo.data?.idToken);
       } else {
         await GoogleSignin.signOut();
+        setGoogleBusy(false);
       }
     } catch (error) {
+      setGoogleBusy(false);
       console.log(error);
     }
   };
@@ -181,7 +200,7 @@ export default function SignUp() {
               style={{ marginBottom: spacing(14) }}
               onPress={form.handleSubmit(onSubmit, onError)}
               isLoading={isPending}
-              disabled={isGooglePending}
+              disabled={disableAuth}
             />
 
             {/* Google Sign-up */}
@@ -190,9 +209,27 @@ export default function SignUp() {
               variant="outline"
               leftIcon={<Image source={assets.icons.googleIcon} />}
               onPress={GoogleLogin}
-              disabled={isPending}
+              disabled={disableAuth}
               isLoading={isGooglePending}
             />
+            {/* Apple Sign-up (iOS only) */}
+            {Platform.OS === 'ios' && (
+              <AppButton
+                text="Sign up with Apple"
+                variant="outline"
+                style={{ marginTop: spacing(14) }}
+                leftIcon={
+                  <Ionicons
+                    name="logo-apple"
+                    size={fontSize(20)}
+                    color={theme.colors.black}
+                  />
+                }
+                onPress={signInWithApple}
+                disabled={disableAuth}
+                isLoading={isApplePending}
+              />
+            )}
             {/* Divider */}
             <View style={styles.dividerContainer}>
               <View style={styles.dividerLine} />
@@ -205,7 +242,7 @@ export default function SignUp() {
               <Text style={styles.signupText}>Already have an account? </Text>
               <TouchableButton
                 onPress={() => navigation.navigate('Login')}
-                disabled={isPending || isGooglePending}
+                disabled={disableAuth}
               >
                 <Text style={styles.signupLink}>Sign In</Text>
               </TouchableButton>
