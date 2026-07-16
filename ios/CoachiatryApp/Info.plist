@@ -48,11 +48,11 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>This app requires access to your camera</string>
+	<string>Coachiatry uses your camera to take photos to send in chat conversations — for example, snapping a picture to share with your coach in a message.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>This app needs to save photos</string>
+	<string>Coachiatry saves photos you capture in the app to your photo library — for example, keeping a picture you took to send in a chat.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app requires access to your photo library</string>
+	<string>Coachiatry uses your photo library so you can choose existing photos to send in chats and set your profile and group pictures — for example, selecting a saved image to share with your coach.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>INSendMessageIntent</string>
