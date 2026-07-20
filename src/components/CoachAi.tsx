@@ -703,6 +703,34 @@ function CoachAiSheet({
               />
             </ScrollView>
 
+            {/* AI data-use disclosure (Apple Guideline 5.1.1 / privacy). */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() =>
+                Linking.openURL('https://www.coachiatry.com/privacy-policy')
+              }
+              style={{
+                paddingHorizontal: spacing(16),
+                paddingVertical: spacing(8),
+                backgroundColor: theme.colors.white,
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: theme.fonts.lato.regular,
+                  fontSize: fontSize(11),
+                  color: theme.colors.gray[500],
+                  textAlign: 'center',
+                }}
+              >
+                Coach AI sends the workspace data you select to Google Gemini to
+                generate responses.{' '}
+                <Text style={{ color: theme.colors.primary }}>
+                  Privacy Policy
+                </Text>
+              </Text>
+            </TouchableOpacity>
+
             {/* Footer Input */}
             {
               page !== 'chat' ? (

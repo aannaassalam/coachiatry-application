@@ -2,6 +2,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -446,6 +447,33 @@ export default function Profile() {
             </View>
             <Ionicons
               name="chevron-forward"
+              size={fontSize(18)}
+              color={theme.colors.gray[400]}
+            />
+          </TouchableButton>
+          <TouchableButton
+            style={styles.menuRow}
+            onPress={() =>
+              Linking.openURL('https://www.coachiatry.com/privacy-policy')
+            }
+          >
+            <View style={styles.menuLeft}>
+              <View style={styles.menuIcon}>
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={fontSize(18)}
+                  color={theme.colors.primary}
+                />
+              </View>
+              <View>
+                <Text style={styles.menuLabel}>Privacy Policy</Text>
+                <Text style={styles.menuSubLabel}>
+                  How your data is used, including AI processing by Google Gemini
+                </Text>
+              </View>
+            </View>
+            <Ionicons
+              name="open-outline"
               size={fontSize(18)}
               color={theme.colors.gray[400]}
             />
