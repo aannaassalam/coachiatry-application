@@ -26,7 +26,7 @@ import Users from '../screens/Users';
 
 export type AppTabParamList = {
   Dashboard: undefined;
-  Tasks: undefined;
+  Tasks: { statusId?: string } | undefined;
   Chats: undefined;
   Users: undefined;
   Clients: undefined;

@@ -438,9 +438,9 @@ export default function Profile() {
                   color={theme.colors.primary}
                 />
               </View>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.menuLabel}>Categories & Statuses</Text>
-                <Text style={styles.menuSubLabel}>
+                <Text style={styles.menuSubLabel} numberOfLines={2}>
                   Manage your task categories and statuses
                 </Text>
               </View>
@@ -449,6 +449,7 @@ export default function Profile() {
               name="chevron-forward"
               size={fontSize(18)}
               color={theme.colors.gray[400]}
+              style={{ marginLeft: spacing(8) }}
             />
           </TouchableButton>
           <TouchableButton
@@ -465,10 +466,10 @@ export default function Profile() {
                   color={theme.colors.primary}
                 />
               </View>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.menuLabel}>Privacy Policy</Text>
-                <Text style={styles.menuSubLabel}>
-                  How your data is used, including AI processing by Google Gemini
+                <Text style={styles.menuSubLabel} numberOfLines={2}>
+                  How your data is used, including AI processing
                 </Text>
               </View>
             </View>
@@ -476,6 +477,7 @@ export default function Profile() {
               name="open-outline"
               size={fontSize(18)}
               color={theme.colors.gray[400]}
+              style={{ marginLeft: spacing(8) }}
             />
           </TouchableButton>
         </View>

@@ -100,6 +100,7 @@ export const endpoints = {
     createGroup: '/chat/group',
     editGroup: '/chat/group/edit',
     leaveGroup: (chatId: string) => `/chat/leave-group/${chatId}`,
+    deleteConversation: (chatId: string) => `/chat/conversation/${chatId}`,
     inviteToGroup: '/chat/group/invite',
     getGroupInvite: (token: string) => `/chat/group/invite/${token}`,
     acceptGroupInvite: (token: string) => `/chat/group/invite/${token}/accept`,

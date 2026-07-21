@@ -40,6 +40,15 @@ export default function ChatMessage({
     details.name = item.name;
   }
 
+  // Direct chat with a deleted account. Soft-deleted keeps its real name (so we
+  // append "(deleted)"); hard-deleted already renders as "Deleted user".
+  const isDeletedChatUser =
+    item.type !== 'group' &&
+    ((chatUser?.user as any)?.active === false ||
+      (chatUser?.user as any)?.deleted === true);
+  const showDeletedSuffix =
+    item.type !== 'group' && (chatUser?.user as any)?.active === false;
+
   return (
     <TouchableButton
       onPress={() => {
@@ -57,7 +66,16 @@ export default function ChatMessage({
       />
 
       <View style={styles.cardBody}>
-        <Text style={styles.cardTitle}>{details.name}</Text>
+        <Text
+          style={[
+            styles.cardTitle,
+            isDeletedChatUser && { color: theme.colors.gray[400] },
+          ]}
+          numberOfLines={1}
+        >
+          {details.name}
+          {showDeletedSuffix ? ' (deleted)' : ''}
+        </Text>
 
         <Text
           ellipsizeMode="tail"

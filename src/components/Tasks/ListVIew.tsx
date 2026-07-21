@@ -19,11 +19,15 @@ export default function ListView({
   filters,
   group,
   groupDir,
+  expandStatusId,
+  onStatusExpanded,
 }: {
   sort: string;
   filters: Filter[];
   group: string;
   groupDir: string;
+  expandStatusId?: string;
+  onStatusExpanded?: () => void;
 }) {
   const queryClient = useQueryClient();
 
@@ -111,6 +115,8 @@ export default function ListView({
       sort={sort}
       group={group as GroupColumnKey}
       groupDir={groupDir}
+      expandStatusId={expandStatusId}
+      onStatusExpanded={onStatusExpanded}
       refreshing={refreshing}
       onRefresh={onRefresh}
       contentContainerStyle={{ paddingBottom: FLOATING_BAR_FOOTPRINT }}

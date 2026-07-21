@@ -132,6 +132,13 @@ export interface TaskSectionListProps {
   scrollEnabled?: boolean;
   /** Use the reanimated-animated FlashList (collapsing-header screens). */
   animated?: boolean;
+  /**
+   * When set (e.g. arriving from a Dashboard status tap), expand ONLY this
+   * status group and collapse all others. Consumed once via `onStatusExpanded`.
+   */
+  expandStatusId?: string;
+  /** Called after `expandStatusId` has been applied, so the caller can clear it. */
+  onStatusExpanded?: () => void;
 }
 
 export default function TaskSectionList({
@@ -149,6 +156,8 @@ export default function TaskSectionList({
   onScroll,
   scrollEnabled = true,
   animated = false,
+  expandStatusId,
+  onStatusExpanded,
 }: TaskSectionListProps) {
   const { styles } = useStyles(stylesheet);
 
@@ -173,6 +182,20 @@ export default function TaskSectionList({
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
   const signature = groups.map(g => g.key).join('|');
   const prevSignature = React.useRef<string | null>(null);
+
+  // Consume an incoming "expand only this status" request (from a Dashboard
+  // status tap). Declared BEFORE the default-first effect and marks the current
+  // signature as handled, so the default doesn't override the requested status.
+  React.useEffect(() => {
+    if (!expandStatusId || groups.length === 0) return;
+    if (!groups.some(g => g.key === expandStatusId)) return;
+    prevSignature.current = signature;
+    setExpanded({ [expandStatusId]: true });
+    onStatusExpanded?.();
+  }, [expandStatusId, groups, signature, onStatusExpanded]);
+
+  // Default-expand the first group; re-default when the grouping itself changes
+  // (its buckets, and thus keys, differ).
   React.useEffect(() => {
     if (prevSignature.current === signature || groups.length === 0) return;
     prevSignature.current = signature;

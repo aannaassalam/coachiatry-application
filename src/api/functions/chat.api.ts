@@ -124,6 +124,16 @@ export const leaveGroup = async (chatId: string) => {
   return res;
 };
 
+// Delete a single direct conversation (with a deleted user) and all its
+// messages. The backend only allows this when the other member is a deleted
+// account.
+export const deleteDirectConversation = async (chatId: string) => {
+  const res = await axiosInstance.delete(
+    endpoints.chat.deleteConversation(chatId),
+  );
+  return res.data;
+};
+
 // Invite people to a group by email. The backend skips anyone already a member
 // and, for everyone else, emails an invite link (existing users → join link,
 // new users → signup-then-join link). Auto-join also happens on signup/login.

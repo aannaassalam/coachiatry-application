@@ -56,6 +56,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AttachmentViewer from '../../components/Chat/AttachementViewer';
 import { FileMessage } from '../../components/Chat/FileMessage';
+import LinkifiedText from '../../components/Chat/LinkifiedText';
 import { ImageMessage } from '../../components/Chat/ImageMessage';
 import { VideoMessage } from '../../components/Chat/VideoMessage';
 import TouchableButton from '../../components/TouchableButton';
@@ -176,16 +177,16 @@ const RenderMessage = ({
               </View>
             )}
             {item.type === 'text' ? (
-              <Text
+              <LinkifiedText
+                text={item.content}
+                linkColor={isMe ? theme.colors.white : '#2563EB'}
                 style={[
                   styles.messageText,
                   {
                     color: isMe ? theme.colors.white : theme.colors.gray[900],
                   },
                 ]}
-              >
-                {item.content}
-              </Text>
+              />
             ) : item.type === 'image' ? (
               <View style={{ paddingHorizontal: 0 }}>
                 <ImageMessage

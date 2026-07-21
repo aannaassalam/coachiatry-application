@@ -1,6 +1,7 @@
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { AppTabParamList } from '../../navigators/BottomNavigator';
 import moment from 'moment';
 import { useState } from 'react';
 import { Pressable, Text, TouchableOpacity, View } from 'react-native';
@@ -23,6 +24,10 @@ type TaskListNavigationProp = NativeStackNavigationProp<
 
 function TaskList() {
   const navigation = useNavigation<TaskListNavigationProp>();
+  const route = useRoute<RouteProp<AppTabParamList, 'Tasks'>>();
+  // Set when arriving from a Dashboard status tap — the list opens with only
+  // this status section expanded.
+  const expandStatusId = route.params?.statusId;
   const [tab, setTab] = useState('list');
   const [sort, setSort] = useState('');
   const [group, setGroup] = useState('status');
@@ -109,6 +114,8 @@ function TaskList() {
           filters={validatedFilters}
           group={group}
           groupDir={groupDir}
+          expandStatusId={expandStatusId}
+          onStatusExpanded={() => navigation.setParams({ statusId: undefined })}
         />
       ) : (
         <WeekView dates={dates} filters={filters} />

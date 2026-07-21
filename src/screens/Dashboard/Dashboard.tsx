@@ -63,6 +63,7 @@ interface TaskCardProps {
   color: string;
   labelColor?: string;
   tasks?: Task[];
+  onPressStatus?: () => void;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -71,17 +72,21 @@ const TaskCard: React.FC<TaskCardProps> = ({
   color,
   labelColor,
   tasks = [],
+  onPressStatus,
 }) => {
   return (
     <View>
-      {/* Label */}
-      <TaskBadge
-        title={title}
-        count={count}
-        labelColor={labelColor || theme.colors.gray[900]}
-        backgroundColor={color}
-        marginBottom={spacing(6)}
-      />
+      {/* Label — tapping the status opens the Tasks list with only this
+          status section expanded. */}
+      <TouchableButton activeOpacity={0.8} onPress={onPressStatus}>
+        <TaskBadge
+          title={title}
+          count={count}
+          labelColor={labelColor || theme.colors.gray[900]}
+          backgroundColor={color}
+          marginBottom={spacing(6)}
+        />
+      </TouchableButton>
 
       {/* Tasks List — same rich card as the Tasks list view. Grouped by status
           here, so the status pill is omitted (showStatus defaults to false). */}
@@ -141,6 +146,9 @@ const TasksSection = ({
               color={_status.color?.bg}
               labelColor={_status.color?.text}
               tasks={tasksForStatus}
+              onPressStatus={() =>
+                navigation.navigate('Tasks', { statusId: _status._id })
+              }
             />
           );
         })}

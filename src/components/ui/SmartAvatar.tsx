@@ -12,8 +12,13 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import FastImage from 'react-native-fast-image';
 import { createStyleSheet } from 'react-native-unistyles';
 import { spacing } from '../../utils';
+
+// FastImage persists avatars to disk across app launches (RN's Image doesn't),
+// so a profile picture only downloads once and then displays instantly.
+const AnimatedFastImage = Animated.createAnimatedComponent(FastImage);
 
 function getInitials(name?: string) {
   if (!name) return 'U';
@@ -80,16 +85,21 @@ export const SmartAvatar: React.FC<SmartAvatarProps> = ({
         </Text>
       </View>
 
-      {/* Image fades in on top of the initials when it loads. */}
+      {/* Image fades in on top of the initials when it loads (from disk cache
+          on repeat views, so there's usually no visible load at all). */}
       {src && !error && (
-        <Animated.Image
-          source={{ uri: src }}
+        <AnimatedFastImage
+          source={{
+            uri: src,
+            priority: FastImage.priority.normal,
+            cache: FastImage.cacheControl.immutable,
+          }}
+          resizeMode={FastImage.resizeMode.cover}
           style={[
             StyleSheet.absoluteFillObject,
             { borderRadius },
-            styles.image,
             animatedImageStyle,
-            imageStyle,
+            imageStyle as object,
           ]}
           onLoad={() => {
             opacity.value = withTiming(1, { duration: 220 });
@@ -106,9 +116,6 @@ const styles = createStyleSheet({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-  },
-  image: {
-    resizeMode: 'cover',
   },
   fallback: {
     justifyContent: 'center',

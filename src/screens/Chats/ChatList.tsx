@@ -19,7 +19,10 @@ import { AppStackParamList } from '../../types/navigation';
 import { ChatConversation } from '../../typescript/interface/chat.interface';
 import { PaginatedResponse } from '../../typescript/interface/common.interface';
 import { fontSize, spacing } from '../../utils';
-import { getAllConversations, getConversation } from '../../api/functions/chat.api';
+import {
+  getAllConversations,
+  getConversation,
+} from '../../api/functions/chat.api';
 import { Message } from '../../typescript/interface/message.interface';
 import { useSocket } from '../../hooks/useSocket';
 import { useEffect, useRef, useState } from 'react';

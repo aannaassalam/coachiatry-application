@@ -1,6 +1,7 @@
 import { pick, types } from '@react-native-documents/picker';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   findNodeHandle,
   FlatList,
   Keyboard,
@@ -26,8 +27,16 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   InfiniteData,
   useInfiniteQuery,
+  useMutation,
   useQuery,
 } from '@tanstack/react-query';
+import {
+  Menu,
+  MenuOption,
+  MenuOptions,
+  MenuTrigger,
+  renderers,
+} from 'react-native-popup-menu';
 import moment from 'moment';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -42,7 +51,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { queryClient } from '../../../App';
-import { getConversation } from '../../api/functions/chat.api';
+import {
+  deleteDirectConversation,
+  getConversation,
+} from '../../api/functions/chat.api';
 import { getMessages } from '../../api/functions/message.api';
 import { ChatCoach, ChevronLeft } from '../../assets';
 import EmojiReactor from '../../components/Chat/EmojiReactor';
@@ -79,6 +91,7 @@ import AttachmentFullPreview from '../../components/Chat/AttachmentPreview';
 import EmojiKeyboard from '../../components/Chat/EmojiKeyboard';
 import { ImageMessage } from '../../components/Chat/ImageMessage';
 import TypingIndicator from '../../components/Chat/TypingIndicator';
+import LinkifiedText from '../../components/Chat/LinkifiedText';
 import CoachAiSheet from '../../components/CoachAi';
 import TouchableButton from '../../components/TouchableButton';
 import { uploadManager } from '../../helpers/uploadManager';
@@ -294,7 +307,9 @@ const RenderMessage = ({
               )}
               {item.type === 'text' ? (
                 <View style={styles.textWithTime}>
-                  <Text
+                  <LinkifiedText
+                    text={item.content}
+                    linkColor={isMe ? theme.colors.white : '#2563EB'}
                     style={[
                       styles.messageText,
                       styles.messageTextFlex,
@@ -304,9 +319,7 @@ const RenderMessage = ({
                           : theme.colors.gray[900],
                       },
                     ]}
-                  >
-                    {item.content}
-                  </Text>
+                  />
                   <Text
                     style={[
                       styles.bubbleTimestamp,
@@ -541,6 +554,54 @@ const ChatScreen = () => {
     _member => _member.user._id !== profile?._id,
   );
 
+  // The other member's account has been deleted (soft-deleted → active:false, or
+  // hard-deleted → the backend's `deleted` placeholder). Only then do we offer
+  // to delete the conversation.
+  const isDeletedUserChat =
+    conversation?.type === 'direct' &&
+    ((friend?.user as any)?.active === false ||
+      (friend?.user as any)?.deleted === true);
+  // A soft-deleted account still carries its real name, so append "(deleted)".
+  // A hard-deleted account already renders as "Deleted user" — no suffix.
+  const showDeletedSuffix = (friend?.user as any)?.active === false;
+
+  const { mutate: deleteConversation, isPending: isDeletingConversation } =
+    useMutation({
+      mutationFn: () => deleteDirectConversation(room),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        queryClient.removeQueries({ queryKey: ['conversations', room] });
+        queryClient.removeQueries({ queryKey: ['messages', room] });
+        showMessage({
+          type: 'success',
+          message: 'Conversation deleted',
+          description: 'This conversation has been removed.',
+        });
+        navigation.goBack();
+      },
+      onError: () =>
+        showMessage({
+          type: 'danger',
+          message: 'Error',
+          description: 'Could not delete the conversation. Please try again.',
+        }),
+    });
+
+  const confirmDeleteConversation = () => {
+    Alert.alert(
+      'Delete conversation',
+      'This permanently deletes this conversation and all its messages for you. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteConversation(),
+        },
+      ],
+    );
+  };
+
   const details: { photo?: string; name?: string } = {
     photo: friend?.user.photo,
     name: friend?.user.fullName,
@@ -635,6 +696,31 @@ const ChatScreen = () => {
     if (room) {
       setFocusedChat(room);
       clearChatNotifications(room);
+
+      // Opening the chat reads it — clear its unread badge immediately in the
+      // conversation caches. The server's mark_seen only echoes a reset when it
+      // finds unseen sent/delivered messages, so we can't rely on that event
+      // alone to zero the counter.
+      const zeroUnread = (c: ChatConversation): ChatConversation =>
+        c._id === room ? { ...c, unreadCount: 0 } : c;
+
+      queryClient.setQueryData<
+        InfiniteData<PaginatedResponse<ChatConversation[]>>
+      >(['conversations'], old =>
+        old
+          ? {
+              ...old,
+              pages: old.pages.map(p => ({
+                ...p,
+                data: p.data.map(zeroUnread),
+              })),
+            }
+          : old,
+      );
+      queryClient.setQueryData<PaginatedResponse<ChatConversation[]>>(
+        ['conversations-dashboard'],
+        old => (old?.data ? { ...old, data: old.data.map(zeroUnread) } : old),
+      );
     }
     return () => {
       activeRoomRef.current = null; // user left chat
@@ -1587,15 +1673,66 @@ const ChatScreen = () => {
               name={details.name}
               size={scale(28)}
             />
-            <Text style={styles.userName} numberOfLines={1}>
+            <Text
+              style={[
+                styles.userName,
+                isDeletedUserChat && { color: theme.colors.gray[400] },
+              ]}
+              numberOfLines={1}
+            >
               {details.name}
+              {showDeletedSuffix ? ' (deleted)' : ''}
             </Text>
-            {conversation?.type === 'direct' && friendStatus === 'online' && (
-              <View style={styles.dot} />
-            )}
+            {conversation?.type === 'direct' &&
+              friendStatus === 'online' &&
+              !isDeletedUserChat && <View style={styles.dot} />}
           </View>
           {conversation?.type === 'direct' ? (
-            <View style={{ width: 24 }} />
+            isDeletedUserChat ? (
+              <Menu
+                renderer={renderers.Popover}
+                rendererProps={{ placement: 'bottom' }}
+              >
+                <MenuTrigger
+                  customStyles={{
+                    TriggerTouchableComponent: TouchableOpacity,
+                    triggerWrapper: { padding: 4, borderRadius: 100 },
+                  }}
+                  disabled={isDeletingConversation}
+                >
+                  <Ionicons
+                    name="ellipsis-horizontal"
+                    size={fontSize(18)}
+                    color={theme.colors.gray[700]}
+                  />
+                </MenuTrigger>
+                <MenuOptions
+                  customStyles={{
+                    optionsContainer: {
+                      width: scale(220),
+                      borderRadius: 10,
+                      paddingVertical: scale(4),
+                    },
+                  }}
+                >
+                  <MenuOption
+                    onSelect={confirmDeleteConversation}
+                    style={styles.deleteConversationOption}
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      color="#ef4444"
+                      size={fontSize(16)}
+                    />
+                    <Text style={styles.deleteConversationText}>
+                      Clear chat & delete conversation
+                    </Text>
+                  </MenuOption>
+                </MenuOptions>
+              </Menu>
+            ) : (
+              <View style={{ width: 24 }} />
+            )
           ) : (
             <TouchableButton
               style={{ padding: 4, borderRadius: 100 }}
@@ -1814,6 +1951,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.white,
+  },
+  deleteConversationOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(10),
+    paddingVertical: spacing(10),
+    paddingHorizontal: spacing(12),
+  },
+  deleteConversationText: {
+    fontSize: fontSize(14),
+    fontFamily: theme.fonts.lato.regular,
+    color: '#ef4444',
+    flexShrink: 1,
   },
   header: {
     flexDirection: 'row',

@@ -9,7 +9,7 @@ export type AuthStackParamList = {
 };
 
 export type AppStackParamList = {
-  Tasks: undefined;
+  Tasks: { statusId?: string } | undefined;
   Chats: undefined;
   Documents: undefined;
   DocumentEditor: {
