@@ -9,6 +9,7 @@ import CreateTaxonomySheet from './components/CreateTaxonomySheet';
 import DeleteTaxonomySheet from './components/DeleteTaxonomySheet';
 import AssigneePickerSheet from './components/AssigneePickerSheet';
 import CreateClientSheet from './components/CreateClientSheet';
+import ScheduleMessageSheet from './components/Chat/ScheduleMessageSheet';
 
 registerSheet('filter-sheet', FilterSheet);
 registerSheet('general-sheet', BottomSheet);
@@ -19,6 +20,7 @@ registerSheet('create-taxonomy-sheet', CreateTaxonomySheet);
 registerSheet('delete-taxonomy-sheet', DeleteTaxonomySheet);
 registerSheet('assignee-sheet', AssigneePickerSheet);
 registerSheet('create-client-sheet', CreateClientSheet);
+registerSheet('schedule-message-sheet', ScheduleMessageSheet);
 
 type Filter = {
   selectedKey: string;
@@ -146,6 +148,24 @@ declare module 'react-native-actions-sheet' {
      */
     'create-client-sheet': SheetDefinition<{
       payload?: object;
+    }>;
+
+    /**
+     * Compose / schedule a message to be sent to a chat later, optionally
+     * repeating. Pass `selectedMessage` to edit an existing scheduled message.
+     */
+    'schedule-message-sheet': SheetDefinition<{
+      payload: {
+        chatId: string;
+        message?: string;
+        receiverName?: string;
+        selectedMessage?: {
+          _id: string;
+          content: string;
+          scheduledAt: string;
+          repeat: string;
+        };
+      };
     }>;
   }
 }

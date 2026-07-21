@@ -11,6 +11,7 @@ export type AuthStackParamList = {
 export type AppStackParamList = {
   Tasks: { statusId?: string } | undefined;
   Chats: undefined;
+  ScheduledMessages: undefined;
   Documents: undefined;
   DocumentEditor: {
     mode?: 'edit' | 'view' | 'add';

@@ -99,19 +99,20 @@ const RenderItem = ({
   });
 
   return (
-    <Menu
-      renderer={renderers.Popover}
+    <View style={{ marginBottom: spacing(16) }}>
+      <Menu
+        renderer={renderers.Popover}
       onOpen={() =>
         ReactNativeHapticFeedback.trigger('impactMedium', hapticOptions)
       }
       rendererProps={{
         placement: 'bottom',
+        // Shift toward the right. Only marginLeft — the marginTop offset caused
+        // the open wobble.
         anchorStyle: {
-          marginLeft: width * 0.85,
-          marginTop: -30,
+          marginLeft: width * 0.65,
         },
       }}
-      style={{ marginBottom: spacing(16) }}
     >
       <MenuTrigger
         triggerOnLongPress
@@ -147,9 +148,9 @@ const RenderItem = ({
       <MenuOptions
         customStyles={{
           optionsContainer: {
-            width: scale(100),
+            width: scale(150),
             borderRadius: 10,
-            paddingVertical: scale(5),
+            paddingVertical: scale(4),
           },
         }}
       >
@@ -159,7 +160,7 @@ const RenderItem = ({
         </MenuOption>
         <MenuOption
           value={1}
-          style={styles.option}
+          style={[styles.option, styles.deleteOption]}
           onSelect={() =>
             Alert.alert(
               'Delete Document',
@@ -179,7 +180,8 @@ const RenderItem = ({
           <Text style={[styles.optionText, { color: '#ef4444' }]}>Delete</Text>
         </MenuOption>
       </MenuOptions>
-    </Menu>
+      </Menu>
+    </View>
   );
 };
 
@@ -353,11 +355,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing(10),
-    paddingVertical: scale(5),
-    paddingHorizontal: scale(10),
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(14),
   },
   optionText: {
-    fontSize: fontSize(16),
+    fontSize: fontSize(14),
+  },
+  deleteOption: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.gray[100],
   },
   loaderOverlay: {
     ...StyleSheet.absoluteFill,

@@ -233,9 +233,9 @@ const TaskDetailsScreen = () => {
             <MenuOptions
               customStyles={{
                 optionsContainer: {
-                  width: scale(100),
+                  width: scale(150),
                   borderRadius: 10,
-                  paddingVertical: scale(5),
+                  paddingVertical: scale(4),
                 },
               }}
             >
@@ -253,7 +253,7 @@ const TaskDetailsScreen = () => {
               </MenuOption>
               <MenuOption
                 value={1}
-                style={styles.option}
+                style={[styles.option, styles.deleteOption]}
                 onSelect={() =>
                   Alert.alert(
                     'Delete Task',
@@ -659,11 +659,15 @@ const styles = createStyleSheet({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing(10),
-    paddingVertical: scale(5),
-    paddingHorizontal: scale(10),
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(14),
   },
   optionText: {
-    fontSize: fontSize(16),
+    fontSize: fontSize(14),
+  },
+  deleteOption: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.gray[100],
   },
   createdOn: {
     marginTop: 'auto',

@@ -14,6 +14,7 @@ import BottomNavigator from './BottomNavigator';
 import FloatingChatHost from '../components/Chat/FloatingChatHost';
 import CoachChatScreen from '../screens/Chats/CoachChatRoom';
 import GroupScreen from '../screens/Chats/GroupScreen';
+import ScheduledMessages from '../screens/Chats/ScheduledMessages';
 import UserDetails from '../screens/Users/UserDetails';
 import AddEditUser from '../screens/Users/AddEditUser';
 import CategoryStatusSettings from '../screens/Settings/CategoryStatusSettings';
@@ -45,6 +46,10 @@ const AppNavigator = ({ hideFloatingChat = false }: { hideFloatingChat?: boolean
         <Stack.Screen name="ChatRoom" component={ChatScreen} />
         <Stack.Screen name="GroupScreen" component={GroupScreen} />
         <Stack.Screen name="CoachChatRoom" component={CoachChatScreen} />
+        <Stack.Screen
+          name="ScheduledMessages"
+          component={ScheduledMessages}
+        />
         <Stack.Screen name="AddEditUser" component={AddEditUser} />
         <Stack.Screen
           name="CategoryStatusSettings"

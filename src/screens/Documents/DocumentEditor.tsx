@@ -3,7 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Pressable,
   StyleSheet,
@@ -26,7 +26,11 @@ import moment from 'moment';
 import { Controller, useForm } from 'react-hook-form';
 import { SheetManager } from 'react-native-actions-sheet';
 import { showMessage } from 'react-native-flash-message';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import {
+  KeyboardAwareScrollView,
+  KeyboardStickyView,
+} from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   actions,
   RichEditor,
@@ -151,8 +155,9 @@ export default function DocumentEditor() {
   // role === 'coach' alone excluded managers/admins onto the self-scoped path.
   const isStaffViewingClient =
     !!userId && ['coach', 'manager', 'admin'].includes(profile?.role ?? '');
+  const insets = useSafeAreaInsets();
   const editor = useRef<RichEditor | null>(null);
-  const scrollRef = useRef<KeyboardAwareScrollView>(null);
+  const scrollRef = useRef<any>(null);
   const [editorValue, setEditorValue] = useState(content);
   const [localMode, setLocalMode] = useState(mode);
   const [downloading, setDownloading] = useState(false);
@@ -245,8 +250,10 @@ export default function DocumentEditor() {
   }, [data, form]);
 
   const handleCursorPosition = (offsetY: number) => {
-    if (!scrollRef.current) return;
-    scrollRef.current?.scrollToPosition(0, offsetY - 200, true);
+    scrollRef.current?.scrollTo?.({
+      y: Math.max(0, offsetY - 200),
+      animated: true,
+    });
   };
 
   useEffect(() => {
@@ -371,11 +378,7 @@ export default function DocumentEditor() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.select({ ios: 'padding', android: 'height' })}
-      style={{ flex: 1 }}
-    >
-      <View style={styles.container}>
+    <View style={styles.container}>
         {downloading && (
           <View
             style={{
@@ -403,6 +406,20 @@ export default function DocumentEditor() {
             </Text>
           )}
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {/* Save lives in the header so it stays reachable while the keyboard
+                is open (the bottom bar gets covered on smaller screens). */}
+            {localMode !== 'view' && (
+              <AppButton
+                text="Save"
+                onPress={form.handleSubmit(onSubmit, onError)}
+                isLoading={isEditing || isPending || isCoachPending}
+                leftIcon={
+                  <Feather name="save" color={theme.colors.white} size={14} />
+                }
+                style={styles.headerSaveButton}
+                textStyle={{ fontSize: fontSize(13) }}
+              />
+            )}
             {localMode === 'view' && (
               <TouchableButton
                 style={{ ...styles.iconButton, marginLeft: 'auto' }}
@@ -451,49 +468,69 @@ export default function DocumentEditor() {
                 <MenuOptions
                   customStyles={{
                     optionsContainer: {
-                      width: scale(100),
+                      width: scale(160),
                       borderRadius: 10,
-                      paddingVertical: scale(5),
+                      paddingVertical: scale(4),
                     },
                   }}
                 >
-                  <MenuOption
-                    style={styles.option}
-                    onSelect={() => setLocalMode('edit')}
-                  >
-                    <Pencil
-                      color={theme.colors.gray[900]}
-                      size={fontSize(16)}
-                    />
-                    <Text style={styles.optionText}>Edit</Text>
-                  </MenuOption>
-                  <MenuOption
-                    value={1}
-                    style={styles.option}
-                    onSelect={() =>
-                      Alert.alert(
-                        'Delete Document',
-                        'Are you sure you want to delete this document?',
-                        [
-                          { text: 'Cancel', style: 'cancel' },
-                          {
-                            text: 'Delete',
-                            style: 'destructive',
-                            onPress: () => deleteDoc(data?._id as string),
-                          },
-                        ],
-                      )
-                    }
-                  >
-                    <Octicons
-                      name="trash"
-                      color="#ef4444"
-                      size={fontSize(16)}
-                    />
-                    <Text style={[styles.optionText, { color: '#ef4444' }]}>
-                      Delete
-                    </Text>
-                  </MenuOption>
+                  {localMode === 'view' ? (
+                    <MenuOption
+                      style={styles.option}
+                      onSelect={() => setLocalMode('edit')}
+                    >
+                      <Pencil
+                        color={theme.colors.gray[900]}
+                        size={fontSize(16)}
+                      />
+                      <Text style={styles.optionText}>Edit</Text>
+                    </MenuOption>
+                  ) : (
+                    <MenuOption
+                      style={styles.option}
+                      onSelect={() =>
+                        localMode === 'add'
+                          ? navigation.goBack()
+                          : setLocalMode('view')
+                      }
+                    >
+                      <Ionicons
+                        name="close"
+                        color={theme.colors.gray[900]}
+                        size={fontSize(18)}
+                      />
+                      <Text style={styles.optionText}>Cancel</Text>
+                    </MenuOption>
+                  )}
+                  {localMode !== 'add' && (
+                    <MenuOption
+                      value={1}
+                      style={[styles.option, styles.deleteOption]}
+                      onSelect={() =>
+                        Alert.alert(
+                          'Delete Document',
+                          'Are you sure you want to delete this document?',
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Delete',
+                              style: 'destructive',
+                              onPress: () => deleteDoc(data?._id as string),
+                            },
+                          ],
+                        )
+                      }
+                    >
+                      <Octicons
+                        name="trash"
+                        color="#ef4444"
+                        size={fontSize(16)}
+                      />
+                      <Text style={[styles.optionText, { color: '#ef4444' }]}>
+                        Delete
+                      </Text>
+                    </MenuOption>
+                  )}
                 </MenuOptions>
               </Menu>
             ) : null}
@@ -506,12 +543,10 @@ export default function DocumentEditor() {
           <>
             <KeyboardAwareScrollView
               ref={scrollRef}
-              enableOnAndroid
-              enableAutomaticScroll
-              extraScrollHeight={20}
-              extraHeight={Platform.OS === 'ios' ? 120 : 200}
+              style={styles.scroll}
+              bottomOffset={spacing(24)}
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingBottom: spacing(150) }}
+              contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
             >
               {/* Author Info */}
@@ -564,12 +599,9 @@ export default function DocumentEditor() {
                       //     ? userCategories
                       //     : categories?.find(_cat => _cat._id === field.value),
                       // );
-                      const selectedTag =
-                        isStaffViewingClient
-                          ? userCategories?.find(
-                              _cat => _cat._id === field.value,
-                            )
-                          : categories?.find(_cat => _cat._id === field.value);
+                      const selectedTag = isStaffViewingClient
+                        ? userCategories?.find(_cat => _cat._id === field.value)
+                        : categories?.find(_cat => _cat._id === field.value);
                       // console.log(selectedTag);
                       return (
                         <TouchableButton
@@ -636,8 +668,15 @@ export default function DocumentEditor() {
                   initialContentHTML={editorValue}
                   placeholder="Start writing here..."
                   onChange={setEditorValue}
-                  editorStyle={styles.editorInput}
-                  scrollEnabled={true} // ✅ Internal scroll enabled
+                  editorStyle={{
+                    backgroundColor: 'transparent',
+                    color: theme.colors.gray[900],
+                    placeholderColor: theme.colors.gray[400],
+                    contentCSSText: `font-size: ${fontSize(
+                      15,
+                    )}px; line-height: 1.65; padding-bottom: 48px;`,
+                  }}
+                  scrollEnabled
                   onCursorPosition={handleCursorPosition}
                   showsVerticalScrollIndicator={false}
                   disabled={localMode === 'view' || isPending || isEditing}
@@ -646,35 +685,32 @@ export default function DocumentEditor() {
               {/* </KeyboardAvoidingView> */}
             </KeyboardAwareScrollView>
 
-            {/* Bottom Toolbar */}
-            {/* <ToolbarWithKeyboardPadding insetsBottom={insets.bottom}> */}
-            <View style={styles.toolbarContainer}>
-              {localMode !== 'view' && (
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    marginTop: spacing(5),
-                  }}
-                >
-                  <View style={{ flexDirection: 'row' }}>
-                    <TouchableButton
-                      style={styles.toolbarButton}
-                      onPress={() =>
-                        editor.current?.sendAction('action', actions.undo)
-                      }
-                    >
-                      <Undo />
-                    </TouchableButton>
-                    <TouchableButton
-                      style={styles.toolbarButton}
-                      onPress={() =>
-                        editor.current?.sendAction('action', actions.redo)
-                      }
-                    >
-                      <Redo />
-                    </TouchableButton>
-                  </View>
+            {/* While editing, the formatting toolbar docks directly above the
+                keyboard (KeyboardStickyView). Save/Cancel live in the header, so
+                the edit surface stays uncluttered. View mode shows a footer with
+                the read actions. */}
+            {localMode !== 'view' ? (
+              // The app shell adds paddingBottom: insets.bottom, which lifts the
+              // sticky toolbar that far above the keyboard — push it back down by
+              // the same amount when the keyboard is open to close the gap.
+              <KeyboardStickyView offset={{ opened: insets.bottom }}>
+                <View style={styles.stickyToolbar}>
+                  <TouchableButton
+                    style={styles.toolbarButton}
+                    onPress={() =>
+                      editor.current?.sendAction('action', actions.undo)
+                    }
+                  >
+                    <Undo />
+                  </TouchableButton>
+                  <TouchableButton
+                    style={styles.toolbarButton}
+                    onPress={() =>
+                      editor.current?.sendAction('action', actions.redo)
+                    }
+                  >
+                    <Redo />
+                  </TouchableButton>
                   <RichToolbar
                     editor={editor}
                     actions={[
@@ -689,81 +725,62 @@ export default function DocumentEditor() {
                     iconMap={toolbarIconMap}
                     style={styles.richToolbarContainer}
                     selectedIconTint={theme.colors.primary}
-                    unselectedIconTint={theme.colors.gray[200]}
+                    unselectedIconTint={theme.colors.gray[500]}
                     unselectedButtonStyle={styles.unselectedToolbarButton}
                     selectedButtonStyle={styles.unselectedToolbarButton}
                   />
+                  {/* iOS has no system key to dismiss the WebView keyboard. */}
+                  {Platform.OS === 'ios' && (
+                    <TouchableButton
+                      style={styles.dismissButton}
+                      onPress={() => {
+                        editor.current?.dismissKeyboard();
+                        Keyboard.dismiss();
+                      }}
+                    >
+                      <Ionicons
+                        name="chevron-down"
+                        size={fontSize(20)}
+                        color={theme.colors.gray[700]}
+                      />
+                    </TouchableButton>
+                  )}
                 </View>
-              )}
-
-              <View style={styles.bottomButtonsRow}>
-                {localMode === 'view' && (
-                  <AppButton
-                    text="Edit"
-                    onPress={() => {
-                      setLocalMode('edit');
-                    }}
-                    leftIcon={<Pencil color={theme.colors.primary} size={14} />}
-                    variant="secondary-outline"
-                    style={{ marginRight: 'auto' }}
-                  />
-                )}
-                {localMode === 'edit' && (
-                  <AppButton
-                    text="Cancel"
-                    onPress={() => {
-                      setLocalMode('view');
-                    }}
-                    variant="secondary-outline"
-                    style={{ marginRight: 'auto' }}
-                    disabled={isEditing}
-                  />
-                )}
-                {localMode !== 'add' && (
-                  <CoachAiSheet page="document" id={documentId}>
-                    <View pointerEvents="none">
-                      <AppButton
-                        text="Coach AI"
-                        leftIcon={<WhiteCoachAi />}
-                        style={{ backgroundColor: '#37405d' }}
-                        // disabled
-                      />
-                    </View>
-                  </CoachAiSheet>
-                )}
-                {localMode !== 'view' ? (
-                  <AppButton
-                    text="Save Changes"
-                    leftIcon={
-                      <Feather
-                        name="save"
-                        color={theme.colors.white}
-                        size={16}
-                      />
-                    }
-                    onPress={form.handleSubmit(onSubmit, onError)}
-                    isLoading={isEditing || isPending || isCoachPending}
-                  />
-                ) : (
-                  <AppButton
-                    text="Download"
-                    leftIcon={
-                      <Feather
-                        name="download"
-                        size={16}
-                        color={theme.colors.white}
-                      />
-                    }
-                    onPress={downloadAsPDF}
-                  />
-                )}
+              </KeyboardStickyView>
+            ) : (
+              <View style={styles.viewFooter}>
+                <AppButton
+                  text="Edit"
+                  onPress={() => setLocalMode('edit')}
+                  leftIcon={<Pencil color={theme.colors.primary} size={14} />}
+                  variant="secondary-outline"
+                  style={styles.footerLeftButton}
+                />
+                <CoachAiSheet page="document" id={documentId}>
+                  <View pointerEvents="none">
+                    <AppButton
+                      text="Coach AI"
+                      leftIcon={<WhiteCoachAi />}
+                      style={styles.coachAiButton}
+                    />
+                  </View>
+                </CoachAiSheet>
+                <AppButton
+                  text="Download"
+                  leftIcon={
+                    <Feather
+                      name="download"
+                      size={16}
+                      color={theme.colors.white}
+                    />
+                  }
+                  onPress={downloadAsPDF}
+                />
               </View>
-            </View>
+            )}
           </>
         )}
-        {/* </ToolbarWithKeyboardPadding> */}
       </View>
-    </KeyboardAvoidingView>
   );
 }
 
@@ -823,6 +840,11 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: spacing(4),
     paddingHorizontal: spacing(10),
+  },
+  headerSaveButton: {
+    paddingVertical: spacing(7),
+    paddingHorizontal: spacing(14),
+    marginRight: spacing(4),
   },
   headerTitle: {
     fontSize: fontSize(18),
@@ -896,16 +918,20 @@ const styles = StyleSheet.create({
   },
 
   // Editor Input
-  editorContainer: {
-    marginTop: spacing(10),
-    paddingHorizontal: spacing(7),
-    minHeight: 300,
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: spacing(24),
     flexGrow: 1,
   },
-  editorInput: {
-    fontSize: fontSize(15),
-    fontFamily: theme.fonts.lato.regular,
-    color: theme.colors.gray[900],
+
+  // Editor
+  editorContainer: {
+    marginTop: spacing(12),
+    paddingHorizontal: spacing(14),
+    minHeight: 320,
+    flexGrow: 1,
   },
   editor: {
     marginTop: spacing(10),
@@ -913,54 +939,50 @@ const styles = StyleSheet.create({
     paddingBottom: spacing(30),
   },
 
-  // Toolbar
-  toolbarContainer: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
+  // Docked formatting toolbar (edit mode) — sits above the keyboard
+  stickyToolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: theme.colors.white,
     borderTopWidth: 1,
     borderTopColor: theme.colors.gray[200],
-    paddingTop: spacing(5),
-    paddingBottom: spacing(12),
-    paddingHorizontal: spacing(16),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 10,
-    justifyContent: 'center',
-  },
-  toolbarScroll: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: spacing(12),
+    paddingHorizontal: spacing(12),
     paddingVertical: spacing(8),
-    borderRadius: 10,
-    width: 'auto',
-    marginLeft: 'auto',
-    backgroundColor: theme.colors.gray[100],
+    gap: spacing(4),
   },
   toolbarButton: {
-    marginRight: spacing(16),
+    paddingHorizontal: spacing(6),
+  },
+  dismissButton: {
+    marginLeft: 'auto',
+    paddingLeft: spacing(8),
   },
   unselectedToolbarButton: {
     width: 'auto',
-    paddingHorizontal: spacing(11),
+    paddingHorizontal: spacing(8),
   },
   richToolbarContainer: {
-    backgroundColor: theme.colors.gray[100],
-    borderRadius: 10,
-    gap: 5,
+    flex: 1,
+    backgroundColor: 'transparent',
   },
 
-  // Bottom Buttons
-  bottomButtonsRow: {
+  // View-mode footer
+  viewFooter: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
     gap: spacing(10),
-    marginTop: spacing(10),
+    paddingHorizontal: spacing(16),
+    paddingVertical: spacing(12),
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.gray[200],
+    backgroundColor: theme.colors.white,
+  },
+  footerLeftButton: {
+    marginRight: 'auto',
+  },
+  coachAiButton: {
+    backgroundColor: '#37405d',
   },
   coachButton: {
     flexDirection: 'row',
@@ -1004,10 +1026,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing(10),
-    paddingVertical: scale(5),
-    paddingHorizontal: scale(10),
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(14),
   },
   optionText: {
-    fontSize: fontSize(16),
+    fontSize: fontSize(14),
+  },
+  deleteOption: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.gray[100],
   },
 });

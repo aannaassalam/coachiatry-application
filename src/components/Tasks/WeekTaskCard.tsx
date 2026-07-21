@@ -65,16 +65,10 @@ function TaskCard({ task }: { task: Task }) {
     <Menu
       key={task._id}
       renderer={renderers.Popover}
+      rendererProps={{ placement: 'bottom', anchorStyle: { marginLeft: width * 0.65 } }}
       onOpen={() =>
         ReactNativeHapticFeedback.trigger('impactMedium', hapticOptions)
       }
-      rendererProps={{
-        placement: 'bottom',
-        anchorStyle: {
-          marginLeft: width * 0.85,
-          marginTop: -30,
-        },
-      }}
     >
       <MenuTrigger
         triggerOnLongPress
@@ -145,9 +139,9 @@ function TaskCard({ task }: { task: Task }) {
       <MenuOptions
         customStyles={{
           optionsContainer: {
-            width: scale(100),
-            borderRadius: 10,
-            paddingVertical: scale(5),
+            width: scale(160),
+            borderRadius: 12,
+            paddingVertical: scale(4),
           },
         }}
       >
@@ -162,7 +156,7 @@ function TaskCard({ task }: { task: Task }) {
         </MenuOption>
         <MenuOption
           value={1}
-          style={styles.option}
+          style={[styles.option, styles.deleteOption]}
           onSelect={() =>
             Alert.alert(
               'Delete task',
@@ -325,10 +319,14 @@ const styles = createStyleSheet({
     flexDirection: 'row',
     gap: spacing(10),
     alignItems: 'center',
-    paddingVertical: scale(5),
-    paddingHorizontal: scale(10),
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(14),
   },
   optionText: {
-    fontSize: fontSize(16),
+    fontSize: fontSize(14),
+  },
+  deleteOption: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.gray[100],
   },
 });

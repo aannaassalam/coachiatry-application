@@ -42,8 +42,8 @@ export const getMessagesByCoach = async (
 
 export const scheduleMessage = async (body: {
   message: string;
-  date: string;
-  time: string;
+  // Absolute UTC timestamp (date + time combined), as the backend expects.
+  scheduledAt: string;
   frequency: string;
   chatId: string;
 }) => {
@@ -57,13 +57,19 @@ export const scheduleMessage = async (body: {
 export const editScheduleMessage = async (body: {
   messageId: string;
   message: string;
-  date: string;
-  time: string;
+  scheduledAt: string;
   frequency: string;
 }) => {
   const res = await axiosInstance.patch(
     endpoints.messages.editScheduleMessage(body.messageId),
     body,
+  );
+  return res;
+};
+
+export const deleteScheduleMessage = async (messageId: string) => {
+  const res = await axiosInstance.delete(
+    endpoints.messages.editScheduleMessage(messageId),
   );
   return res;
 };

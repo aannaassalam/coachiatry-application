@@ -37,6 +37,7 @@ import {
   MenuTrigger,
   renderers,
 } from 'react-native-popup-menu';
+import { SheetManager } from 'react-native-actions-sheet';
 import moment from 'moment';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -56,7 +57,7 @@ import {
   getConversation,
 } from '../../api/functions/chat.api';
 import { getMessages } from '../../api/functions/message.api';
-import { ChatCoach, ChevronLeft } from '../../assets';
+import { ChatClock, ChatCoach, ChevronLeft } from '../../assets';
 import EmojiReactor from '../../components/Chat/EmojiReactor';
 import { SmartAvatar } from '../../components/ui/SmartAvatar';
 import { useAuth } from '../../hooks/useAuth';
@@ -611,6 +612,17 @@ const ChatScreen = () => {
     details.photo = conversation.groupPhoto;
     details.name = conversation.name;
   }
+
+  // Open the schedule-message sheet, pre-filled with the current draft.
+  const openScheduleSheet = () => {
+    SheetManager.show('schedule-message-sheet', {
+      payload: {
+        chatId: room,
+        message,
+        receiverName: details.name,
+      },
+    });
+  };
 
   const allMessages = useMemo(
     () => messagesData?.pages.flatMap(page => [...page.data]) ?? [],
@@ -1884,48 +1896,57 @@ const ChatScreen = () => {
           />
         </View>
 
-        {!isTyping && (
-          <Animated.View
-            entering={FadeInRight.duration(150)}
-            exiting={FadeOutRight.duration(150)}
-            style={{ flexDirection: 'row', marginLeft: 10 }}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing(8),
+            marginLeft: 10,
+          }}
+        >
+          {/* Schedule the current draft to be sent later. */}
+          <TouchableButton
+            style={styles.circleButton}
+            onPress={openScheduleSheet}
           >
-            {/* <TouchableButton style={styles.circleButton}>
-              <ChatClock />
-            </TouchableButton> */}
+            <ChatClock />
+          </TouchableButton>
 
-            <CoachAiSheet page="chat" id={room}>
-              <View pointerEvents="none" style={styles.circleButton}>
-                <ChatCoach />
-              </View>
-            </CoachAiSheet>
-          </Animated.View>
-        )}
-
-        {isTyping && (
-          <Animated.View
-            entering={FadeInRight.duration(150)}
-            exiting={FadeOutRight.duration(150)}
-            style={{ marginLeft: 10 }}
-          >
-            <TouchableButton
-              style={{
-                padding: spacing(10),
-                paddingLeft: spacing(11),
-                paddingRight: spacing(9),
-                backgroundColor: theme.colors.primary,
-                borderRadius: 10,
-              }}
-              onPress={() => handleSend(message, attachments)}
+          {!isTyping ? (
+            <Animated.View
+              entering={FadeInRight.duration(150)}
+              exiting={FadeOutRight.duration(150)}
             >
-              <Ionicons
-                name="send"
-                size={fontSize(18)}
-                color={theme.colors.white}
-              />
-            </TouchableButton>
-          </Animated.View>
-        )}
+              <CoachAiSheet page="chat" id={room}>
+                <View pointerEvents="none" style={styles.circleButton}>
+                  <ChatCoach />
+                </View>
+              </CoachAiSheet>
+            </Animated.View>
+          ) : (
+            <Animated.View
+              entering={FadeInRight.duration(150)}
+              exiting={FadeOutRight.duration(150)}
+            >
+              <TouchableButton
+                style={{
+                  padding: spacing(10),
+                  paddingLeft: spacing(11),
+                  paddingRight: spacing(9),
+                  backgroundColor: theme.colors.primary,
+                  borderRadius: 10,
+                }}
+                onPress={() => handleSend(message, attachments)}
+              >
+                <Ionicons
+                  name="send"
+                  size={fontSize(18)}
+                  color={theme.colors.white}
+                />
+              </TouchableButton>
+            </Animated.View>
+          )}
+        </View>
       </View>
 
       <EmojiKeyboard
