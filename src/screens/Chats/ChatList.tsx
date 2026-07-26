@@ -44,6 +44,7 @@ export default function ChatList() {
   const socket = useSocket();
   const navigation = useNavigation<ChatScreenNavigationProp>();
   const [searchVisible, setSearchVisible] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const viewableItemsChanged = useRef(
     ({
@@ -75,9 +76,15 @@ export default function ChatList() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['conversations'],
+    // The plain ['conversations'] key is deliberately kept for the default
+    // list: FloatingChatList owns that cache (unread counts / reordering), and
+    // renaming it here would fork it. The archive gets its own key.
+    queryKey: showArchived ? ['conversations', 'archived'] : ['conversations'],
     queryFn: ({ pageParam = 1, signal }) =>
-      getAllConversations({ page: pageParam }, signal),
+      getAllConversations(
+        { page: pageParam, ...(showArchived ? { archived: true } : {}) },
+        signal,
+      ),
     initialPageParam: 1,
     getNextPageParam: lastPage => {
       const { currentPage, totalPages } = lastPage.meta;
@@ -88,6 +95,7 @@ export default function ChatList() {
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const conversations = data?.pages.flatMap(page => page.data) ?? [];
+  const archivedCount = data?.pages[0]?.meta?.archivedCount ?? 0;
 
   useEffect(() => {
     if (!socket) return;
@@ -146,25 +154,41 @@ export default function ChatList() {
       ) : (
         <View style={{ flex: 1 }}>
           <View style={styles.listHeader}>
-            <Text style={styles.listHeaderTitle}>Messages</Text>
-            <View style={styles.headerActions}>
-              <TouchableButton onPress={() => setSearchVisible(true)}>
-                <Ionicons
-                  name="search"
-                  size={fontSize(18)}
-                  color={theme.colors.gray[700]}
-                />
-              </TouchableButton>
+            {showArchived ? (
               <TouchableButton
-                onPress={() => navigation.navigate('GroupScreen', {})}
+                style={styles.archivedBackBtn}
+                onPress={() => setShowArchived(false)}
               >
-                <Entypo
-                  name="plus"
-                  size={fontSize(18)}
-                  color={theme.colors.gray[700]}
+                <Ionicons
+                  name="chevron-back"
+                  size={fontSize(16)}
+                  color={theme.colors.gray[800]}
                 />
+                <Text style={styles.listHeaderTitle}>Archived</Text>
               </TouchableButton>
-            </View>
+            ) : (
+              <>
+                <Text style={styles.listHeaderTitle}>Messages</Text>
+                <View style={styles.headerActions}>
+                  <TouchableButton onPress={() => setSearchVisible(true)}>
+                    <Ionicons
+                      name="search"
+                      size={fontSize(18)}
+                      color={theme.colors.gray[700]}
+                    />
+                  </TouchableButton>
+                  <TouchableButton
+                    onPress={() => navigation.navigate('GroupScreen', {})}
+                  >
+                    <Entypo
+                      name="plus"
+                      size={fontSize(18)}
+                      color={theme.colors.gray[700]}
+                    />
+                  </TouchableButton>
+                </View>
+              </>
+            )}
           </View>
           <FlatList
             data={conversations}
@@ -181,6 +205,35 @@ export default function ChatList() {
               if (hasNextPage && !isFetchingNextPage) fetchNextPage();
             }}
             onEndReachedThreshold={0.3}
+            // WhatsApp-style entry point, pinned above the conversations.
+            ListHeaderComponent={
+              !showArchived && archivedCount > 0 ? (
+                <TouchableButton
+                  style={styles.archivedRow}
+                  onPress={() => setShowArchived(true)}
+                >
+                  <Ionicons
+                    name="archive-outline"
+                    size={fontSize(18)}
+                    color={theme.colors.gray[500]}
+                  />
+                  <Text style={styles.archivedLabel}>Archived</Text>
+                  <Text style={styles.archivedCount}>{archivedCount}</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={fontSize(14)}
+                    color={theme.colors.gray[400]}
+                  />
+                </TouchableButton>
+              ) : null
+            }
+            ListEmptyComponent={
+              showArchived ? (
+                <Text style={styles.archivedEmpty}>
+                  No archived conversations
+                </Text>
+              ) : null
+            }
             ListFooterComponent={
               isFetchingNextPage ? (
                 <View style={styles.listFooter}>
@@ -226,6 +279,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing(12),
     alignItems: 'center',
+  },
+  archivedBackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(4),
+  },
+  archivedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(12),
+    paddingHorizontal: spacing(10),
+    paddingVertical: spacing(12),
+  },
+  archivedLabel: {
+    flex: 1,
+    color: theme.colors.gray[800],
+    fontFamily: theme.fonts.archivo.medium,
+    fontSize: fontSize(14),
+  },
+  archivedCount: {
+    color: theme.colors.gray[500],
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(12),
+  },
+  archivedEmpty: {
+    textAlign: 'center',
+    marginTop: spacing(40),
+    color: theme.colors.gray[400],
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(13),
   },
   listFooter: {
     paddingVertical: spacing(10),

@@ -54,6 +54,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { queryClient } from '../../../App';
 import {
   deleteDirectConversation,
+  setChatArchived,
   getConversation,
 } from '../../api/functions/chat.api';
 import { getMessages } from '../../api/functions/message.api';
@@ -565,6 +566,30 @@ const ChatScreen = () => {
   // A soft-deleted account still carries its real name, so append "(deleted)".
   // A hard-deleted account already renders as "Deleted user" — no suffix.
   const showDeletedSuffix = (friend?.user as any)?.active === false;
+
+  // Archiving is per-member: this is the viewer's own entry, so the menu can
+  // offer Archive or Unarchive. A coach viewing a client's room isn't a member
+  // and gets neither (the API rejects it too).
+  const myMembership = conversation?.members?.find(
+    _member => _member.user?._id === profile?._id,
+  );
+
+  const { mutate: toggleArchive, isPending: isArchiving } = useMutation({
+    mutationFn: setChatArchived,
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      showMessage({
+        type: 'success',
+        message: variables.archived ? 'Chat archived' : 'Chat unarchived',
+      });
+    },
+    onError: () =>
+      showMessage({
+        type: 'danger',
+        message: 'Error',
+        description: 'Could not update the chat. Please try again.',
+      }),
+  });
 
   const { mutate: deleteConversation, isPending: isDeletingConversation } =
     useMutation({
@@ -1699,34 +1724,74 @@ const ChatScreen = () => {
               friendStatus === 'online' &&
               !isDeletedUserChat && <View style={styles.dot} />}
           </View>
-          {conversation?.type === 'direct' ? (
-            isDeletedUserChat ? (
-              <Menu
-                renderer={renderers.Popover}
-                rendererProps={{ placement: 'bottom' }}
+          {/* One menu for every room action: group info, archive, delete. */}
+          {myMembership || isDeletedUserChat ? (
+            <Menu
+              renderer={renderers.Popover}
+              rendererProps={{ placement: 'bottom' }}
+            >
+              <MenuTrigger
+                customStyles={{
+                  TriggerTouchableComponent: TouchableOpacity,
+                  triggerWrapper: { padding: 4, borderRadius: 100 },
+                }}
+                disabled={isDeletingConversation || isArchiving}
               >
-                <MenuTrigger
-                  customStyles={{
-                    TriggerTouchableComponent: TouchableOpacity,
-                    triggerWrapper: { padding: 4, borderRadius: 100 },
-                  }}
-                  disabled={isDeletingConversation}
-                >
-                  <Ionicons
-                    name="ellipsis-horizontal"
-                    size={fontSize(18)}
-                    color={theme.colors.gray[700]}
-                  />
-                </MenuTrigger>
-                <MenuOptions
-                  customStyles={{
-                    optionsContainer: {
-                      width: scale(220),
-                      borderRadius: 10,
-                      paddingVertical: scale(4),
-                    },
-                  }}
-                >
+                <Ionicons
+                  name="ellipsis-horizontal"
+                  size={fontSize(18)}
+                  color={theme.colors.gray[700]}
+                />
+              </MenuTrigger>
+              <MenuOptions
+                customStyles={{
+                  optionsContainer: {
+                    width: scale(220),
+                    borderRadius: 10,
+                    paddingVertical: scale(4),
+                  },
+                }}
+              >
+                {conversation?.type === 'group' && (
+                  <MenuOption
+                    onSelect={() =>
+                      navigation.navigate('GroupScreen', { roomId: room })
+                    }
+                    style={styles.headerMenuOption}
+                  >
+                    <Feather
+                      name="info"
+                      color={theme.colors.gray[700]}
+                      size={fontSize(16)}
+                    />
+                    <Text style={styles.headerMenuText}>Group info</Text>
+                  </MenuOption>
+                )}
+                {!!myMembership && (
+                  <MenuOption
+                    onSelect={() =>
+                      toggleArchive({
+                        chatId: room,
+                        archived: !myMembership.archived,
+                      })
+                    }
+                    style={styles.headerMenuOption}
+                  >
+                    <Ionicons
+                      name={
+                        myMembership.archived
+                          ? 'arrow-up-circle-outline'
+                          : 'archive-outline'
+                      }
+                      color={theme.colors.gray[700]}
+                      size={fontSize(16)}
+                    />
+                    <Text style={styles.headerMenuText}>
+                      {myMembership.archived ? 'Unarchive chat' : 'Archive chat'}
+                    </Text>
+                  </MenuOption>
+                )}
+                {conversation?.type === 'direct' && isDeletedUserChat && (
                   <MenuOption
                     onSelect={confirmDeleteConversation}
                     style={styles.deleteConversationOption}
@@ -1740,20 +1805,11 @@ const ChatScreen = () => {
                       Clear chat & delete conversation
                     </Text>
                   </MenuOption>
-                </MenuOptions>
-              </Menu>
-            ) : (
-              <View style={{ width: 24 }} />
-            )
+                )}
+              </MenuOptions>
+            </Menu>
           ) : (
-            <TouchableButton
-              style={{ padding: 4, borderRadius: 100 }}
-              onPress={() =>
-                navigation.navigate('GroupScreen', { roomId: room })
-              }
-            >
-              <Feather name="info" color="#333" size={fontSize(18)} />
-            </TouchableButton>
+            <View style={{ width: 24 }} />
           )}
         </View>
       )}
@@ -1979,6 +2035,19 @@ const styles = StyleSheet.create({
     gap: spacing(10),
     paddingVertical: spacing(10),
     paddingHorizontal: spacing(12),
+  },
+  headerMenuOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(10),
+    paddingVertical: spacing(10),
+    paddingHorizontal: spacing(12),
+  },
+  headerMenuText: {
+    fontSize: fontSize(14),
+    fontFamily: theme.fonts.lato.regular,
+    color: theme.colors.gray[800],
+    flexShrink: 1,
   },
   deleteConversationText: {
     fontSize: fontSize(14),

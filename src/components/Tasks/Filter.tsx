@@ -1,6 +1,11 @@
 /* Filter.tsx — uses local React context inside registered sheet */
 
-import { useQueries } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import React, {
   createContext,
   useCallback,
@@ -10,10 +15,12 @@ import React, {
 } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   Image,
   Pressable,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import ActionSheet, {
@@ -33,8 +40,15 @@ import {
   getAllStatuses,
   getAllStatusesByCoach,
 } from '../../api/functions/status.api';
+import {
+  addSavedFilter,
+  deleteSavedFilter,
+  editSavedFilter,
+  getSavedFilters,
+  SavedFilter,
+} from '../../api/functions/savedFilter.api';
 import { assets } from '../../assets';
-import { VALUELESS_OPERATORS } from '../../helpers/utils';
+import { sanitizeFilters, VALUELESS_OPERATORS } from '../../helpers/utils';
 import { theme } from '../../theme';
 import { fontSize, scale, spacing, verticalScale } from '../../utils';
 import AppButton from '../ui/AppButton';
@@ -97,9 +111,17 @@ type SheetPayload = {
   filters: Filter[];
   setFilters: React.Dispatch<React.SetStateAction<Filter[]>>;
   // When a staff member filters a viewed client's tasks, the category/status
-  // options must come from the client, not the logged-in staff.
+  // options — and the saved filters — must come from the client, not the
+  // logged-in staff.
   userId?: string;
 };
+
+// Order-sensitive signature, used only to answer "have the rows drifted from
+// the saved filter that's applied?".
+const signature = (rows: Filter[]) =>
+  sanitizeFilters(rows)
+    .map(r => `${r.selectedKey}|${r.selectedOperator}|${r.selectedValue ?? ''}`)
+    .join(';');
 
 /* ---------- Local Context for sheet state (NOT SheetProvider) ---------- */
 type InternalSheetState = {
@@ -110,6 +132,13 @@ type InternalSheetState = {
   commitFilter: (final: Filter, editIndex?: number | null) => void;
   removeFilter: (filter: Filter[]) => void;
   userId?: string;
+  /** Saved filter currently applied, if any — drives Apply vs Save changes. */
+  appliedId: string | null;
+  setAppliedId: (id: string | null) => void;
+  /** Saved filter being edited on the save screen; null = creating a new one. */
+  editingSaved: SavedFilter | null;
+  setEditingSaved: (f: SavedFilter | null) => void;
+  applySaved: (f: SavedFilter) => void;
 };
 
 const TempFilterContext = createContext<InternalSheetState | null>(null);
@@ -206,7 +235,49 @@ const InitialFilterScreen = () => {
     setLocalFilters,
     removeFilter: removeParentFilter,
     userId,
+    appliedId,
+    setAppliedId,
+    setEditingSaved,
+    applySaved,
   } = useTempFilter();
+  const queryClient = useQueryClient();
+
+  const { data: savedFilters = [] } = useQuery({
+    queryKey: ['savedFilters', userId],
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      getSavedFilters(userId, signal),
+  });
+
+  const { mutate: removeSaved } = useMutation({
+    mutationFn: deleteSavedFilter,
+    onSuccess: (_data, id) => {
+      if (id === appliedId) setAppliedId(null);
+      queryClient.invalidateQueries({ queryKey: ['savedFilters'] });
+    },
+  });
+
+  // The sheet unmounts when it closes, so `appliedId` only survives one
+  // session. Falling back to a signature match means reopening the sheet with
+  // untouched rows still shows which saved filter they came from.
+  // ponytail: drifted rows after a reopen lose the link and offer "Save filter"
+  // (create) instead of "Save changes" — lift appliedId to the screen if that
+  // matters.
+  const applied =
+    savedFilters.find(f => f._id === appliedId) ??
+    savedFilters.find(f => signature(f.filters) === signature(localFilters));
+  const validFilters = sanitizeFilters(localFilters);
+  const isDirty =
+    !!applied && signature(applied.filters) !== signature(localFilters);
+
+  const confirmDeleteSaved = (filter: SavedFilter) =>
+    Alert.alert('Delete filter', `Delete “${filter.name}”?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => removeSaved(filter._id),
+      },
+    ]);
 
   const [
     { data: categories = [], isLoading: isCategoryLoading },
@@ -239,6 +310,7 @@ const InitialFilterScreen = () => {
   const clearAll = () => {
     setLocalFilters([]);
     removeParentFilter([]);
+    setAppliedId(null);
   };
 
   const editField = (
@@ -284,6 +356,71 @@ const InitialFilterScreen = () => {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
+        {savedFilters.length > 0 && (
+          <View style={styles.savedSection}>
+            <Text style={styles.savedHeading}>
+              Saved filters · tap to apply
+            </Text>
+            {savedFilters.map(filter => {
+              const isApplied = filter._id === applied?._id;
+              return (
+                <View
+                  key={filter._id}
+                  style={[styles.savedRow, isApplied && styles.savedRowActive]}
+                >
+                  <Pressable
+                    style={styles.savedRowMain}
+                    onPress={() =>
+                      isApplied ? clearAll() : applySaved(filter)
+                    }
+                  >
+                    <Feather
+                      name={isApplied ? 'check-circle' : 'circle'}
+                      size={fontSize(15)}
+                      color={
+                        isApplied
+                          ? theme.colors.primary
+                          : theme.colors.gray[300]
+                      }
+                    />
+                    <Text style={styles.savedRowText} numberOfLines={1}>
+                      {filter.name}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    hitSlop={8}
+                    style={styles.savedRowAction}
+                    // Editing works on the live rows, so apply it first — Save
+                    // then writes back the name AND whatever the rows now say.
+                    onPress={() => {
+                      applySaved(filter);
+                      setEditingSaved(filter);
+                      router?.navigate('save-filter');
+                    }}
+                  >
+                    <Feather
+                      name="edit-2"
+                      size={fontSize(14)}
+                      color={theme.colors.gray[500]}
+                    />
+                  </Pressable>
+                  <Pressable
+                    hitSlop={8}
+                    style={styles.savedRowAction}
+                    onPress={() => confirmDeleteSaved(filter)}
+                  >
+                    <Feather
+                      name="trash-2"
+                      size={fontSize(14)}
+                      color={theme.colors.gray[500]}
+                    />
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
         {!hasFilters ? (
           <View style={styles.emptyWrap}>
             <Image
@@ -379,6 +516,25 @@ const InitialFilterScreen = () => {
             router?.navigate('select-type');
           }}
         />
+        {/* Saving is always explicit — editing rows never writes back. */}
+        {validFilters.length > 0 && (
+          <Pressable
+            style={styles.saveFilterBtn}
+            onPress={() => {
+              setEditingSaved(isDirty ? applied! : null);
+              router?.navigate('save-filter');
+            }}
+          >
+            <Feather
+              name="bookmark"
+              size={fontSize(15)}
+              color={theme.colors.primary}
+            />
+            <Text style={styles.saveFilterText}>
+              {isDirty ? `Save changes to “${applied!.name}”` : 'Save filter'}
+            </Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -589,12 +745,91 @@ const SelectValueFilterScreen = () => {
   );
 };
 
+/**
+ * Name-and-save screen. Reached from "Save filter" (new) or the pencil on a
+ * saved row (edit) — in edit mode it writes back both the name and the rows as
+ * they currently stand, which is why editing applies the filter first.
+ */
+const SaveFilterScreen = () => {
+  const router = useSheetRouter('filter-sheet');
+  const { localFilters, userId, editingSaved, setAppliedId } = useTempFilter();
+  const queryClient = useQueryClient();
+  const [name, setName] = useState(editingSaved?.name ?? '');
+
+  const done = (saved: SavedFilter) => {
+    setAppliedId(saved._id);
+    queryClient.invalidateQueries({ queryKey: ['savedFilters'] });
+    router?.initialNavigation();
+  };
+
+  const { mutate: create, isPending: isCreating } = useMutation({
+    mutationFn: () =>
+      addSavedFilter(
+        { name: name.trim(), filters: sanitizeFilters(localFilters) },
+        userId,
+      ),
+    onSuccess: done,
+  });
+
+  const { mutate: update, isPending: isUpdating } = useMutation({
+    mutationFn: () =>
+      editSavedFilter({
+        id: editingSaved!._id,
+        name: name.trim(),
+        filters: sanitizeFilters(localFilters),
+      }),
+    onSuccess: done,
+  });
+
+  const canSave =
+    !!name.trim() && sanitizeFilters(localFilters).length > 0;
+
+  return (
+    <View>
+      <SheetHeader
+        title={editingSaved ? 'Edit saved filter' : 'Save filter'}
+        subtitle={
+          editingSaved
+            ? 'Name and rows are saved together'
+            : `${sanitizeFilters(localFilters).length} condition(s)`
+        }
+        onBack={() => router?.goBack()}
+      />
+      <View style={styles.listContent}>
+        <TextInput
+          autoFocus
+          value={name}
+          onChangeText={setName}
+          placeholder="Filter name"
+          placeholderTextColor={theme.colors.gray[400]}
+          style={styles.nameInput}
+          returnKeyType="done"
+          onSubmitEditing={() =>
+            canSave && (editingSaved ? update() : create())
+          }
+        />
+        <Text style={styles.saveHint}>
+          Nothing is stored until you press Save.
+        </Text>
+        <AppButton
+          text={editingSaved ? 'Save' : 'Create'}
+          disabled={!canSave}
+          isLoading={isCreating || isUpdating}
+          style={{ paddingVertical: spacing(16), marginTop: spacing(16) }}
+          onPress={() => (editingSaved ? update() : create())}
+        />
+      </View>
+    </View>
+  );
+};
+
 /* ---------- Routes ---------- */
 export const filterRoutes: Route[] = [
   { name: 'initial-screen', component: InitialFilterScreen },
   { name: 'select-type', component: SelectTypeFilterScreen },
   { name: 'select-operator', component: SelectOperatorFilterScreen },
   { name: 'select-values', component: SelectValueFilterScreen },
+  { name: 'save-filter', component: SaveFilterScreen },
 ];
 
 /* ---------- The registered sheet component (wrapped in local context) ---------- */
@@ -610,6 +845,17 @@ export const FilterSheet = (props: SheetProps<'filter-sheet'>) => {
 
   // temp filter (single in-progress filter while user navigates)
   const [tempFilter, setTempFilter] = useState<TempFilter>(null);
+  const [appliedId, setAppliedId] = useState<string | null>(null);
+  const [editingSaved, setEditingSaved] = useState<SavedFilter | null>(null);
+
+  const applySaved = useCallback(
+    (filter: SavedFilter) => {
+      setAppliedId(filter._id);
+      setLocalFilters(filter.filters);
+      if (parentSetFilters) parentSetFilters(filter.filters);
+    },
+    [parentSetFilters],
+  );
 
   // commit helper: update local and call parent's setFilters immediately
   const commitFilter = useCallback(
@@ -645,8 +891,22 @@ export const FilterSheet = (props: SheetProps<'filter-sheet'>) => {
       commitFilter,
       removeFilter,
       userId,
+      appliedId,
+      setAppliedId,
+      editingSaved,
+      setEditingSaved,
+      applySaved,
     }),
-    [commitFilter, localFilters, tempFilter, removeFilter, userId],
+    [
+      commitFilter,
+      localFilters,
+      tempFilter,
+      removeFilter,
+      userId,
+      appliedId,
+      editingSaved,
+      applySaved,
+    ],
   );
 
   return (
@@ -916,6 +1176,79 @@ const styles = createStyleSheet({
   boxTextSelected: {
     fontFamily: theme.fonts.archivo.medium,
     color: theme.colors.primary,
+  },
+
+  /* saved filters */
+  savedSection: {
+    marginBottom: spacing(14),
+  },
+  savedHeading: {
+    fontFamily: theme.fonts.archivo.medium,
+    fontSize: fontSize(11),
+    color: theme.colors.gray[500],
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: spacing(8),
+  },
+  savedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.gray[100],
+    paddingHorizontal: spacing(12),
+    paddingVertical: spacing(10),
+    marginBottom: spacing(8),
+  },
+  savedRowActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: 'rgba(14,23,52,0.04)',
+  },
+  savedRowMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(10),
+  },
+  savedRowText: {
+    flexShrink: 1,
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(14),
+    color: theme.colors.gray[900],
+  },
+  savedRowAction: {
+    paddingHorizontal: spacing(6),
+    paddingVertical: spacing(2),
+  },
+  saveFilterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing(8),
+    paddingVertical: spacing(12),
+  },
+  saveFilterText: {
+    fontFamily: theme.fonts.archivo.medium,
+    fontSize: fontSize(13),
+    color: theme.colors.primary,
+  },
+  nameInput: {
+    backgroundColor: theme.colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.gray[200],
+    paddingHorizontal: spacing(14),
+    paddingVertical: spacing(12),
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(14),
+    color: theme.colors.gray[900],
+  },
+  saveHint: {
+    marginTop: spacing(8),
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(12),
+    color: theme.colors.gray[500],
   },
 
   /* footer */

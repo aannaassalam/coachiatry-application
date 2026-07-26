@@ -127,6 +127,19 @@ export const leaveGroup = async (chatId: string) => {
 // Delete a single direct conversation (with a deleted user) and all its
 // messages. The backend only allows this when the other member is a deleted
 // account.
+// Archive/unarchive for the signed-in user only — the other members' lists are
+// unaffected.
+export const setChatArchived = async (body: {
+  chatId: string;
+  archived: boolean;
+}) => {
+  const res = await axiosInstance.patch(
+    endpoints.chat.archiveConversation(body.chatId),
+    { archived: body.archived },
+  );
+  return res.data;
+};
+
 export const deleteDirectConversation = async (chatId: string) => {
   const res = await axiosInstance.delete(
     endpoints.chat.deleteConversation(chatId),

@@ -6,7 +6,6 @@ import moment from 'moment';
 import { useEffect, useState } from 'react';
 import {
   Alert,
-  Dimensions,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -46,7 +45,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { theme } from '../../theme';
 import { AppStackParamList } from '../../types/navigation';
 import { Subtask, Task } from '../../typescript/interface/task.interface';
-import { fontSize, scale, spacing, verticalScale } from '../../utils';
+import { fontSize, scale, spacing } from '../../utils';
 import { FLOATING_BAR_FOOTPRINT } from '../../components/Chat/FloatingChatHost';
 import { Pencil } from 'lucide-react-native';
 
@@ -167,6 +166,14 @@ const TaskDetailsScreen = () => {
   // background refetches (e.g. autosave invalidation), which would otherwise
   // leave the RefreshControl stuck spinning when returning to this screen.
   const [refreshing, setRefreshing] = useState(false);
+
+  // Read-more for long descriptions. descLines starts null so the first paint
+  // renders unclamped — that's the one layout pass we read the true line count
+  // from (clamped onTextLayout reports differently across iOS/Android).
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [descLines, setDescLines] = useState<number | null>(null);
+  const DESC_MAX_LINES = 4;
+
   const onRefresh = async () => {
     setRefreshing(true);
     try {
@@ -198,10 +205,15 @@ const TaskDetailsScreen = () => {
         <TouchableButton
           style={styles.iconButton}
           onPress={() => navigation.goBack()}
+          hitSlop={spacing(8)}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
         >
           <ChevronLeft />
         </TouchableButton>
-        <Text style={styles.headerTitle}>Task Details</Text>
+        <Text style={styles.headerTitle} accessibilityRole="header">
+          Task Details
+        </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Menu
             renderer={renderers.Popover}
@@ -221,14 +233,13 @@ const TaskDetailsScreen = () => {
                 TriggerTouchableComponent: TouchableOpacity,
               }}
               style={styles.iconButton}
+              accessibilityLabel="Task options"
             >
-              {/* <TouchableOpacity style={styles.iconButton}> */}
               <Ionicons
                 name="ellipsis-horizontal"
                 size={fontSize(18)}
                 color={theme.colors.gray[600]}
               />
-              {/* </TouchableOpacity> */}
             </MenuTrigger>
             <MenuOptions
               customStyles={{
@@ -307,10 +318,49 @@ const TaskDetailsScreen = () => {
           {/* Task Title */}
           <Text style={styles.title}>{data?.title}</Text>
 
+          {/* Description — sits right after the title so view matches the edit
+              screen's field order. */}
+          {!!data?.description && (
+            <View style={styles.descriptionSection}>
+              <Text style={styles.sectionTitle}>Description</Text>
+              <View style={styles.descriptionBox}>
+                <Text
+                  style={styles.descriptionText}
+                  numberOfLines={
+                    descLines !== null && !descExpanded
+                      ? DESC_MAX_LINES
+                      : undefined
+                  }
+                  onTextLayout={e => {
+                    if (descLines === null)
+                      setDescLines(e.nativeEvent.lines.length);
+                  }}
+                >
+                  {data?.description}
+                </Text>
+                {descLines !== null && descLines > DESC_MAX_LINES && (
+                  <Pressable
+                    hitSlop={spacing(8)}
+                    onPress={() => setDescExpanded(v => !v)}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      descExpanded ? 'Show less' : 'Read more'
+                    }
+                  >
+                    <Text style={styles.readMore}>
+                      {descExpanded ? 'Read less' : 'Read more'}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          )}
+
           {/* Subtasks */}
           <Subtasks subtasks={data?.subtasks ?? []} taskId={taskId} />
 
-          <View style={styles.divider} />
+          <View style={styles.groupCard}>
+            <Text style={styles.sectionHeader}>Task Details</Text>
 
           {/* Owner */}
           <View style={styles.row}>
@@ -342,6 +392,11 @@ const TaskDetailsScreen = () => {
                 <Pressable
                   style={styles.assigneeValue}
                   disabled={!canEdit}
+                  accessibilityRole="button"
+                  accessibilityLabel="Assigned to"
+                  accessibilityHint={
+                    canEdit ? 'Double tap to change assignees' : undefined
+                  }
                   onPress={() => {
                     // Warm the assignees cache so the sheet opens with data
                     // ready (no loading-skeleton flash during the slide-in).
@@ -413,6 +468,54 @@ const TaskDetailsScreen = () => {
             );
           })()}
 
+          {/* Priority */}
+          <View style={styles.row}>
+            <Text style={styles.label}>Priority</Text>
+            <Priority priority={data?.priority ?? 'medium'} />
+          </View>
+
+          {/* Category */}
+          <View style={styles.row}>
+            <Text style={styles.label}>Category</Text>
+            {data?.category?.color && (
+              <Badge
+                title={data?.category.title}
+                color={data?.category.color.text}
+                bgColor={data?.category.color.bg}
+              />
+            )}
+          </View>
+
+          {/* Status */}
+          <View style={styles.row}>
+            <Text style={styles.label}>Status</Text>
+            {data?.status?.color && (
+              <View style={styles.statusTag(data.status.color.bg)}>
+                <Text style={styles.statusText(data.status.color.text)}>
+                  {data.status.title}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Duration */}
+          <View style={styles.row}>
+            <Text style={styles.label}>Duration</Text>
+            <Text style={styles.value}>
+              {moment
+                .utc(
+                  moment
+                    .duration(data?.taskDuration, 'minute')
+                    .asMilliseconds(),
+                )
+                .format('H [Hours]  m [Minutes]')}
+            </Text>
+          </View>
+          </View>
+
+          <View style={styles.groupCard}>
+            <Text style={styles.sectionHeader}>Schedule</Text>
+
           {/* Due Date */}
           <View style={styles.row}>
             <Text style={styles.label}>Due date & Time</Text>
@@ -432,20 +535,6 @@ const TaskDetailsScreen = () => {
             </View>
           </View>
 
-          {/* Duration */}
-          <View style={styles.row}>
-            <Text style={styles.label}>Duration</Text>
-            <Text style={styles.value}>
-              {moment
-                .utc(
-                  moment
-                    .duration(data?.taskDuration, 'minute')
-                    .asMilliseconds(),
-                )
-                .format('H [Hours]  m [Minutes]')}
-            </Text>
-          </View>
-
           {/* Repeat */}
           <View style={styles.row}>
             <Text style={styles.label}>Repeat</Text>
@@ -461,51 +550,6 @@ const TaskDetailsScreen = () => {
               {data?.remindBefore?.toString().padStart(2, '0') ?? 0} mins before
             </Text>
           </View>
-
-          {/* Category */}
-          <View style={styles.row}>
-            <Text style={styles.label}>Category</Text>
-            {data?.category?.color && (
-              <Badge
-                title={data?.category.title}
-                color={data?.category.color.text}
-                bgColor={data?.category.color.bg}
-              />
-            )}
-          </View>
-
-          <View style={styles.divider} />
-
-          {/* Priority & Status */}
-          <View
-            style={[
-              styles.row,
-              { marginVertical: 0, marginBottom: spacing(5) },
-            ]}
-          >
-            <Text style={styles.label}>Priority</Text>
-            <Priority priority={data?.priority ?? 'medium'} />
-          </View>
-
-          <View style={[styles.row, { marginVertical: 0 }]}>
-            <Text style={styles.label}>Status</Text>
-            {data?.status?.color && (
-              <View style={styles.statusTag(data.status.color.bg)}>
-                <Text style={styles.statusText(data.status.color.text)}>
-                  {data.status.title}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.divider} />
-
-          {/* Description */}
-          <View style={{ marginBottom: spacing(20) }}>
-            <Text style={styles.sectionTitle}>Description</Text>
-            <View style={styles.descriptionBox}>
-              <Text style={styles.descriptionText}>{data?.description}</Text>
-            </View>
           </View>
 
           <Text style={styles.createdOn}>
@@ -533,8 +577,11 @@ const styles = createStyleSheet({
     gap: spacing(5),
   },
   iconButton: {
-    padding: spacing(4),
-    paddingHorizontal: spacing(10),
+    minWidth: scale(40),
+    minHeight: scale(40),
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 100,
   },
   headerTitle: {
     fontSize: fontSize(18),
@@ -573,13 +620,6 @@ const styles = createStyleSheet({
   subtaskCompletedText: {
     textDecorationLine: 'line-through',
     color: '#aaa',
-  },
-  divider: {
-    height: verticalScale(8),
-    backgroundColor: '#F9F9F9',
-    width: Dimensions.get('screen').width,
-    marginLeft: spacing(-20),
-    marginVertical: spacing(14),
   },
   row: {
     flexDirection: 'row',
@@ -644,10 +684,35 @@ const styles = createStyleSheet({
     color: '#4F4D55',
     marginBottom: spacing(8),
   },
+  sectionHeader: {
+    fontFamily: theme.fonts.archivo.semiBold,
+    fontSize: fontSize(12),
+    color: theme.colors.gray[500],
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: spacing(8),
+  },
+  groupCard: {
+    backgroundColor: theme.colors.white,
+    borderWidth: 1,
+    borderColor: '#EDEFF2',
+    borderRadius: 14,
+    padding: spacing(16),
+    marginBottom: spacing(16),
+  },
+  descriptionSection: {
+    marginBottom: spacing(16),
+  },
   descriptionBox: {
     backgroundColor: '#F7F7F7',
     padding: spacing(12),
     borderRadius: spacing(7),
+  },
+  readMore: {
+    marginTop: spacing(8),
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.archivo.medium,
+    fontSize: fontSize(13),
   },
   descriptionText: {
     color: '#444',

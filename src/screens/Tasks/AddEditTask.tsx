@@ -186,6 +186,9 @@ const AddSubtasks = ({ disabled }: { disabled?: boolean }) => {
               <Pressable
                 style={styles.subtaskRemoveButton}
                 onPress={() => remove(index)}
+                hitSlop={spacing(8)}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove subtask ${index + 1}`}
               >
                 <Ionicons
                   name="close"
@@ -200,6 +203,8 @@ const AddSubtasks = ({ disabled }: { disabled?: boolean }) => {
       <Pressable
         style={styles.addMore}
         onPress={() => append({ title: '', completed: false })}
+        accessibilityRole="button"
+        accessibilityLabel="Add another subtask"
       >
         <Ionicons
           name="add"
@@ -584,10 +589,16 @@ export default function AddEditTask() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableButton style={styles.iconButton} onPress={handleClose}>
+        <TouchableButton
+          style={styles.iconButton}
+          onPress={handleClose}
+          hitSlop={spacing(8)}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <ChevronLeft />
         </TouchableButton>
-        <Text style={styles.headerTitle}>
+        <Text style={styles.headerTitle} accessibilityRole="header">
           {taskId ? 'Edit' : 'Add New'} Task
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -606,14 +617,13 @@ export default function AddEditTask() {
                   TriggerTouchableComponent: TouchableOpacity,
                 }}
                 style={styles.iconButton}
+                accessibilityLabel="Task options"
               >
-                {/* <TouchableOpacity style={styles.iconButton}> */}
                 <Ionicons
                   name="ellipsis-horizontal"
                   size={fontSize(18)}
                   color={theme.colors.gray[600]}
                 />
-                {/* </TouchableOpacity> */}
               </MenuTrigger>
               <MenuOptions
                 customStyles={{
@@ -734,9 +744,8 @@ export default function AddEditTask() {
               </FormProvider>
             </View>
 
-            <View style={styles.divider} />
-
-            <View>
+            <View style={[styles.groupCard, { marginTop: spacing(8) }]}>
+              <Text style={styles.sectionHeader}>Task Details</Text>
               <View style={styles.row}>
                 <View style={styles.formItem}>
                   <Text style={styles.label}>Priority</Text>
@@ -746,6 +755,7 @@ export default function AddEditTask() {
                     render={({ field }) => (
                       <Pressable
                         style={styles.inputContainer}
+                        accessibilityRole="button"
                         onPress={() =>
                           SheetManager.show('general-sheet', {
                             payload: {
@@ -783,6 +793,7 @@ export default function AddEditTask() {
                     render={({ field }) => (
                       <Pressable
                         style={styles.inputContainer}
+                        accessibilityRole="button"
                         onPress={() =>
                           SheetManager.show('general-sheet', {
                             payload: {
@@ -849,48 +860,6 @@ export default function AddEditTask() {
               </View>
               <View style={styles.row}>
                 <View style={styles.formItem}>
-                  <Text style={styles.label}>Due Date & Time</Text>
-                  <Controller
-                    name="dueDate"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Pressable
-                        style={styles.inputContainer}
-                        onPress={() => setDateTimePicker(true)}
-                      >
-                        <Text
-                          style={[styles.inputText, { textTransform: 'none' }]}
-                          numberOfLines={1}
-                        >
-                          {moment(field.value).format('MMM D YYYY, hh:mm a') ===
-                          moment().format('MMM D YYYY, hh:mm a')
-                            ? 'Select Date and time'
-                            : moment(field.value).format('MMM D YYYY, hh:mm a')}
-                        </Text>
-                        <Ionicons
-                          name="calendar-clear-outline"
-                          size={fontSize(18)}
-                          color={'#7F7D83'}
-                        />
-                        <DatePicker
-                          modal
-                          open={dateTimePicker}
-                          date={field.value}
-                          minimumDate={new Date()}
-                          mode="datetime"
-                          onConfirm={date => {
-                            field.onChange(date);
-                            setDateTimePicker(false);
-                          }}
-                          onCancel={() => setDateTimePicker(false)}
-                        />
-                      </Pressable>
-                    )}
-                  />
-                </View>
-              </View>
-              <View style={styles.row}>
-                <View style={styles.formItem}>
                   <Text style={styles.label}>Status</Text>
                   <Controller
                     control={form.control}
@@ -898,6 +867,7 @@ export default function AddEditTask() {
                     render={({ field }) => (
                       <Pressable
                         style={styles.inputContainer}
+                        accessibilityRole="button"
                         onPress={() =>
                           SheetManager.show('general-sheet', {
                             payload: {
@@ -970,6 +940,7 @@ export default function AddEditTask() {
                     render={({ field }) => (
                       <Pressable
                         style={styles.inputContainer}
+                        accessibilityRole="button"
                         onPress={() => setDurationPicker(true)}
                       >
                         <Text style={styles.inputText} numberOfLines={1}>
@@ -998,6 +969,53 @@ export default function AddEditTask() {
                   />
                 </View>
               </View>
+            </View>
+
+            <View style={styles.groupCard}>
+              <Text style={styles.sectionHeader}>Schedule</Text>
+              <View style={styles.row}>
+                <View style={styles.formItem}>
+                  <Text style={styles.label}>Due Date & Time</Text>
+                  <Controller
+                    name="dueDate"
+                    control={form.control}
+                    render={({ field }) => (
+                      <Pressable
+                        style={styles.inputContainer}
+                        accessibilityRole="button"
+                        onPress={() => setDateTimePicker(true)}
+                      >
+                        <Text
+                          style={[styles.inputText, { textTransform: 'none' }]}
+                          numberOfLines={1}
+                        >
+                          {moment(field.value).format('MMM D YYYY, hh:mm a') ===
+                          moment().format('MMM D YYYY, hh:mm a')
+                            ? 'Select Date and time'
+                            : moment(field.value).format('MMM D YYYY, hh:mm a')}
+                        </Text>
+                        <Ionicons
+                          name="calendar-clear-outline"
+                          size={fontSize(18)}
+                          color={'#7F7D83'}
+                        />
+                        <DatePicker
+                          modal
+                          open={dateTimePicker}
+                          date={field.value}
+                          minimumDate={new Date()}
+                          mode="datetime"
+                          onConfirm={date => {
+                            field.onChange(date);
+                            setDateTimePicker(false);
+                          }}
+                          onCancel={() => setDateTimePicker(false)}
+                        />
+                      </Pressable>
+                    )}
+                  />
+                </View>
+              </View>
               <View style={styles.row}>
                 <View style={styles.formItem}>
                   <Text style={styles.label}>Frequency</Text>
@@ -1007,6 +1025,7 @@ export default function AddEditTask() {
                     render={({ field }) => (
                       <Pressable
                         style={styles.inputContainer}
+                        accessibilityRole="button"
                         onPress={() =>
                           SheetManager.show('general-sheet', {
                             payload: {
@@ -1048,6 +1067,7 @@ export default function AddEditTask() {
                     render={({ field }) => (
                       <Pressable
                         style={styles.inputContainer}
+                        accessibilityRole="button"
                         onPress={() =>
                           SheetManager.show('general-sheet', {
                             payload: {
@@ -1142,8 +1162,11 @@ const styles = createStyleSheet({
     gap: spacing(5),
   },
   iconButton: {
-    padding: spacing(4),
-    paddingHorizontal: spacing(10),
+    minWidth: scale(40),
+    minHeight: scale(40),
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 100,
   },
   headerTitle: {
     fontSize: fontSize(18),
@@ -1189,13 +1212,6 @@ const styles = createStyleSheet({
     color: theme.colors.gray[500],
     fontSize: fontSize(12),
   },
-  divider: {
-    height: verticalScale(8),
-    backgroundColor: '#F9F9F9',
-    width: Dimensions.get('screen').width,
-    marginLeft: spacing(-20),
-    marginVertical: spacing(14),
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1207,19 +1223,36 @@ const styles = createStyleSheet({
     flex: 1,
   },
   label: {
-    fontFamily: theme.fonts.lato.regular,
-    fontSize: fontSize(14),
-    color: theme.colors.gray[700],
+    fontFamily: theme.fonts.archivo.medium,
+    fontSize: fontSize(13),
+    color: theme.colors.gray[600],
+  },
+  sectionHeader: {
+    fontFamily: theme.fonts.archivo.semiBold,
+    fontSize: fontSize(12),
+    color: theme.colors.gray[500],
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: spacing(14),
+  },
+  groupCard: {
+    backgroundColor: theme.colors.white,
+    borderWidth: 1,
+    borderColor: '#EDEFF2',
+    borderRadius: 14,
+    padding: spacing(16),
+    marginBottom: spacing(16),
   },
   inputContainer: {
-    padding: spacing(8),
+    minHeight: verticalScale(46),
+    paddingVertical: spacing(10),
+    paddingHorizontal: spacing(12),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing(8),
-    borderWidth: 1,
-    borderColor: theme.colors.gray[300],
-    borderRadius: 8,
+    backgroundColor: '#F7F8FA',
+    borderRadius: 10,
   },
   inputText: {
     fontFamily: theme.fonts.lato.regular,
@@ -1267,12 +1300,15 @@ const styles = createStyleSheet({
     marginBottom: spacing(6),
   },
   subtaskInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.gray[300],
-    borderRadius: 8,
-    paddingVertical: spacing(8),
-    paddingHorizontal: spacing(8),
+    backgroundColor: '#F7F8FA',
+    borderRadius: 10,
+    paddingVertical: spacing(10),
+    paddingHorizontal: spacing(12),
+    minHeight: verticalScale(44),
     flex: 1,
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(14),
+    color: theme.colors.gray[900],
   },
   subtaskRemoveButton: {
     paddingHorizontal: spacing(8),

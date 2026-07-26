@@ -42,6 +42,9 @@ declare module 'react-native-actions-sheet' {
       payload: {
         filters: Filter[];
         setFilters: React.Dispatch<React.SetStateAction<Filter[]>>;
+        // Set when a coach is filtering a client's sheet — scopes the
+        // status/category options and the saved filters to that client.
+        userId?: string;
         // tempFilter: TempFilter; // initial only
       };
 
@@ -55,6 +58,7 @@ declare module 'react-native-actions-sheet' {
         'select-type': any;
         'select-operator': any;
         'select-values': any;
+        'save-filter': any;
       };
     }>;
 

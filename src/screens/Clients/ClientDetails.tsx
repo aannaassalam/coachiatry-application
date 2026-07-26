@@ -111,6 +111,9 @@ export default function ClientDetailsA1() {
   const [group, setGroup] = useState('status');
   const [groupDir, setGroupDir] = useState('asc');
   const [filters, setFilters] = useState<Filter[]>([]);
+  // Read-only here: a coach can open the client's archive, but archiving is the
+  // client's own action (the API only lets a member archive).
+  const [showArchivedChats, setShowArchivedChats] = useState(false);
   const validatedFilters = sanitizeFilters(filters);
 
   const [
@@ -206,9 +209,15 @@ export default function ClientDetailsA1() {
     // query owned by FloatingChatHost (mixing useQuery + useInfiniteQuery on the
     // same key breaks this screen's data shape). Still covered by ['conversations']
     // prefix invalidation.
-    queryKey: ['conversations', 'coach', userId],
+    queryKey: ['conversations', 'coach', userId, { showArchivedChats }],
     queryFn: ({ signal }) =>
-      getAllConversationsByCoach({ userId: userId as string }, signal),
+      getAllConversationsByCoach(
+        {
+          userId: userId as string,
+          filters: showArchivedChats ? { archived: true } : undefined,
+        },
+        signal,
+      ),
   });
 
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
@@ -450,13 +459,49 @@ export default function ClientDetailsA1() {
     </View>
   );
 
+  const archivedChatCount = chats?.meta?.archivedCount ?? 0;
+
   const renderChats = () => (
     <View>
+      {showArchivedChats && (
+        <TouchableButton
+          style={styles.archivedRow}
+          onPress={() => setShowArchivedChats(false)}
+        >
+          <Feather
+            name="chevron-left"
+            size={fontSize(16)}
+            color={theme.colors.gray[800]}
+          />
+          <Text style={styles.archivedLabel}>Archived</Text>
+        </TouchableButton>
+      )}
       {isChatLoading ? (
         <AvatarListSkeleton trailing paddingHorizontal={16} />
       ) : (
         <FlatList
           data={chats?.data}
+          ListHeaderComponent={
+            !showArchivedChats && archivedChatCount > 0 ? (
+              <TouchableButton
+                style={styles.archivedRow}
+                onPress={() => setShowArchivedChats(true)}
+              >
+                <Feather
+                  name="archive"
+                  size={fontSize(16)}
+                  color={theme.colors.gray[500]}
+                />
+                <Text style={styles.archivedLabel}>Archived</Text>
+                <Text style={styles.archivedCount}>{archivedChatCount}</Text>
+                <Feather
+                  name="chevron-right"
+                  size={fontSize(14)}
+                  color={theme.colors.gray[400]}
+                />
+              </TouchableButton>
+            ) : null
+          }
           renderItem={({ item }) => (
             <ChatMessage
               item={item}
@@ -629,6 +674,25 @@ export default function ClientDetailsA1() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.gray[50] },
+
+  archivedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(12),
+    paddingHorizontal: spacing(16),
+    paddingVertical: spacing(12),
+  },
+  archivedLabel: {
+    flex: 1,
+    color: theme.colors.gray[800],
+    fontFamily: theme.fonts.archivo.medium,
+    fontSize: fontSize(14),
+  },
+  archivedCount: {
+    color: theme.colors.gray[500],
+    fontFamily: theme.fonts.lato.regular,
+    fontSize: fontSize(12),
+  },
 
   /* big header (scroll content) */
   bigHeader: {

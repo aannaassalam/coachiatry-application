@@ -87,6 +87,8 @@ export interface PaginatedResponse<T> {
     currentPage: number;
     totalPages: number;
     totalCount: number;
+    /** Conversation lists only: how many chats this user has archived. */
+    archivedCount?: number;
   };
 }
 

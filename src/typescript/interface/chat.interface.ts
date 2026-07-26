@@ -12,6 +12,8 @@ export interface ChatConversation {
       role: "member" | "admin" | "owner";
       joinedAt: string;
       lastReadAt: string;
+      /** Per-member archive flag; only sent by the single-conversation fetch. */
+      archived?: boolean;
     }
   ];
   unreadCount: number;

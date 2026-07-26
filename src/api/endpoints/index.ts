@@ -42,6 +42,14 @@ export const endpoints = {
     addCoach: (userId: string) => `/categories/coach/${userId}`,
     delete: (categoryId: string) => `/categories/${categoryId}`,
   },
+  savedFilter: {
+    getAll: '/saved-filters',
+    add: '/saved-filters',
+    getAllCoach: (userId: string) => `/saved-filters/coach/${userId}`,
+    addCoach: (userId: string) => `/saved-filters/coach/${userId}`,
+    edit: (id: string) => `/saved-filters/${id}`,
+    delete: (id: string) => `/saved-filters/${id}`,
+  },
   status: {
     getAll: '/statuses',
     add: '/statuses',
@@ -101,6 +109,7 @@ export const endpoints = {
     editGroup: '/chat/group/edit',
     leaveGroup: (chatId: string) => `/chat/leave-group/${chatId}`,
     deleteConversation: (chatId: string) => `/chat/conversation/${chatId}`,
+    archiveConversation: (chatId: string) => `/chat/${chatId}/archive`,
     inviteToGroup: '/chat/group/invite',
     getGroupInvite: (token: string) => `/chat/group/invite/${token}`,
     acceptGroupInvite: (token: string) => `/chat/group/invite/${token}/accept`,
