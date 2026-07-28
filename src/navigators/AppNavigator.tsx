@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ChatScreen from '../screens/Chats/ChatRoom';
 import ClientDetails from '../screens/Clients/ClientDetails';
+import ClientSettings from '../screens/Clients/ClientSettings';
 import DocumentEditor from '../screens/Documents/DocumentEditor';
 import EditProfile from '../screens/Profile/EditProfile';
 import Profile from '../screens/Profile/Profile';
@@ -42,6 +43,7 @@ const AppNavigator = ({ hideFloatingChat = false }: { hideFloatingChat?: boolean
         <Stack.Screen name="Profile" component={Profile} />
         <Stack.Screen name="EditProfile" component={EditProfile} />
         <Stack.Screen name="ClientDetails" component={ClientDetails} />
+        <Stack.Screen name="ClientSettings" component={ClientSettings} />
         <Stack.Screen name="UserDetails" component={UserDetails} />
         <Stack.Screen name="ChatRoom" component={ChatScreen} />
         <Stack.Screen name="GroupScreen" component={GroupScreen} />

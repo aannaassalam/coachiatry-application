@@ -32,6 +32,7 @@ export type AppStackParamList = {
   };
   EditProfile: undefined;
   ClientDetails: { userId: string; fromUsersScreen?: boolean };
+  ClientSettings: { userId: string };
   ChatRoom: { roomId: string; fromFloating?: boolean };
   GroupScreen: { roomId?: string; byCoach?: boolean };
   CoachChatRoom: { roomId: string; userId: string };

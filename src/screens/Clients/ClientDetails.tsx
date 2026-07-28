@@ -99,6 +99,14 @@ const RenderDocument = ({
   );
 };
 
+// Who may open the settings screen for whom — kept in step with
+// resolveTargetUser on the backend, which 403s anything else.
+const MANAGEABLE_ROLES: Record<string, string[]> = {
+  admin: ['manager', 'coach', 'user'],
+  manager: ['coach', 'user'],
+  coach: ['user'],
+};
+
 export default function ClientDetailsA1() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<AppStackParamList, 'ClientDetails'>>();
@@ -297,6 +305,10 @@ export default function ClientDetailsA1() {
   // Switching tabs swaps the active scroller (the Tasks tab is its own
   // virtualized FlashList; Documents/Chats stay in the ScrollView). Reset the
   // shared scroll position so the collapsing header re-expands on each switch.
+  const canManageUser =
+    !!data?.role &&
+    (MANAGEABLE_ROLES[profile?.role ?? ''] ?? []).includes(data.role);
+
   const changeTab = (tab: 'Tasks' | 'Documents' | 'Chats') => {
     scrollY.value = 0;
     setActiveTab(tab);
@@ -315,7 +327,25 @@ export default function ClientDetailsA1() {
           <ChevronLeft />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Client Details</Text>
-        <View style={{ width: 24 }} />
+        {canManageUser ? (
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('ClientSettings', { userId: userId })
+            }
+            style={{
+              paddingHorizontal: spacing(5),
+              paddingVertical: spacing(3),
+            }}
+          >
+            <Feather
+              name="settings"
+              size={fontSize(18)}
+              color={theme.colors.gray[600]}
+            />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 24 }} />
+        )}
       </View>
       {!isAllLoading && (
         <View style={styles.profileCenter}>

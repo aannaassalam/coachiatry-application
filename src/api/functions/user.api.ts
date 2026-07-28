@@ -20,7 +20,9 @@ export const updateProfile = async (body: {
   return res;
 };
 
-export const updateProfilePicture = async (file: Asset) => {
+// `userId` targets another user instead of the signed-in one (staff editing a
+// client/coach from the client settings screen). Same for the watcher helpers.
+export const updateProfilePicture = async (file: Asset, userId?: string) => {
   const formData = new FormData();
   formData.append('profilePicture', {
     name: file.fileName ?? `photo.${file.type?.split('/')[1] ?? 'jpg'}`,
@@ -29,10 +31,24 @@ export const updateProfilePicture = async (file: Asset) => {
       Platform.OS === 'android' ? file.uri : file.uri?.replace('file://', ''),
   } as any);
   const res = await axiosInstance.patch(
-    endpoints.user.updateProfilePicture,
+    userId
+      ? endpoints.user.updateProfilePictureFor(userId)
+      : endpoints.user.updateProfilePicture,
     formData,
   );
   return res;
+};
+
+// Staff setting someone else's password outright — no current password needed.
+export const setClientPassword = async (body: {
+  userId: string;
+  password: string;
+}) => {
+  const res = await axiosInstance.patch(
+    endpoints.user.setPasswordFor(body.userId),
+    { password: body.password },
+  );
+  return res.data;
 };
 
 export const shareViewAccessToWatchers = async (shareId: string) => {
@@ -40,8 +56,12 @@ export const shareViewAccessToWatchers = async (shareId: string) => {
   return res.data;
 };
 
-export const revokeViewAccess = async (viewerId: string) => {
-  const res = await axiosInstance.delete(endpoints.user.revokeAccess(viewerId));
+export const revokeViewAccess = async (viewerId: string, userId?: string) => {
+  const res = await axiosInstance.delete(
+    userId
+      ? endpoints.user.revokeAccessFor(userId, viewerId)
+      : endpoints.user.revokeAccess(viewerId),
+  );
   return res;
 };
 
@@ -81,8 +101,18 @@ export const getUserById = async (
   id: string,
   signal?: AbortSignal,
 ): Promise<
-  Pick<User, '_id' | 'fullName' | 'email' | 'photo' | 'createdAt' | 'role'> & {
+  Pick<
+    User,
+    | '_id'
+    | 'fullName'
+    | 'email'
+    | 'photo'
+    | 'createdAt'
+    | 'role'
+    | 'shareId'
+  > & {
     assignedCoach: User[];
+    sharedViewers?: User[];
   }
 > => {
   const res = await axiosInstance.get(endpoints.user.userById(id), { signal });
@@ -100,8 +130,11 @@ export const getUsersByIds = async (
   return res.data;
 };
 
-export const addWatchers = async (userIds: string[]) => {
-  const res = await axiosInstance.post(endpoints.user.addWatchers, { userIds });
+export const addWatchers = async (userIds: string[], userId?: string) => {
+  const res = await axiosInstance.post(
+    userId ? endpoints.user.addWatchersFor(userId) : endpoints.user.addWatchers,
+    { userIds },
+  );
   return res;
 };
 
@@ -116,19 +149,26 @@ export interface FindWatcherResult {
 // already a watcher / the current user). Powers the "invite by email" flow.
 export const findWatcherByEmail = async (
   email: string,
+  userId?: string,
 ): Promise<FindWatcherResult> => {
   const res = await axiosInstance.get(endpoints.user.findWatcherByEmail, {
-    params: { email },
+    params: { email, userId },
   });
   return res.data;
 };
 
 // Email an invite to people who don't yet have an account, adding them as
 // watchers once they join.
-export const inviteWatchersByEmail = async (emails: string[]) => {
-  const res = await axiosInstance.post(endpoints.user.inviteWatchers, {
-    emails,
-  });
+export const inviteWatchersByEmail = async (
+  emails: string[],
+  userId?: string,
+) => {
+  const res = await axiosInstance.post(
+    userId
+      ? endpoints.user.inviteWatchersFor(userId)
+      : endpoints.user.inviteWatchers,
+    { emails },
+  );
   return res;
 };
 
@@ -169,14 +209,19 @@ export const createUser = async (body: {
 export const updateUser = async (body: {
   userId: string;
   name: string;
-  email: string;
-  role: 'admin' | 'manager' | 'coach' | 'user';
+  email?: string;
+  role?: 'admin' | 'manager' | 'coach' | 'user';
   assignedCoach?: string[];
 }) => {
-  const res = await axiosInstance.put(
-    endpoints.user.updateUser(body.userId),
-    body,
-  );
+  // The backend reads `fullName`; sending `name` (as this did) meant renames
+  // were silently dropped. `role`/`assignedCoach` stay optional and are only
+  // applied when present, so a caller that just renames leaves assignment
+  // alone — a coach sending assignedCoach reassigns the client to themselves.
+  const { userId, name, ...rest } = body;
+  const res = await axiosInstance.put(endpoints.user.updateUser(userId), {
+    ...rest,
+    fullName: name,
+  });
   return res;
 };
 
