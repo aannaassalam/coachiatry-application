@@ -35,7 +35,9 @@ export interface Message {
   reactions?: MessageReaction[];
   replyTo?: Message | null;
   scheduledAt?: Date;
-  repeat: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+  // 'none' is the default for ordinary (unscheduled) messages; the backend
+  // stores every scheduled one-time send as 'once'.
+  repeat: 'none' | 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly';
   createdAt?: string;
   updatedAt?: string;
   status: MessageStatus;

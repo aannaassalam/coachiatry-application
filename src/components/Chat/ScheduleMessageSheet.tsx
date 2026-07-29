@@ -23,10 +23,10 @@ import AppButton from '../ui/AppButton';
 
 const SHEET_ID = 'schedule-message-sheet';
 
-// Values map to the backend `frequency` (stored as `repeat`) enum. "Once" is a
-// one-time send (backend `none`).
+// Values map to the backend `repeat` enum. A one-time send is 'once'; older
+// rows stored it as 'none', which the backend now normalizes on write.
 const FREQUENCIES = [
-  { label: 'Once', value: 'none' },
+  { label: 'Once', value: 'once' },
   { label: 'Daily', value: 'daily' },
   { label: 'Weekly', value: 'weekly' },
   { label: 'Monthly', value: 'monthly' },
@@ -50,10 +50,12 @@ export default function ScheduleMessageSheet(
     d.setHours(d.getHours() + 1, 0, 0, 0);
     return d;
   });
-  // Defaults to "Once" (one-time). Editing keeps the message's existing repeat.
-  const [frequency, setFrequency] = useState(() =>
-    editing ? payload!.selectedMessage!.repeat || 'none' : 'none',
-  );
+  // Defaults to "Once" (one-time). Editing keeps the message's existing repeat,
+  // mapping legacy 'none' rows onto the 'once' pill so one is always selected.
+  const [frequency, setFrequency] = useState(() => {
+    const stored = editing ? payload!.selectedMessage!.repeat : '';
+    return !stored || stored === 'none' ? 'once' : stored;
+  });
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
 
