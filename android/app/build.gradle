@@ -84,8 +84,8 @@ android {
         applicationId "com.coachiatryapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 6
-        versionName "1.1"
+        versionCode 8
+        versionName "1.3"
     }
     signingConfigs {
         release {
